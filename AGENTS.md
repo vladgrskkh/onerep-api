@@ -15,15 +15,20 @@ make migrate-down # Rollback migrations
 ```
 
 ## Architecture
-DDD with CSP (Consumer-defined interfaces):
+DDD with domain-based vertical slicing:
 
 ```
 cmd/server/          # Entry point
 internal/
-  domain/            # Entities, value objects — no interfaces, no imports
-  application/       # Use cases + consumer-defined interfaces (ISP)
-  handler/           # HTTP handlers, middleware
-  infrastructure/    # Postgres, Redis, S3, JWT validator implementations
+  domain/
+    exercises/       # exercise domain (entities, service, handler)
+    templates/       # template domain
+    workouts/        # workout domain
+    progress/        # progress domain
+  application/       # App wire-up, route registration
+  handler/           # Shared HTTP utilities (response, middleware, DTOs)
+  infrastructure/    # Postgres, Redis, S3, JWT validator
+  config/            # Environment configuration
 ```
 
 ## CI
