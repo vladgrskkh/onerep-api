@@ -1,16 +1,59 @@
 linters:
   enable:
+    - bodyclose
     - errcheck
+    - gosec
     - gosimple
     - govet
     - ineffassign
-    - staticcheck
-    - unused
-    - gofmt
-    - goimports
-    - revive
     - misspell
+    - nilerr
+    - noctx
+    - nolintlint
+    - prealloc
+    - revive
+    - rowserrcheck
+    - sqlclosecheck
+    - staticcheck
     - unconvert
+    - unparam
+    - unused
+    - wastedassign
+    - whitespace
+
+linters-settings:
+  revive:
+    rules:
+      - name: blank-imports
+      - name: context-as-argument
+      - name: context-keys-type
+      - name: dot-imports
+      - name: error-return
+      - name: error-strings
+      - name: error-naming
+      - name: exported
+      - name: increment-decrement
+      - name: indent-error-flow
+      - name: range
+      - name: receiver-naming
+      - name: redefines-builtin-id
+      - name: superfluous-else
+      - name: time-naming
+      - name: unexported-return
+      - name: unreachable-code
+      - name: unused-parameter
+      - name: var-declaration
+      - name: var-naming
+
+  gosec:
+    excludes:
+      - G104
+
+  govet:
+    enable-all: true
+    disable:
+      - shadow
+      - fieldalignment
 
 issues:
   exclude-use-default: false
@@ -18,4 +61,4 @@ issues:
   max-same-issues: 0
 
 run:
-  timeout: 3m
+  timeout: 5m
