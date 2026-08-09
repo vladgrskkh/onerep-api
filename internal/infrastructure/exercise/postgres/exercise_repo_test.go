@@ -133,6 +133,71 @@ func (s *ExerciseRepoTestSuite) TestCreate_HeaderOnly() {
 	s.Empty(found.MuscleGroups)
 }
 
+func (s *ExerciseRepoTestSuite) TestBatchInsertMedia_AndMuscleGroups() {
+	ex := s.newTestExercise("BatchInsert-" + uuid.NewString())
+	ex.Media = nil
+	ex.MuscleGroups = nil
+	created := s.createTestExercise(ex)
+
+	media := []exercise.ExerciseMedia{
+		{ID: uuid.Must(uuid.NewV7()), ExerciseID: created.ID, MediaType: exercise.MediaTypePhoto, SortOrder: 0, S3Key: "exercises/batch-1.jpg"},
+		{ID: uuid.Must(uuid.NewV7()), ExerciseID: created.ID, MediaType: exercise.MediaTypeVideo, SortOrder: 1, S3Key: "exercises/batch-2.mp4"},
+	}
+	groups := []exercise.ExerciseMuscleGroup{
+		{ExerciseID: created.ID, MuscleGroupID: 1, IsPrimary: false},
+		{ExerciseID: created.ID, MuscleGroupID: 2, IsPrimary: true},
+	}
+
+	err := s.trManager.Do(s.ctx, func(ctx context.Context) error {
+		if err := s.repo.BatchInsertMedia(ctx, media); err != nil {
+			return err
+		}
+		return s.repo.BatchInsertMuscleGroups(ctx, groups)
+	})
+	s.Require().NoError(err)
+
+	found, err := s.repo.FindByID(s.ctx, created.ID)
+	s.Require().NoError(err)
+	s.Len(found.Media, 2)
+	s.Equal("exercises/batch-1.jpg", found.Media[0].S3Key)
+	s.Equal("exercises/batch-2.mp4", found.Media[1].S3Key)
+	s.Len(found.MuscleGroups, 2)
+	s.True(found.MuscleGroups[0].IsPrimary)
+	s.Equal(2, found.MuscleGroups[0].MuscleGroupID)
+	s.False(found.MuscleGroups[1].IsPrimary)
+	s.Equal(1, found.MuscleGroups[1].MuscleGroupID)
+}
+
+func (s *ExerciseRepoTestSuite) TestInsertMedia_AndMuscleGroup_Single() {
+	ex := s.newTestExercise("SingleInsert-" + uuid.NewString())
+	ex.Media = nil
+	ex.MuscleGroups = nil
+	created := s.createTestExercise(ex)
+
+	err := s.repo.InsertMedia(s.ctx, exercise.ExerciseMedia{
+		ID:         uuid.Must(uuid.NewV7()),
+		ExerciseID: created.ID,
+		MediaType:  exercise.MediaTypePhoto,
+		SortOrder:  0,
+		S3Key:      "exercises/single.jpg",
+	})
+	s.Require().NoError(err)
+	err = s.repo.InsertMuscleGroup(s.ctx, exercise.ExerciseMuscleGroup{
+		ExerciseID:    created.ID,
+		MuscleGroupID: 3,
+		IsPrimary:     true,
+	})
+	s.Require().NoError(err)
+
+	found, err := s.repo.FindByID(s.ctx, created.ID)
+	s.Require().NoError(err)
+	s.Len(found.Media, 1)
+	s.Equal("exercises/single.jpg", found.Media[0].S3Key)
+	s.Len(found.MuscleGroups, 1)
+	s.Equal(3, found.MuscleGroups[0].MuscleGroupID)
+	s.True(found.MuscleGroups[0].IsPrimary)
+}
+
 func (s *ExerciseRepoTestSuite) TestFindByID_NotFound() {
 	_, err := s.repo.FindByID(s.ctx, uuid.New())
 	s.ErrorIs(err, exercise.ErrExerciseNotFound)

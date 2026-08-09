@@ -147,6 +147,83 @@ func (s *TemplateRepoTestSuite) TestCreate_HeaderOnly() {
 	s.Empty(found.Media)
 }
 
+func (s *TemplateRepoTestSuite) TestBatchInsertExercises_AndMedia() {
+	t := s.newTestTemplate("BatchInsert-" + uuid.NewString())
+	t.Exercises = nil
+	t.Media = nil
+	var created domaintemplate.Template
+	err := s.trManager.Do(s.ctx, func(ctx context.Context) error {
+		var err error
+		created, err = s.repo.Create(ctx, t)
+		return err
+	})
+	s.Require().NoError(err)
+	s.created = append(s.created, created.ID)
+
+	ex1 := s.insertTestExercise()
+	ex2 := s.insertTestExercise()
+	exercises := []domaintemplate.TemplateExercise{
+		{TemplateID: created.ID, ExerciseID: ex1, SortOrder: 0, PlannedSets: 3},
+		{TemplateID: created.ID, ExerciseID: ex2, SortOrder: 1, PlannedSets: 4},
+	}
+	media := []domaintemplate.TemplateMedia{
+		{ID: uuid.Must(uuid.NewV7()), TemplateID: created.ID, MediaType: domaintemplate.MediaTypePhoto, SortOrder: 0, S3Key: "templates/batch-1.jpg"},
+		{ID: uuid.Must(uuid.NewV7()), TemplateID: created.ID, MediaType: domaintemplate.MediaTypePhoto, SortOrder: 1, S3Key: "templates/batch-2.jpg"},
+	}
+
+	err = s.trManager.Do(s.ctx, func(ctx context.Context) error {
+		if err := s.repo.BatchInsertExercises(ctx, exercises); err != nil {
+			return err
+		}
+		return s.repo.BatchInsertMedia(ctx, media)
+	})
+	s.Require().NoError(err)
+
+	found, err := s.repo.FindByID(s.ctx, created.ID)
+	s.Require().NoError(err)
+	s.Len(found.Exercises, 2)
+	s.Equal(0, found.Exercises[0].SortOrder)
+	s.Equal(3, found.Exercises[0].PlannedSets)
+	s.Equal(ex1, found.Exercises[0].ExerciseID)
+	s.Equal(1, found.Exercises[1].SortOrder)
+	s.Equal(4, found.Exercises[1].PlannedSets)
+	s.Equal(ex2, found.Exercises[1].ExerciseID)
+	s.Len(found.Media, 2)
+	s.Equal("templates/batch-1.jpg", found.Media[0].S3Key)
+	s.Equal("templates/batch-2.jpg", found.Media[1].S3Key)
+}
+
+func (s *TemplateRepoTestSuite) TestInsertExercise_AndMedia_Single() {
+	t := s.newTestTemplate("SingleInsert-" + uuid.NewString())
+	t.Exercises = nil
+	t.Media = nil
+	created := s.createTestTemplate(t)
+
+	ex := s.insertTestExercise()
+	err := s.repo.InsertExercise(s.ctx, domaintemplate.TemplateExercise{
+		TemplateID:  created.ID,
+		ExerciseID:  ex,
+		SortOrder:   0,
+		PlannedSets: 5,
+	})
+	s.Require().NoError(err)
+	err = s.repo.InsertMedia(s.ctx, domaintemplate.TemplateMedia{
+		ID:         uuid.Must(uuid.NewV7()),
+		TemplateID: created.ID,
+		MediaType:  domaintemplate.MediaTypePhoto,
+		SortOrder:  0,
+		S3Key:      "templates/single.jpg",
+	})
+	s.Require().NoError(err)
+
+	found, err := s.repo.FindByID(s.ctx, created.ID)
+	s.Require().NoError(err)
+	s.Len(found.Exercises, 1)
+	s.Equal(5, found.Exercises[0].PlannedSets)
+	s.Len(found.Media, 1)
+	s.Equal("templates/single.jpg", found.Media[0].S3Key)
+}
+
 func (s *TemplateRepoTestSuite) TestFindByID_NotFound() {
 	_, err := s.repo.FindByID(s.ctx, uuid.New())
 	s.ErrorIs(err, domaintemplate.ErrTemplateNotFound)

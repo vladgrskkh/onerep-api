@@ -176,6 +176,43 @@ func (r *TemplateRepo) Create(ctx context.Context, t domaintemplate.Template) (d
 	return t, nil
 }
 
+func (r *TemplateRepo) InsertExercise(ctx context.Context, te domaintemplate.TemplateExercise) error {
+	conn := r.getter.DefaultTrOrDB(ctx, r.db)
+	_, err := conn.Exec(ctx, `
+		INSERT INTO gym.template_exercises (template_id, exercise_id, sort_order, planned_sets)
+		VALUES (@template_id, @exercise_id, @sort_order, @planned_sets)
+	`, pgx.NamedArgs{
+		argTemplateID:  te.TemplateID,
+		"exercise_id":  te.ExerciseID,
+		argSortOrder:   te.SortOrder,
+		"planned_sets": te.PlannedSets,
+	})
+	return err
+}
+
+func (r *TemplateRepo) BatchInsertExercises(
+	ctx context.Context,
+	exercises []domaintemplate.TemplateExercise,
+) error {
+	if len(exercises) == 0 {
+		return nil
+	}
+	conn := r.getter.DefaultTrOrDB(ctx, r.db)
+	batch := &pgx.Batch{}
+	for _, te := range exercises {
+		batch.Queue(`
+			INSERT INTO gym.template_exercises (template_id, exercise_id, sort_order, planned_sets)
+			VALUES (@template_id, @exercise_id, @sort_order, @planned_sets)
+		`, pgx.NamedArgs{
+			argTemplateID:  te.TemplateID,
+			"exercise_id":  te.ExerciseID,
+			argSortOrder:   te.SortOrder,
+			"planned_sets": te.PlannedSets,
+		})
+	}
+	return conn.SendBatch(ctx, batch).Close()
+}
+
 func (r *TemplateRepo) ReplaceExercises(
 	ctx context.Context,
 	templateID uuid.UUID,
@@ -187,20 +224,43 @@ func (r *TemplateRepo) ReplaceExercises(
 	`, pgx.NamedArgs{argTemplateID: templateID}); err != nil {
 		return err
 	}
-	for _, te := range exercises {
-		if _, err := conn.Exec(ctx, `
-			INSERT INTO gym.template_exercises (template_id, exercise_id, sort_order, planned_sets)
-			VALUES (@template_id, @exercise_id, @sort_order, @planned_sets)
-		`, pgx.NamedArgs{
-			argTemplateID:  templateID,
-			"exercise_id":  te.ExerciseID,
-			argSortOrder:   te.SortOrder,
-			"planned_sets": te.PlannedSets,
-		}); err != nil {
-			return err
-		}
+	return r.BatchInsertExercises(ctx, exercises)
+}
+
+func (r *TemplateRepo) InsertMedia(ctx context.Context, m domaintemplate.TemplateMedia) error {
+	conn := r.getter.DefaultTrOrDB(ctx, r.db)
+	_, err := conn.Exec(ctx, `
+		INSERT INTO gym.template_media (id, template_id, media_type, sort_order, s3_key)
+		VALUES (@id, @template_id, @media_type, @sort_order, @s3_key)
+	`, pgx.NamedArgs{
+		"id":          m.ID,
+		argTemplateID: m.TemplateID,
+		"media_type":  m.MediaType,
+		argSortOrder:  m.SortOrder,
+		"s3_key":      m.S3Key,
+	})
+	return err
+}
+
+func (r *TemplateRepo) BatchInsertMedia(ctx context.Context, media []domaintemplate.TemplateMedia) error {
+	if len(media) == 0 {
+		return nil
 	}
-	return nil
+	conn := r.getter.DefaultTrOrDB(ctx, r.db)
+	batch := &pgx.Batch{}
+	for _, m := range media {
+		batch.Queue(`
+			INSERT INTO gym.template_media (id, template_id, media_type, sort_order, s3_key)
+			VALUES (@id, @template_id, @media_type, @sort_order, @s3_key)
+		`, pgx.NamedArgs{
+			"id":          m.ID,
+			argTemplateID: m.TemplateID,
+			"media_type":  m.MediaType,
+			argSortOrder:  m.SortOrder,
+			"s3_key":      m.S3Key,
+		})
+	}
+	return conn.SendBatch(ctx, batch).Close()
 }
 
 func (r *TemplateRepo) ReplaceMedia(
@@ -214,21 +274,7 @@ func (r *TemplateRepo) ReplaceMedia(
 	`, pgx.NamedArgs{argTemplateID: templateID}); err != nil {
 		return err
 	}
-	for _, m := range media {
-		if _, err := conn.Exec(ctx, `
-			INSERT INTO gym.template_media (id, template_id, media_type, sort_order, s3_key)
-			VALUES (@id, @template_id, @media_type, @sort_order, @s3_key)
-		`, pgx.NamedArgs{
-			"id":          m.ID,
-			argTemplateID: templateID,
-			"media_type":  m.MediaType,
-			argSortOrder:  m.SortOrder,
-			"s3_key":      m.S3Key,
-		}); err != nil {
-			return err
-		}
-	}
-	return nil
+	return r.BatchInsertMedia(ctx, media)
 }
 
 func (r *TemplateRepo) Update(ctx context.Context, t domaintemplate.Template) (domaintemplate.Template, error) {

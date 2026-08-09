@@ -236,6 +236,54 @@ func (r *WorkoutRepo) LogSet(
 	return set, nil
 }
 
+func (r *WorkoutRepo) BatchInsertExercises(
+	ctx context.Context,
+	exercises []domainworkout.WorkoutExercise,
+) error {
+	if len(exercises) == 0 {
+		return nil
+	}
+	conn := r.getter.DefaultTrOrDB(ctx, r.db)
+	batch := &pgx.Batch{}
+	for _, we := range exercises {
+		batch.Queue(`
+			INSERT INTO gym.workout_exercises (id, workout_id, exercise_id, sort_order, notes)
+			VALUES (@id, @workout_id, @exercise_id, @sort_order, @notes)
+		`, pgx.NamedArgs{
+			"id":          we.ID,
+			"workout_id":  we.WorkoutID,
+			"exercise_id": we.ExerciseID,
+			"sort_order":  we.SortOrder,
+			argNotes:      we.Notes,
+		})
+	}
+	return conn.SendBatch(ctx, batch).Close()
+}
+
+func (r *WorkoutRepo) BatchInsertSets(ctx context.Context, sets []domainworkout.WorkoutSet) error {
+	if len(sets) == 0 {
+		return nil
+	}
+	conn := r.getter.DefaultTrOrDB(ctx, r.db)
+	batch := &pgx.Batch{}
+	for _, set := range sets {
+		batch.Queue(`
+			INSERT INTO gym.workout_sets (id, workout_exercise_id, set_number, weight_kg, reps, rpe, rest_seconds, is_warmup)
+			VALUES (@id, @workout_exercise_id, @set_number, @weight_kg, @reps, @rpe, @rest_seconds, @is_warmup)
+		`, pgx.NamedArgs{
+			"id":                  set.ID,
+			"workout_exercise_id": set.WorkoutExerciseID,
+			"set_number":          set.SetNumber,
+			"weight_kg":           set.WeightKg,
+			"reps":                set.Reps,
+			"rpe":                 set.RPE,
+			"rest_seconds":        set.RestSeconds,
+			"is_warmup":           set.IsWarmup,
+		})
+	}
+	return conn.SendBatch(ctx, batch).Close()
+}
+
 func (r *WorkoutRepo) Update(ctx context.Context, w domainworkout.Workout) (domainworkout.Workout, error) {
 	conn := r.getter.DefaultTrOrDB(ctx, r.db)
 

@@ -180,6 +180,42 @@ func (r *ExerciseRepo) Create(ctx context.Context, ex domainexercise.Exercise) (
 	return ex, nil
 }
 
+func (r *ExerciseRepo) InsertMedia(ctx context.Context, m domainexercise.ExerciseMedia) error {
+	conn := r.getter.DefaultTrOrDB(ctx, r.db)
+	_, err := conn.Exec(ctx, `
+		INSERT INTO gym.exercise_media (id, exercise_id, media_type, sort_order, s3_key)
+		VALUES (@id, @exercise_id, @media_type, @sort_order, @s3_key)
+	`, pgx.NamedArgs{
+		"id":          m.ID,
+		argExerciseID: m.ExerciseID,
+		"media_type":  m.MediaType,
+		"sort_order":  m.SortOrder,
+		"s3_key":      m.S3Key,
+	})
+	return err
+}
+
+func (r *ExerciseRepo) BatchInsertMedia(ctx context.Context, media []domainexercise.ExerciseMedia) error {
+	if len(media) == 0 {
+		return nil
+	}
+	conn := r.getter.DefaultTrOrDB(ctx, r.db)
+	batch := &pgx.Batch{}
+	for _, m := range media {
+		batch.Queue(`
+			INSERT INTO gym.exercise_media (id, exercise_id, media_type, sort_order, s3_key)
+			VALUES (@id, @exercise_id, @media_type, @sort_order, @s3_key)
+		`, pgx.NamedArgs{
+			"id":          m.ID,
+			argExerciseID: m.ExerciseID,
+			"media_type":  m.MediaType,
+			"sort_order":  m.SortOrder,
+			"s3_key":      m.S3Key,
+		})
+	}
+	return conn.SendBatch(ctx, batch).Close()
+}
+
 func (r *ExerciseRepo) ReplaceMedia(
 	ctx context.Context,
 	exerciseID uuid.UUID,
@@ -191,21 +227,42 @@ func (r *ExerciseRepo) ReplaceMedia(
 	`, pgx.NamedArgs{argExerciseID: exerciseID}); err != nil {
 		return err
 	}
-	for _, m := range media {
-		if _, err := conn.Exec(ctx, `
-			INSERT INTO gym.exercise_media (id, exercise_id, media_type, sort_order, s3_key)
-			VALUES (@id, @exercise_id, @media_type, @sort_order, @s3_key)
-		`, pgx.NamedArgs{
-			"id":          m.ID,
-			argExerciseID: exerciseID,
-			"media_type":  m.MediaType,
-			"sort_order":  m.SortOrder,
-			"s3_key":      m.S3Key,
-		}); err != nil {
-			return err
-		}
+	return r.BatchInsertMedia(ctx, media)
+}
+
+func (r *ExerciseRepo) InsertMuscleGroup(ctx context.Context, mg domainexercise.ExerciseMuscleGroup) error {
+	conn := r.getter.DefaultTrOrDB(ctx, r.db)
+	_, err := conn.Exec(ctx, `
+		INSERT INTO gym.exercise_muscle_groups (exercise_id, muscle_group_id, is_primary)
+		VALUES (@exercise_id, @muscle_group_id, @is_primary)
+	`, pgx.NamedArgs{
+		argExerciseID:     mg.ExerciseID,
+		"muscle_group_id": mg.MuscleGroupID,
+		"is_primary":      mg.IsPrimary,
+	})
+	return err
+}
+
+func (r *ExerciseRepo) BatchInsertMuscleGroups(
+	ctx context.Context,
+	groups []domainexercise.ExerciseMuscleGroup,
+) error {
+	if len(groups) == 0 {
+		return nil
 	}
-	return nil
+	conn := r.getter.DefaultTrOrDB(ctx, r.db)
+	batch := &pgx.Batch{}
+	for _, mg := range groups {
+		batch.Queue(`
+			INSERT INTO gym.exercise_muscle_groups (exercise_id, muscle_group_id, is_primary)
+			VALUES (@exercise_id, @muscle_group_id, @is_primary)
+		`, pgx.NamedArgs{
+			argExerciseID:     mg.ExerciseID,
+			"muscle_group_id": mg.MuscleGroupID,
+			"is_primary":      mg.IsPrimary,
+		})
+	}
+	return conn.SendBatch(ctx, batch).Close()
 }
 
 func (r *ExerciseRepo) ReplaceMuscleGroups(
@@ -219,19 +276,7 @@ func (r *ExerciseRepo) ReplaceMuscleGroups(
 	`, pgx.NamedArgs{argExerciseID: exerciseID}); err != nil {
 		return err
 	}
-	for _, mg := range groups {
-		if _, err := conn.Exec(ctx, `
-			INSERT INTO gym.exercise_muscle_groups (exercise_id, muscle_group_id, is_primary)
-			VALUES (@exercise_id, @muscle_group_id, @is_primary)
-		`, pgx.NamedArgs{
-			argExerciseID:     exerciseID,
-			"muscle_group_id": mg.MuscleGroupID,
-			"is_primary":      mg.IsPrimary,
-		}); err != nil {
-			return err
-		}
-	}
-	return nil
+	return r.BatchInsertMuscleGroups(ctx, groups)
 }
 
 func (r *ExerciseRepo) Update(ctx context.Context, ex domainexercise.Exercise) (domainexercise.Exercise, error) {

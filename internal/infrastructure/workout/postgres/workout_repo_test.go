@@ -376,6 +376,58 @@ func (s *WorkoutRepoTestSuite) TestLogSet_IncrementsSetNumber() {
 	s.Equal(4, found.Exercises[0].Sets[3].SetNumber)
 }
 
+func (s *WorkoutRepoTestSuite) TestBatchInsertExercises_AndSets() {
+	userID := uuid.New()
+	w, err := domainworkout.NewWorkout(userID, nil)
+	s.Require().NoError(err)
+	created := s.createTestWorkout(w)
+
+	ex1 := s.insertTestExercise()
+	ex2 := s.insertTestExercise()
+	we1, err := domainworkout.NewWorkoutExercise(created.ID, ex1)
+	s.Require().NoError(err)
+	we1.SortOrder = 0
+	we2, err := domainworkout.NewWorkoutExercise(created.ID, ex2)
+	s.Require().NoError(err)
+	we2.SortOrder = 1
+	exercises := []domainworkout.WorkoutExercise{we1, we2}
+
+	rpe := 8
+	rest := 90
+	set1, err := domainworkout.NewWorkoutSet(we1.ID, 80, 5, nil, &rest, false)
+	s.Require().NoError(err)
+	set1.SetNumber = 1
+	set2, err := domainworkout.NewWorkoutSet(we1.ID, 82.5, 3, &rpe, nil, false)
+	s.Require().NoError(err)
+	set2.SetNumber = 2
+	sets := []domainworkout.WorkoutSet{set1, set2}
+
+	err = s.trManager.Do(s.ctx, func(ctx context.Context) error {
+		if err := s.repo.BatchInsertExercises(ctx, exercises); err != nil {
+			return err
+		}
+		return s.repo.BatchInsertSets(ctx, sets)
+	})
+	s.Require().NoError(err)
+
+	found, err := s.repo.FindByID(s.ctx, created.ID)
+	s.Require().NoError(err)
+	s.Require().Len(found.Exercises, 2)
+	s.Equal(0, found.Exercises[0].SortOrder)
+	s.Equal(ex1, found.Exercises[0].ExerciseID)
+	s.Equal(1, found.Exercises[1].SortOrder)
+	s.Equal(ex2, found.Exercises[1].ExerciseID)
+
+	s.Require().Len(found.Exercises[0].Sets, 2)
+	s.Equal(1, found.Exercises[0].Sets[0].SetNumber)
+	s.InEpsilon(80, found.Exercises[0].Sets[0].WeightKg, 1e-6)
+	s.Equal(5, found.Exercises[0].Sets[0].Reps)
+	s.Equal(90, *found.Exercises[0].Sets[0].RestSeconds)
+	s.Equal(2, found.Exercises[0].Sets[1].SetNumber)
+	s.Equal(8, *found.Exercises[0].Sets[1].RPE)
+	s.Empty(found.Exercises[1].Sets)
+}
+
 func (s *WorkoutRepoTestSuite) TestUpdate_HeaderOnly() {
 	w := s.createTestWorkout(s.newTestWorkout(uuid.New()))
 
