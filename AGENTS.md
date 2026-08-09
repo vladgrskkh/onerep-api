@@ -2,52 +2,62 @@
 
 Core gym domain service for OneRep — exercises, templates, workouts, progress tracking.
 
+> **Follow [`CONVENTIONS.md`](https://github.com/vladgrskkh/gym/blob/main/CONVENTIONS.md) — the shared engineering conventions for all OneRep services. This file lists the service-specific parts.**
+
 ## Stack
-- Go 1.23+, PostgreSQL 16, Redis 7, S3/MinIO
+- Go 1.26+, PostgreSQL 16, Redis 7, S3/MinIO
 
 ## Commands
 ```bash
 make run          # Start server on :8081
 make test         # Run all tests
-make lint         # go vet ./...
+make lint         # golangci-lint run (golden config)
+make tools        # Install pinned tools
+make generate     # mockery + swagger
+make mock         # mockery only
+make swagger      # swag init only
+make check-generate  # regenerate + fail on diff
 make migrate-up   # Apply migrations
 make migrate-down # Rollback migrations
 ```
 
 ## Architecture
-DDD with domain-based vertical slicing:
+Domain-based layered structure (see CONVENTIONS.md):
 
 ```
-cmd/server/          # Entry point
+cmd/server/              # Entry point (thin)
 internal/
   domain/
-    exercises/       # exercise domain (entities, service, handler)
-    templates/       # template domain
-    workouts/        # workout domain
-    progress/        # progress domain
-  application/       # App wire-up, route registration
-  handler/           # Shared HTTP utilities (response, middleware, DTOs)
-  infrastructure/    # Postgres, Redis, S3, JWT validator
-  config/            # Environment configuration
+    exercises/           # exercise entities, value objects, errors
+    templates/           # template entities
+    workouts/            # workout entities
+    progress/            # progress read models
+  service/
+    exercises/           # use cases + consumer-defined interfaces (ISP)
+    templates/
+    workouts/            # per-set PR check, finish → Redis job
+    progress/
+  handler/
+    exercises/           # handlers + dto/ + error_mapper.go + mapper.go
+    templates/
+    workouts/
+    progress/
+  infrastructure/
+    exercises/           # postgres/, s3/ per domain
+    templates/
+    workouts/
+    progress/
+  application/           # App wiring (options pattern), route registration
+  handler/               # shared HTTP utils: response, context, middleware
+  config/                # caarlos0/env
 ```
 
-## CI
-- `golangci-lint` v2 with golden config (maratori)
-- Docker build pushes to `ghcr.io/vladgrskkh/onerep-api`
-
-## Local dev
-```bash
-# Start dependencies
-docker compose -f ../docker-compose.yml up -d
-
-# Run
-make run
-```
-
-## ISP rule
-Interfaces are declared where they are consumed (application/), not in infrastructure/.
-No central interfaces.go file. Each service declares only the methods it needs.
+Key domain notes:
+- `workouts/` — per-set PR check (Epley 1RM) is synchronous; post-workout
+  volume recalculation is enqueued to Redis and processed by a worker.
+- Progress data is materialized (`progress_1rm`, `progress_volume`), not computed on read.
+- S3 media (exercise photos/videos, template photos) via presigned URLs.
 
 ## Service dependency
-Validates JWT tokens against the Auth service's JWKS endpoint (`/.well-known/jwks.json`).
-No direct HTTP call to Auth service per request — public key is cached on startup.
+Validates JWT tokens against the Auth service's JWKS endpoint
+(`/.well-known/jwks.json`). Public key cached on startup, no per-request calls.
