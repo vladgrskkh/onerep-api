@@ -1,5 +1,5 @@
-// Package workout contains the workout use cases and the interfaces the
-// service consumes, declared where they are used per ISP.
+// Package workout contains the workout use cases and the repository
+// interface the service consumes.
 package workout
 
 import (

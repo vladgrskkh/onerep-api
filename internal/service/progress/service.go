@@ -1,5 +1,5 @@
-// Package progress contains the progress use cases and the interfaces the
-// service consumes, declared where they are used per ISP.
+// Package progress contains the progress use cases and the repository
+// interface the service consumes.
 package progress
 
 import (

@@ -1,5 +1,5 @@
-// Package template contains the template use cases and the interfaces the
-// service consumes, declared where they are used per ISP.
+// Package template contains the template use cases and the repository
+// interface the service consumes.
 package template
 
 import (

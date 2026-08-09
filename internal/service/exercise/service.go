@@ -1,5 +1,5 @@
-// Package exercise contains the exercise use cases and the interfaces the
-// service consumes, declared where they are used per ISP.
+// Package exercise contains the exercise use cases and the repository
+// interfaces the service consumes.
 package exercise
 
 import (
