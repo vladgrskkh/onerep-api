@@ -11,17 +11,21 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/stretchr/testify/suite"
 
+	trmpgx "github.com/avito-tech/go-transaction-manager/drivers/pgxv5/v2"
+	"github.com/avito-tech/go-transaction-manager/trm/v2/manager"
+
 	"github.com/vladgrskkh/onerep-api/internal/domain/exercise"
-	"github.com/vladgrskkh/onerep-api/internal/infrastructure/gym/postgres"
+	"github.com/vladgrskkh/onerep-api/internal/infrastructure/exercise/postgres"
 )
 
 type ExerciseRepoTestSuite struct {
 	suite.Suite
 
-	pool    *pgxpool.Pool
-	repo    *postgres.ExerciseRepo
-	ctx     context.Context
-	created []uuid.UUID
+	pool      *pgxpool.Pool
+	repo      *postgres.ExerciseRepo
+	trManager *manager.Manager
+	ctx       context.Context
+	created   []uuid.UUID
 }
 
 func (s *ExerciseRepoTestSuite) SetupTest() {
@@ -31,6 +35,7 @@ func (s *ExerciseRepoTestSuite) SetupTest() {
 	}
 	s.pool = pool
 	s.repo = postgres.NewExerciseRepo(pool)
+	s.trManager = manager.Must(trmpgx.NewDefaultFactory(pool))
 	s.ctx = context.Background()
 }
 
@@ -58,10 +63,25 @@ func (s *ExerciseRepoTestSuite) newTestExercise(name string) exercise.Exercise {
 }
 
 func (s *ExerciseRepoTestSuite) createTestExercise(ex exercise.Exercise) exercise.Exercise {
-	created, err := s.repo.Create(s.ctx, ex)
+	var created exercise.Exercise
+	err := s.trManager.Do(s.ctx, func(ctx context.Context) error {
+		var err error
+		created, err = s.repo.Create(ctx, ex)
+		return err
+	})
 	s.Require().NoError(err)
 	s.created = append(s.created, created.ID)
 	return created
+}
+
+func (s *ExerciseRepoTestSuite) updateTestExercise(ex exercise.Exercise) (exercise.Exercise, error) {
+	var updated exercise.Exercise
+	err := s.trManager.Do(s.ctx, func(ctx context.Context) error {
+		var err error
+		updated, err = s.repo.Update(ctx, ex)
+		return err
+	})
+	return updated, err
 }
 
 func (s *ExerciseRepoTestSuite) TestCreateAndFindByID() {
@@ -188,7 +208,7 @@ func (s *ExerciseRepoTestSuite) TestUpdate_ReplacesChildren() {
 		{ExerciseID: ex.ID, MuscleGroupID: 3, IsPrimary: true},
 	}
 
-	updated, err := s.repo.Update(s.ctx, ex)
+	updated, err := s.updateTestExercise(ex)
 	s.Require().NoError(err)
 	s.Equal(2, updated.Version)
 
@@ -207,18 +227,18 @@ func (s *ExerciseRepoTestSuite) TestUpdate_VersionConflict() {
 	ex := s.createTestExercise(s.newTestExercise("VersionConflict-" + uuid.NewString()))
 
 	ex.Notes = "first update"
-	_, err := s.repo.Update(s.ctx, ex)
+	_, err := s.updateTestExercise(ex)
 	s.Require().NoError(err)
 
 	ex.Version = 1
-	_, err = s.repo.Update(s.ctx, ex)
+	_, err = s.updateTestExercise(ex)
 	s.ErrorIs(err, exercise.ErrExerciseNotFound)
 }
 
 func (s *ExerciseRepoTestSuite) TestUpdate_NotFound() {
 	ex, err := exercise.NewExercise("NotFound-"+uuid.NewString(), "Description", "Notes", uuid.New())
 	s.Require().NoError(err)
-	_, err = s.repo.Update(s.ctx, ex)
+	_, err = s.updateTestExercise(ex)
 	s.ErrorIs(err, exercise.ErrExerciseNotFound)
 }
 

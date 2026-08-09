@@ -5,19 +5,22 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	trmpgx "github.com/avito-tech/go-transaction-manager/drivers/pgxv5/v2"
+
 	"github.com/vladgrskkh/onerep-api/internal/domain/exercise"
 )
 
 type MuscleGroupRepo struct {
-	pool *pgxpool.Pool
+	db     trmpgx.Tr
+	getter *trmpgx.CtxGetter
 }
 
 func NewMuscleGroupRepo(pool *pgxpool.Pool) *MuscleGroupRepo {
-	return &MuscleGroupRepo{pool: pool}
+	return &MuscleGroupRepo{db: pool, getter: trmpgx.DefaultCtxGetter}
 }
 
 func (r *MuscleGroupRepo) List(ctx context.Context) ([]exercise.MuscleGroup, error) {
-	rows, err := r.pool.Query(ctx, `
+	rows, err := r.getter.DefaultTrOrDB(ctx, r.db).Query(ctx, `
 		SELECT id, name FROM gym.muscle_groups ORDER BY id
 	`)
 	if err != nil {

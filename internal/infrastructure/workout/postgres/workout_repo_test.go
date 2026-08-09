@@ -11,8 +11,11 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/stretchr/testify/suite"
 
+	trmpgx "github.com/avito-tech/go-transaction-manager/drivers/pgxv5/v2"
+	"github.com/avito-tech/go-transaction-manager/trm/v2/manager"
+
 	domainworkout "github.com/vladgrskkh/onerep-api/internal/domain/workout"
-	"github.com/vladgrskkh/onerep-api/internal/infrastructure/gym/postgres"
+	"github.com/vladgrskkh/onerep-api/internal/infrastructure/workout/postgres"
 )
 
 type WorkoutRepoTestSuite struct {
@@ -20,6 +23,7 @@ type WorkoutRepoTestSuite struct {
 
 	pool         *pgxpool.Pool
 	repo         *postgres.WorkoutRepo
+	trManager    *manager.Manager
 	ctx          context.Context
 	created      []uuid.UUID
 	exercisesIDs []uuid.UUID
@@ -32,6 +36,7 @@ func (s *WorkoutRepoTestSuite) SetupTest() {
 	}
 	s.pool = pool
 	s.repo = postgres.NewWorkoutRepo(pool)
+	s.trManager = manager.Must(trmpgx.NewDefaultFactory(pool))
 	s.ctx = context.Background()
 }
 
@@ -84,10 +89,25 @@ func (s *WorkoutRepoTestSuite) newTestWorkout(userID uuid.UUID) domainworkout.Wo
 }
 
 func (s *WorkoutRepoTestSuite) createTestWorkout(w domainworkout.Workout) domainworkout.Workout {
-	created, err := s.repo.Create(s.ctx, w)
+	var created domainworkout.Workout
+	err := s.trManager.Do(s.ctx, func(ctx context.Context) error {
+		var err error
+		created, err = s.repo.Create(ctx, w)
+		return err
+	})
 	s.Require().NoError(err)
 	s.created = append(s.created, created.ID)
 	return created
+}
+
+func (s *WorkoutRepoTestSuite) updateTestWorkout(w domainworkout.Workout) (domainworkout.Workout, error) {
+	var updated domainworkout.Workout
+	err := s.trManager.Do(s.ctx, func(ctx context.Context) error {
+		var err error
+		updated, err = s.repo.Update(ctx, w)
+		return err
+	})
+	return updated, err
 }
 
 func (s *WorkoutRepoTestSuite) TestCreateAndFindByID() {
@@ -235,7 +255,7 @@ func (s *WorkoutRepoTestSuite) TestUpdate_HeaderOnly() {
 	w.Notes = "updated notes"
 	finishedAt := time.Now()
 	w.FinishedAt = &finishedAt
-	updated, err := s.repo.Update(s.ctx, w)
+	updated, err := s.updateTestWorkout(w)
 	s.Require().NoError(err)
 	s.Equal(2, updated.Version)
 
@@ -251,18 +271,18 @@ func (s *WorkoutRepoTestSuite) TestUpdate_VersionConflict() {
 	w := s.createTestWorkout(s.newTestWorkout(uuid.New()))
 
 	w.Notes = "first update"
-	_, err := s.repo.Update(s.ctx, w)
+	_, err := s.updateTestWorkout(w)
 	s.Require().NoError(err)
 
 	w.Version = 1
-	_, err = s.repo.Update(s.ctx, w)
+	_, err = s.updateTestWorkout(w)
 	s.ErrorIs(err, domainworkout.ErrWorkoutNotFound)
 }
 
 func (s *WorkoutRepoTestSuite) TestUpdate_NotFound() {
 	w, err := domainworkout.NewWorkout(uuid.New(), nil)
 	s.Require().NoError(err)
-	_, err = s.repo.Update(s.ctx, w)
+	_, err = s.updateTestWorkout(w)
 	s.ErrorIs(err, domainworkout.ErrWorkoutNotFound)
 }
 

@@ -2,22 +2,25 @@ package postgres
 
 import (
 	"context"
-	"strconv"
 	"strings"
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
+
+	trmpgx "github.com/avito-tech/go-transaction-manager/drivers/pgxv5/v2"
 
 	domainbodyweight "github.com/vladgrskkh/onerep-api/internal/domain/bodyweight"
 )
 
 type BodyWeightRepo struct {
-	pool *pgxpool.Pool
+	db     trmpgx.Tr
+	getter *trmpgx.CtxGetter
 }
 
 func NewBodyWeightRepo(pool *pgxpool.Pool) *BodyWeightRepo {
-	return &BodyWeightRepo{pool: pool}
+	return &BodyWeightRepo{db: pool, getter: trmpgx.DefaultCtxGetter}
 }
 
 func (r *BodyWeightRepo) List(
@@ -27,17 +30,17 @@ func (r *BodyWeightRepo) List(
 ) ([]domainbodyweight.BodyWeight, error) {
 	var query strings.Builder
 	query.WriteString(
-		`SELECT id, user_id, weight_kg, measured_at, created_at, updated_at, version FROM gym.body_weights WHERE user_id = $1`,
+		`SELECT id, user_id, weight_kg, measured_at, created_at, updated_at, version FROM gym.body_weights WHERE user_id = @user_id`,
 	)
-	args := []any{userID}
+	args := pgx.NamedArgs{"user_id": userID}
 
 	if since != nil {
-		args = append(args, *since)
-		query.WriteString(" AND updated_at > $" + strconv.Itoa(len(args)))
+		query.WriteString(` AND updated_at > @since`)
+		args["since"] = *since
 	}
-	query.WriteString(" ORDER BY measured_at DESC")
+	query.WriteString(` ORDER BY measured_at DESC`)
 
-	rows, err := r.pool.Query(ctx, query.String(), args...)
+	rows, err := r.getter.DefaultTrOrDB(ctx, r.db).Query(ctx, query.String(), args)
 	if err != nil {
 		return nil, err
 	}
@@ -66,11 +69,19 @@ func (r *BodyWeightRepo) Create(
 	ctx context.Context,
 	bw domainbodyweight.BodyWeight,
 ) (domainbodyweight.BodyWeight, error) {
-	_, err := r.pool.Exec(ctx, `
+	conn := r.getter.DefaultTrOrDB(ctx, r.db)
+	if _, err := conn.Exec(ctx, `
 		INSERT INTO gym.body_weights (id, user_id, weight_kg, measured_at, created_at, updated_at, version)
-		VALUES ($1, $2, $3, $4, $5, $6, $7)
-	`, bw.ID, bw.UserID, bw.WeightKg, bw.MeasuredAt, bw.CreatedAt, bw.UpdatedAt, bw.Version)
-	if err != nil {
+		VALUES (@id, @user_id, @weight_kg, @measured_at, @created_at, @updated_at, @version)
+	`, pgx.NamedArgs{
+		"id":          bw.ID,
+		"user_id":     bw.UserID,
+		"weight_kg":   bw.WeightKg,
+		"measured_at": bw.MeasuredAt,
+		"created_at":  bw.CreatedAt,
+		"updated_at":  bw.UpdatedAt,
+		"version":     bw.Version,
+	}); err != nil {
 		return domainbodyweight.BodyWeight{}, err
 	}
 	return bw, nil

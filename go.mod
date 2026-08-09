@@ -3,6 +3,8 @@ module github.com/vladgrskkh/onerep-api
 go 1.26
 
 require (
+	github.com/avito-tech/go-transaction-manager/drivers/pgxv5/v2 v2.0.4
+	github.com/avito-tech/go-transaction-manager/trm/v2 v2.0.2
 	github.com/golangci/golangci-lint/v2 v2.12.2
 	github.com/google/uuid v1.6.0
 	github.com/jackc/pgx/v5 v5.10.0

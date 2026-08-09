@@ -11,17 +11,21 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/stretchr/testify/suite"
 
+	trmpgx "github.com/avito-tech/go-transaction-manager/drivers/pgxv5/v2"
+	"github.com/avito-tech/go-transaction-manager/trm/v2/manager"
+
 	domainbodyweight "github.com/vladgrskkh/onerep-api/internal/domain/bodyweight"
-	"github.com/vladgrskkh/onerep-api/internal/infrastructure/gym/postgres"
+	"github.com/vladgrskkh/onerep-api/internal/infrastructure/bodyweight/postgres"
 )
 
 type BodyWeightRepoTestSuite struct {
 	suite.Suite
 
-	pool    *pgxpool.Pool
-	repo    *postgres.BodyWeightRepo
-	ctx     context.Context
-	created []uuid.UUID
+	pool      *pgxpool.Pool
+	repo      *postgres.BodyWeightRepo
+	trManager *manager.Manager
+	ctx       context.Context
+	created   []uuid.UUID
 }
 
 func (s *BodyWeightRepoTestSuite) SetupTest() {
@@ -31,6 +35,7 @@ func (s *BodyWeightRepoTestSuite) SetupTest() {
 	}
 	s.pool = pool
 	s.repo = postgres.NewBodyWeightRepo(pool)
+	s.trManager = manager.Must(trmpgx.NewDefaultFactory(pool))
 	s.ctx = context.Background()
 }
 
@@ -51,7 +56,13 @@ func (s *BodyWeightRepoTestSuite) createTestBodyWeight(
 	bw, err := domainbodyweight.NewBodyWeight(userID, weightKg, measuredAt)
 	s.Require().NoError(err)
 	bw.UpdatedAt = measuredAt
-	created, err := s.repo.Create(s.ctx, bw)
+
+	var created domainbodyweight.BodyWeight
+	err = s.trManager.Do(s.ctx, func(ctx context.Context) error {
+		var err error
+		created, err = s.repo.Create(ctx, bw)
+		return err
+	})
 	s.Require().NoError(err)
 	s.created = append(s.created, created.ID)
 	return created

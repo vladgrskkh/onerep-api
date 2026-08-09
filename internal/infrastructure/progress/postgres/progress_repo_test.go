@@ -11,8 +11,11 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/stretchr/testify/suite"
 
+	trmpgx "github.com/avito-tech/go-transaction-manager/drivers/pgxv5/v2"
+	"github.com/avito-tech/go-transaction-manager/trm/v2/manager"
+
 	domainprogress "github.com/vladgrskkh/onerep-api/internal/domain/progress"
-	"github.com/vladgrskkh/onerep-api/internal/infrastructure/gym/postgres"
+	"github.com/vladgrskkh/onerep-api/internal/infrastructure/progress/postgres"
 )
 
 type progress1RMKey struct {
@@ -32,6 +35,7 @@ type ProgressRepoTestSuite struct {
 
 	pool       *pgxpool.Pool
 	repo       *postgres.ProgressRepo
+	trManager  *manager.Manager
 	ctx        context.Context
 	exerciseID uuid.UUID
 	oneRMKeys  []progress1RMKey
@@ -45,6 +49,7 @@ func (s *ProgressRepoTestSuite) SetupTest() {
 	}
 	s.pool = pool
 	s.repo = postgres.NewProgressRepo(pool)
+	s.trManager = manager.Must(trmpgx.NewDefaultFactory(pool))
 	s.ctx = context.Background()
 
 	exerciseID := uuid.Must(uuid.NewV7())

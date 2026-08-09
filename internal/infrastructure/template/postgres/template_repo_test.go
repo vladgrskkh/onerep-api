@@ -11,8 +11,11 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/stretchr/testify/suite"
 
+	trmpgx "github.com/avito-tech/go-transaction-manager/drivers/pgxv5/v2"
+	"github.com/avito-tech/go-transaction-manager/trm/v2/manager"
+
 	domaintemplate "github.com/vladgrskkh/onerep-api/internal/domain/template"
-	"github.com/vladgrskkh/onerep-api/internal/infrastructure/gym/postgres"
+	"github.com/vladgrskkh/onerep-api/internal/infrastructure/template/postgres"
 )
 
 type TemplateRepoTestSuite struct {
@@ -20,6 +23,7 @@ type TemplateRepoTestSuite struct {
 
 	pool         *pgxpool.Pool
 	repo         *postgres.TemplateRepo
+	trManager    *manager.Manager
 	ctx          context.Context
 	created      []uuid.UUID
 	exercisesIDs []uuid.UUID
@@ -32,6 +36,7 @@ func (s *TemplateRepoTestSuite) SetupTest() {
 	}
 	s.pool = pool
 	s.repo = postgres.NewTemplateRepo(pool)
+	s.trManager = manager.Must(trmpgx.NewDefaultFactory(pool))
 	s.ctx = context.Background()
 }
 
@@ -74,10 +79,25 @@ func (s *TemplateRepoTestSuite) newTestTemplate(name string) domaintemplate.Temp
 }
 
 func (s *TemplateRepoTestSuite) createTestTemplate(t domaintemplate.Template) domaintemplate.Template {
-	created, err := s.repo.Create(s.ctx, t)
+	var created domaintemplate.Template
+	err := s.trManager.Do(s.ctx, func(ctx context.Context) error {
+		var err error
+		created, err = s.repo.Create(ctx, t)
+		return err
+	})
 	s.Require().NoError(err)
 	s.created = append(s.created, created.ID)
 	return created
+}
+
+func (s *TemplateRepoTestSuite) updateTestTemplate(t domaintemplate.Template) (domaintemplate.Template, error) {
+	var updated domaintemplate.Template
+	err := s.trManager.Do(s.ctx, func(ctx context.Context) error {
+		var err error
+		updated, err = s.repo.Update(ctx, t)
+		return err
+	})
+	return updated, err
 }
 
 func (s *TemplateRepoTestSuite) TestCreateAndFindByID() {
@@ -198,7 +218,7 @@ func (s *TemplateRepoTestSuite) TestUpdate_ReplacesChildren() {
 		{ID: uuid.Must(uuid.NewV7()), TemplateID: t.ID, MediaType: domaintemplate.MediaTypePhoto, SortOrder: 0, S3Key: "templates/replacement.jpg"},
 	}
 
-	updated, err := s.repo.Update(s.ctx, t)
+	updated, err := s.updateTestTemplate(t)
 	s.Require().NoError(err)
 	s.Equal(2, updated.Version)
 
@@ -218,18 +238,18 @@ func (s *TemplateRepoTestSuite) TestUpdate_VersionConflict() {
 	t := s.createTestTemplate(s.newTestTemplate("VersionConflict-" + uuid.NewString()))
 
 	t.Name = "first update"
-	_, err := s.repo.Update(s.ctx, t)
+	_, err := s.updateTestTemplate(t)
 	s.Require().NoError(err)
 
 	t.Version = 1
-	_, err = s.repo.Update(s.ctx, t)
+	_, err = s.updateTestTemplate(t)
 	s.ErrorIs(err, domaintemplate.ErrTemplateNotFound)
 }
 
 func (s *TemplateRepoTestSuite) TestUpdate_NotFound() {
 	t, err := domaintemplate.NewTemplate("NotFound-"+uuid.NewString(), "Description", uuid.New())
 	s.Require().NoError(err)
-	_, err = s.repo.Update(s.ctx, t)
+	_, err = s.updateTestTemplate(t)
 	s.ErrorIs(err, domaintemplate.ErrTemplateNotFound)
 }
 
