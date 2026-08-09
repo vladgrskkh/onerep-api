@@ -1,5 +1,12 @@
 basePath: /v1
 definitions:
+  dto.AddExerciseRequest:
+    properties:
+      exercise_id:
+        type: string
+    required:
+    - exercise_id
+    type: object
   dto.ExerciseCreateRequest:
     properties:
       description:
@@ -70,12 +77,57 @@ definitions:
       notes:
         type: string
     type: object
+  dto.LogSetRequest:
+    properties:
+      is_warmup:
+        type: boolean
+      reps:
+        type: integer
+      rest_seconds:
+        minimum: 0
+        type: integer
+      rpe:
+        maximum: 10
+        minimum: 1
+        type: integer
+      weight_kg:
+        type: number
+    required:
+    - reps
+    - weight_kg
+    type: object
+  dto.LogSetResponse:
+    properties:
+      estimated_1rm:
+        type: number
+      id:
+        type: string
+      is_pr:
+        type: boolean
+      is_warmup:
+        type: boolean
+      reps:
+        type: integer
+      rest_seconds:
+        type: integer
+      rpe:
+        type: integer
+      set_number:
+        type: integer
+      weight_kg:
+        type: number
+    type: object
   dto.MuscleGroupResponse:
     properties:
       id:
         type: integer
       is_primary:
         type: boolean
+    type: object
+  dto.StartWorkoutRequest:
+    properties:
+      template_id:
+        type: string
     type: object
   dto.TemplateCreateRequest:
     properties:
@@ -158,6 +210,61 @@ definitions:
       name:
         maxLength: 100
         type: string
+    type: object
+  dto.WorkoutExerciseResponse:
+    properties:
+      exercise_id:
+        type: string
+      id:
+        type: string
+      notes:
+        type: string
+      sets:
+        items:
+          $ref: '#/definitions/dto.WorkoutSetResponse'
+        type: array
+      sort_order:
+        type: integer
+    type: object
+  dto.WorkoutResponse:
+    properties:
+      created_at:
+        type: string
+      exercises:
+        items:
+          $ref: '#/definitions/dto.WorkoutExerciseResponse'
+        type: array
+      finished_at:
+        type: string
+      id:
+        type: string
+      notes:
+        type: string
+      started_at:
+        type: string
+      template_id:
+        type: string
+      updated_at:
+        type: string
+      user_id:
+        type: string
+    type: object
+  dto.WorkoutSetResponse:
+    properties:
+      id:
+        type: string
+      is_warmup:
+        type: boolean
+      reps:
+        type: integer
+      rest_seconds:
+        type: integer
+      rpe:
+        type: integer
+      set_number:
+        type: integer
+      weight_kg:
+        type: number
     type: object
   handler.ErrorDetail:
     properties:
@@ -619,6 +726,237 @@ paths:
       summary: Publish a template
       tags:
       - templates
+  /workouts:
+    get:
+      consumes:
+      - application/json
+      description: List the authenticated user's workouts, optionally filtered by
+        last-updated time
+      parameters:
+      - description: Only workouts updated after this RFC 3339 timestamp
+        in: query
+        name: since
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/dto.WorkoutResponse'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: List workouts
+      tags:
+      - workouts
+    post:
+      consumes:
+      - application/json
+      description: Start a workout for the authenticated user, optionally from a template;
+        an empty body starts without a template
+      parameters:
+      - description: Template ID, optional
+        in: body
+        name: request
+        schema:
+          $ref: '#/definitions/dto.StartWorkoutRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/dto.WorkoutResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Start a workout
+      tags:
+      - workouts
+  /workouts/{id}:
+    get:
+      consumes:
+      - application/json
+      description: Get a workout by ID, including its exercises and sets
+      parameters:
+      - description: Workout ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.WorkoutResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get a workout
+      tags:
+      - workouts
+  /workouts/{id}/exercises:
+    post:
+      consumes:
+      - application/json
+      description: Append an exercise to the authenticated user's workout
+      parameters:
+      - description: Workout ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Exercise to add
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/dto.AddExerciseRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/dto.WorkoutExerciseResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Add an exercise to a workout
+      tags:
+      - workouts
+  /workouts/{id}/exercises/{exId}/sets:
+    post:
+      consumes:
+      - application/json
+      description: Log a set against a workout exercise; returns the estimated one-rep
+        max (Epley formula) and whether it is a new personal record
+      parameters:
+      - description: Workout ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Workout exercise ID
+        in: path
+        name: exId
+        required: true
+        type: string
+      - description: Set data
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/dto.LogSetRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/dto.LogSetResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Log a set
+      tags:
+      - workouts
+  /workouts/{id}/finish:
+    patch:
+      consumes:
+      - application/json
+      description: Mark the authenticated user's workout as completed and enqueue
+        its volume recalculation
+      parameters:
+      - description: Workout ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.WorkoutResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Finish a workout
+      tags:
+      - workouts
 securityDefinitions:
   BearerAuth:
     in: header
