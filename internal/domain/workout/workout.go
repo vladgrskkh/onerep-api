@@ -26,6 +26,7 @@ type WorkoutExercise struct {
 	ExerciseID uuid.UUID
 	SortOrder  int
 	Notes      string
+	Sets       []WorkoutSet
 }
 
 type WorkoutSet struct {
