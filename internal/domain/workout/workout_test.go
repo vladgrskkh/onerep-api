@@ -70,7 +70,7 @@ func (s *WorkoutTestSuite) TestNewWorkoutSet() {
 	s.NotEqual(uuid.Nil, ws.ID)
 	s.Equal(uuid.Version(7), ws.ID.Version())
 	s.Equal(workoutExerciseID, ws.WorkoutExerciseID)
-	s.Equal(82.5, ws.WeightKg)
+	s.InEpsilon(82.5, ws.WeightKg, 1e-6)
 	s.Equal(5, ws.Reps)
 	s.NotNil(ws.RPE)
 	s.Equal(8, *ws.RPE)
@@ -90,8 +90,8 @@ func (s *WorkoutTestSuite) TestNewWorkoutSet_OptionalNil() {
 }
 
 func (s *WorkoutTestSuite) TestErrors() {
-	s.ErrorContains(workout.ErrWorkoutNotFound, "workout not found")
-	s.ErrorContains(workout.ErrActiveWorkout, "active workout")
+	s.Require().ErrorContains(workout.ErrWorkoutNotFound, "workout not found")
+	s.Require().ErrorContains(workout.ErrActiveWorkout, "active workout")
 }
 
 func TestWorkoutSuite(t *testing.T) {

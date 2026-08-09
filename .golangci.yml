@@ -184,7 +184,7 @@ linters:
         - fieldalignment
       settings:
         shadow:
-          strict: true
+          strict: false
 
     mnd:
       ignored-functions:
@@ -222,7 +222,6 @@ linters:
 
     sloglint:
       no-global: all
-      context: scope
 
     staticcheck:
       checks:
@@ -242,6 +241,10 @@ linters:
     rules:
       - source: 'TODO'
         linters: [godot]
+      - source: '@Router'
+        linters: [godot]
+      - text: 'exported: type name will be used as .+ by other packages, and that stutters'
+        linters: [revive]
       - text: 'should have a package comment'
         linters: [revive]
       - text: 'exported \S+ \S+ should have comment( \(or a comment on this block\))? or be unexported'

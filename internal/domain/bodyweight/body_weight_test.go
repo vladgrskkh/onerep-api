@@ -23,7 +23,7 @@ func (s *BodyWeightTestSuite) TestNewBodyWeight() {
 	s.NotEqual(uuid.Nil, bw.ID)
 	s.Equal(uuid.Version(7), bw.ID.Version())
 	s.Equal(userID, bw.UserID)
-	s.Equal(78.5, bw.WeightKg)
+	s.InEpsilon(78.5, bw.WeightKg, 1e-6)
 	s.Equal(measuredAt, bw.MeasuredAt)
 	s.False(bw.CreatedAt.IsZero())
 	s.False(bw.UpdatedAt.IsZero())

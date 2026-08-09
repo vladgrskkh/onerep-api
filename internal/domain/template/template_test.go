@@ -35,12 +35,12 @@ func (s *TemplateTestSuite) TestNewTemplate() {
 }
 
 func (s *TemplateTestSuite) TestMediaTypePhoto() {
-	s.Equal(template.MediaType("photo"), template.MediaTypePhoto)
+	s.Equal(template.MediaTypePhoto, template.MediaType("photo"))
 }
 
 func (s *TemplateTestSuite) TestErrors() {
-	s.ErrorContains(template.ErrTemplateNotFound, "template not found")
-	s.ErrorContains(template.ErrNotOwner, "not the owner")
+	s.Require().ErrorContains(template.ErrTemplateNotFound, "template not found")
+	s.Require().ErrorContains(template.ErrNotOwner, "not the owner")
 }
 
 func TestTemplateSuite(t *testing.T) {

@@ -60,7 +60,14 @@ func NewWorkoutExercise(workoutID, exerciseID uuid.UUID) WorkoutExercise {
 	}
 }
 
-func NewWorkoutSet(workoutExerciseID uuid.UUID, weightKg float64, reps int, rpe *int, restSeconds *int, isWarmup bool) WorkoutSet {
+func NewWorkoutSet(
+	workoutExerciseID uuid.UUID,
+	weightKg float64,
+	reps int,
+	rpe *int,
+	restSeconds *int,
+	isWarmup bool,
+) WorkoutSet {
 	return WorkoutSet{
 		ID:                uuid.Must(uuid.NewV7()),
 		WorkoutExerciseID: workoutExerciseID,

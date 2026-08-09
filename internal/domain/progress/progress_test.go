@@ -24,7 +24,7 @@ func (s *ProgressTestSuite) TestNewProgress1RM() {
 	s.Equal(exerciseID, p.ExerciseID)
 	s.Equal(userID, p.UserID)
 	s.Equal(date, p.Date)
-	s.Equal(120.0, p.Estimated1RM)
+	s.InEpsilon(120.0, p.Estimated1RM, 1e-6)
 }
 
 func (s *ProgressTestSuite) TestNewProgressVolume() {
@@ -36,7 +36,7 @@ func (s *ProgressTestSuite) TestNewProgressVolume() {
 	s.Equal(1, p.MuscleGroupID)
 	s.Equal(userID, p.UserID)
 	s.Equal(date, p.Date)
-	s.Equal(5000.0, p.TotalKG)
+	s.InEpsilon(5000.0, p.TotalKG, 1e-6)
 }
 
 func TestProgressSuite(t *testing.T) {

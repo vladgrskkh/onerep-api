@@ -44,13 +44,13 @@ func (s *ExerciseTestSuite) TestNewMuscleGroup() {
 }
 
 func (s *ExerciseTestSuite) TestMediaTypeConstants() {
-	s.Equal(exercise.MediaType("photo"), exercise.MediaTypePhoto)
-	s.Equal(exercise.MediaType("video"), exercise.MediaTypeVideo)
+	s.Equal(exercise.MediaTypePhoto, exercise.MediaType("photo"))
+	s.Equal(exercise.MediaTypeVideo, exercise.MediaType("video"))
 }
 
 func (s *ExerciseTestSuite) TestErrors() {
-	s.ErrorContains(exercise.ErrExerciseNotFound, "exercise not found")
-	s.ErrorContains(exercise.ErrCannotEditBuiltIn, "built-in")
+	s.Require().ErrorContains(exercise.ErrExerciseNotFound, "exercise not found")
+	s.Require().ErrorContains(exercise.ErrCannotEditBuiltIn, "built-in")
 }
 
 func TestExerciseSuite(t *testing.T) {
