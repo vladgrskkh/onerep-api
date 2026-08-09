@@ -13,6 +13,12 @@ type ExerciseRepository interface {
 	FindByID(ctx context.Context, id uuid.UUID) (domainexercise.Exercise, error)
 	Create(ctx context.Context, ex domainexercise.Exercise) (domainexercise.Exercise, error)
 	Update(ctx context.Context, ex domainexercise.Exercise) (domainexercise.Exercise, error)
+	ReplaceMedia(ctx context.Context, exerciseID uuid.UUID, media []domainexercise.ExerciseMedia) error
+	ReplaceMuscleGroups(
+		ctx context.Context,
+		exerciseID uuid.UUID,
+		groups []domainexercise.ExerciseMuscleGroup,
+	) error
 	SoftDelete(ctx context.Context, id uuid.UUID) error
 }
 

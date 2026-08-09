@@ -94,7 +94,25 @@ func (s *WorkoutRepoTestSuite) createTestWorkout(w domainworkout.Workout) domain
 	err := s.trManager.Do(s.ctx, func(ctx context.Context) error {
 		var err error
 		created, err = s.repo.Create(ctx, w)
-		return err
+		if err != nil {
+			return err
+		}
+		created.Exercises = nil
+		for _, we := range w.Exercises {
+			createdWE, err := s.repo.AddExercise(ctx, created.ID, we.ExerciseID)
+			if err != nil {
+				return err
+			}
+			for _, set := range we.Sets {
+				createdSet, err := s.repo.LogSet(ctx, createdWE.ID, set)
+				if err != nil {
+					return err
+				}
+				createdWE.Sets = append(createdWE.Sets, createdSet)
+			}
+			created.Exercises = append(created.Exercises, createdWE)
+		}
+		return nil
 	})
 	s.Require().NoError(err)
 	s.created = append(s.created, created.ID)
@@ -135,6 +153,25 @@ func (s *WorkoutRepoTestSuite) TestCreateAndFindByID() {
 	s.InEpsilon(82.5, found.Exercises[0].Sets[1].WeightKg, 1e-6)
 	s.Equal(3, found.Exercises[0].Sets[1].Reps)
 	s.Empty(found.Exercises[1].Sets)
+}
+
+func (s *WorkoutRepoTestSuite) TestCreate_HeaderOnly() {
+	userID := uuid.New()
+	w, err := domainworkout.NewWorkout(userID, nil)
+	s.Require().NoError(err)
+	var created domainworkout.Workout
+	err = s.trManager.Do(s.ctx, func(ctx context.Context) error {
+		var err error
+		created, err = s.repo.Create(ctx, w)
+		return err
+	})
+	s.Require().NoError(err)
+	s.created = append(s.created, created.ID)
+
+	found, err := s.repo.FindByID(s.ctx, created.ID)
+	s.Require().NoError(err)
+	s.Equal(w.UserID, found.UserID)
+	s.Empty(found.Exercises)
 }
 
 func (s *WorkoutRepoTestSuite) TestCreate_WithTemplateAndNotes() {
@@ -208,15 +245,25 @@ func (s *WorkoutRepoTestSuite) TestList_ExcludesSoftDeleted() {
 	s.ErrorIs(err, domainworkout.ErrWorkoutNotFound)
 }
 
+func (s *WorkoutRepoTestSuite) insertWorkoutExercise(id, workoutID, exerciseID uuid.UUID, sortOrder int) {
+	_, err := s.pool.Exec(s.ctx, `
+		INSERT INTO gym.workout_exercises (id, workout_id, exercise_id, sort_order, notes)
+		VALUES ($1, $2, $3, $4, '')
+	`, id, workoutID, exerciseID, sortOrder)
+	s.Require().NoError(err)
+}
+
 func (s *WorkoutRepoTestSuite) TestFindByID_AttributesSetsWithEqualSortOrder() {
 	w, err := domainworkout.NewWorkout(uuid.New(), nil)
 	s.Require().NoError(err)
+	s.createTestWorkout(w)
 	ex1 := s.insertTestExercise()
 	ex2 := s.insertTestExercise()
 
 	we1, err := domainworkout.NewWorkoutExercise(w.ID, ex1)
 	s.Require().NoError(err)
 	we1.SortOrder = 0
+	s.insertWorkoutExercise(we1.ID, w.ID, ex1, 0)
 	set1, err := domainworkout.NewWorkoutSet(we1.ID, 60, 10, nil, nil, false)
 	s.Require().NoError(err)
 	set1.SetNumber = 1
@@ -228,6 +275,7 @@ func (s *WorkoutRepoTestSuite) TestFindByID_AttributesSetsWithEqualSortOrder() {
 	we2, err := domainworkout.NewWorkoutExercise(w.ID, ex2)
 	s.Require().NoError(err)
 	we2.SortOrder = 0
+	s.insertWorkoutExercise(we2.ID, w.ID, ex2, 0)
 	set3, err := domainworkout.NewWorkoutSet(we2.ID, 100, 5, nil, nil, false)
 	s.Require().NoError(err)
 	set3.SetNumber = 1
@@ -236,8 +284,12 @@ func (s *WorkoutRepoTestSuite) TestFindByID_AttributesSetsWithEqualSortOrder() {
 	set4.SetNumber = 2
 	we2.Sets = []domainworkout.WorkoutSet{set3, set4}
 
-	w.Exercises = []domainworkout.WorkoutExercise{we1, we2}
-	s.createTestWorkout(w)
+	for _, we := range []domainworkout.WorkoutExercise{we1, we2} {
+		for _, set := range we.Sets {
+			_, err = s.repo.LogSet(s.ctx, we.ID, set)
+			s.Require().NoError(err)
+		}
+	}
 
 	found, err := s.repo.FindByID(s.ctx, w.ID)
 	s.Require().NoError(err)

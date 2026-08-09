@@ -173,37 +173,62 @@ func (r *TemplateRepo) Create(ctx context.Context, t domaintemplate.Template) (d
 	}); err != nil {
 		return domaintemplate.Template{}, err
 	}
+	return t, nil
+}
 
-	for _, te := range t.Exercises {
+func (r *TemplateRepo) ReplaceExercises(
+	ctx context.Context,
+	templateID uuid.UUID,
+	exercises []domaintemplate.TemplateExercise,
+) error {
+	conn := r.getter.DefaultTrOrDB(ctx, r.db)
+	if _, err := conn.Exec(ctx, `
+		DELETE FROM gym.template_exercises WHERE template_id = @template_id
+	`, pgx.NamedArgs{argTemplateID: templateID}); err != nil {
+		return err
+	}
+	for _, te := range exercises {
 		if _, err := conn.Exec(ctx, `
 			INSERT INTO gym.template_exercises (template_id, exercise_id, sort_order, planned_sets)
 			VALUES (@template_id, @exercise_id, @sort_order, @planned_sets)
 		`, pgx.NamedArgs{
-			argTemplateID:  te.TemplateID,
+			argTemplateID:  templateID,
 			"exercise_id":  te.ExerciseID,
 			argSortOrder:   te.SortOrder,
 			"planned_sets": te.PlannedSets,
 		}); err != nil {
-			return domaintemplate.Template{}, err
+			return err
 		}
 	}
+	return nil
+}
 
-	for _, m := range t.Media {
+func (r *TemplateRepo) ReplaceMedia(
+	ctx context.Context,
+	templateID uuid.UUID,
+	media []domaintemplate.TemplateMedia,
+) error {
+	conn := r.getter.DefaultTrOrDB(ctx, r.db)
+	if _, err := conn.Exec(ctx, `
+		DELETE FROM gym.template_media WHERE template_id = @template_id
+	`, pgx.NamedArgs{argTemplateID: templateID}); err != nil {
+		return err
+	}
+	for _, m := range media {
 		if _, err := conn.Exec(ctx, `
 			INSERT INTO gym.template_media (id, template_id, media_type, sort_order, s3_key)
 			VALUES (@id, @template_id, @media_type, @sort_order, @s3_key)
 		`, pgx.NamedArgs{
 			"id":          m.ID,
-			argTemplateID: m.TemplateID,
+			argTemplateID: templateID,
 			"media_type":  m.MediaType,
 			argSortOrder:  m.SortOrder,
 			"s3_key":      m.S3Key,
 		}); err != nil {
-			return domaintemplate.Template{}, err
+			return err
 		}
 	}
-
-	return t, nil
+	return nil
 }
 
 func (r *TemplateRepo) Update(ctx context.Context, t domaintemplate.Template) (domaintemplate.Template, error) {
@@ -230,46 +255,6 @@ func (r *TemplateRepo) Update(ctx context.Context, t domaintemplate.Template) (d
 	if tag.RowsAffected() == 0 {
 		return domaintemplate.Template{}, domaintemplate.ErrTemplateNotFound
 	}
-
-	if _, err = conn.Exec(ctx, `
-		DELETE FROM gym.template_exercises WHERE template_id = @template_id
-	`, pgx.NamedArgs{argTemplateID: t.ID}); err != nil {
-		return domaintemplate.Template{}, err
-	}
-	for _, te := range t.Exercises {
-		if _, err = conn.Exec(ctx, `
-			INSERT INTO gym.template_exercises (template_id, exercise_id, sort_order, planned_sets)
-			VALUES (@template_id, @exercise_id, @sort_order, @planned_sets)
-		`, pgx.NamedArgs{
-			argTemplateID:  te.TemplateID,
-			"exercise_id":  te.ExerciseID,
-			argSortOrder:   te.SortOrder,
-			"planned_sets": te.PlannedSets,
-		}); err != nil {
-			return domaintemplate.Template{}, err
-		}
-	}
-
-	if _, err = conn.Exec(ctx, `
-		DELETE FROM gym.template_media WHERE template_id = @template_id
-	`, pgx.NamedArgs{argTemplateID: t.ID}); err != nil {
-		return domaintemplate.Template{}, err
-	}
-	for _, m := range t.Media {
-		if _, err = conn.Exec(ctx, `
-			INSERT INTO gym.template_media (id, template_id, media_type, sort_order, s3_key)
-			VALUES (@id, @template_id, @media_type, @sort_order, @s3_key)
-		`, pgx.NamedArgs{
-			"id":          m.ID,
-			argTemplateID: m.TemplateID,
-			"media_type":  m.MediaType,
-			argSortOrder:  m.SortOrder,
-			"s3_key":      m.S3Key,
-		}); err != nil {
-			return domaintemplate.Template{}, err
-		}
-	}
-
 	return t, nil
 }
 

@@ -179,39 +179,6 @@ func (r *WorkoutRepo) Create(ctx context.Context, w domainworkout.Workout) (doma
 	}); err != nil {
 		return domainworkout.Workout{}, err
 	}
-
-	for _, we := range w.Exercises {
-		if _, err := conn.Exec(ctx, `
-			INSERT INTO gym.workout_exercises (id, workout_id, exercise_id, sort_order, notes)
-			VALUES (@id, @workout_id, @exercise_id, @sort_order, @notes)
-		`, pgx.NamedArgs{
-			"id":          we.ID,
-			"workout_id":  we.WorkoutID,
-			"exercise_id": we.ExerciseID,
-			"sort_order":  we.SortOrder,
-			argNotes:      we.Notes,
-		}); err != nil {
-			return domainworkout.Workout{}, err
-		}
-		for _, s := range we.Sets {
-			if _, err := conn.Exec(ctx, `
-				INSERT INTO gym.workout_sets (id, workout_exercise_id, set_number, weight_kg, reps, rpe, rest_seconds, is_warmup)
-				VALUES (@id, @workout_exercise_id, @set_number, @weight_kg, @reps, @rpe, @rest_seconds, @is_warmup)
-			`, pgx.NamedArgs{
-				"id":                  s.ID,
-				"workout_exercise_id": s.WorkoutExerciseID,
-				"set_number":          s.SetNumber,
-				"weight_kg":           s.WeightKg,
-				"reps":                s.Reps,
-				"rpe":                 s.RPE,
-				"rest_seconds":        s.RestSeconds,
-				"is_warmup":           s.IsWarmup,
-			}); err != nil {
-				return domainworkout.Workout{}, err
-			}
-		}
-	}
-
 	return w, nil
 }
 

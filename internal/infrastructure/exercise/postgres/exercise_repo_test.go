@@ -67,7 +67,13 @@ func (s *ExerciseRepoTestSuite) createTestExercise(ex exercise.Exercise) exercis
 	err := s.trManager.Do(s.ctx, func(ctx context.Context) error {
 		var err error
 		created, err = s.repo.Create(ctx, ex)
-		return err
+		if err != nil {
+			return err
+		}
+		if err = s.repo.ReplaceMedia(ctx, created.ID, ex.Media); err != nil {
+			return err
+		}
+		return s.repo.ReplaceMuscleGroups(ctx, created.ID, ex.MuscleGroups)
 	})
 	s.Require().NoError(err)
 	s.created = append(s.created, created.ID)
@@ -107,6 +113,24 @@ func (s *ExerciseRepoTestSuite) TestCreateAndFindByID() {
 	s.Equal(2, found.MuscleGroups[0].MuscleGroupID)
 	s.False(found.MuscleGroups[1].IsPrimary)
 	s.Equal(1, found.MuscleGroups[1].MuscleGroupID)
+}
+
+func (s *ExerciseRepoTestSuite) TestCreate_HeaderOnly() {
+	ex := s.newTestExercise("HeaderOnly-" + uuid.NewString())
+	var created exercise.Exercise
+	err := s.trManager.Do(s.ctx, func(ctx context.Context) error {
+		var err error
+		created, err = s.repo.Create(ctx, ex)
+		return err
+	})
+	s.Require().NoError(err)
+	s.created = append(s.created, created.ID)
+
+	found, err := s.repo.FindByID(s.ctx, created.ID)
+	s.Require().NoError(err)
+	s.Equal(ex.Name, found.Name)
+	s.Empty(found.Media)
+	s.Empty(found.MuscleGroups)
 }
 
 func (s *ExerciseRepoTestSuite) TestFindByID_NotFound() {
@@ -196,6 +220,25 @@ func (s *ExerciseRepoTestSuite) TestList_ExcludesSoftDeleted() {
 	s.ErrorIs(err, exercise.ErrExerciseNotFound)
 }
 
+func (s *ExerciseRepoTestSuite) TestUpdate_HeaderKeepsChildren() {
+	ex := s.createTestExercise(s.newTestExercise("UpdateKeepsChildren-" + uuid.NewString()))
+
+	ex.Name = "Updated-" + uuid.NewString()
+	ex.Notes = "Updated notes"
+
+	updated, err := s.updateTestExercise(ex)
+	s.Require().NoError(err)
+	s.Equal(2, updated.Version)
+
+	found, err := s.repo.FindByID(s.ctx, ex.ID)
+	s.Require().NoError(err)
+	s.Equal(ex.Name, found.Name)
+	s.Equal("Updated notes", found.Notes)
+	s.Equal(2, found.Version)
+	s.Len(found.Media, 2)
+	s.Len(found.MuscleGroups, 2)
+}
+
 func (s *ExerciseRepoTestSuite) TestUpdate_ReplacesChildren() {
 	ex := s.createTestExercise(s.newTestExercise("UpdateChildren-" + uuid.NewString()))
 
@@ -208,7 +251,18 @@ func (s *ExerciseRepoTestSuite) TestUpdate_ReplacesChildren() {
 		{ExerciseID: ex.ID, MuscleGroupID: 3, IsPrimary: true},
 	}
 
-	updated, err := s.updateTestExercise(ex)
+	var updated exercise.Exercise
+	err := s.trManager.Do(s.ctx, func(ctx context.Context) error {
+		var err error
+		updated, err = s.repo.Update(ctx, ex)
+		if err != nil {
+			return err
+		}
+		if err = s.repo.ReplaceMedia(ctx, ex.ID, ex.Media); err != nil {
+			return err
+		}
+		return s.repo.ReplaceMuscleGroups(ctx, ex.ID, ex.MuscleGroups)
+	})
 	s.Require().NoError(err)
 	s.Equal(2, updated.Version)
 

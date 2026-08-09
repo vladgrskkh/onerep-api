@@ -18,28 +18,16 @@ import (
 	"github.com/vladgrskkh/onerep-api/internal/infrastructure/progress/postgres"
 )
 
-type progress1RMKey struct {
-	exerciseID uuid.UUID
-	userID     uuid.UUID
-	date       time.Time
-}
-
-type progressVolumeKey struct {
-	muscleGroupID int
-	userID        uuid.UUID
-	date          time.Time
-}
-
 type ProgressRepoTestSuite struct {
 	suite.Suite
 
-	pool       *pgxpool.Pool
-	repo       *postgres.ProgressRepo
-	trManager  *manager.Manager
-	ctx        context.Context
-	exerciseID uuid.UUID
-	oneRMKeys  []progress1RMKey
-	volumeKeys []progressVolumeKey
+	pool         *pgxpool.Pool
+	repo         *postgres.ProgressRepo
+	trManager    *manager.Manager
+	ctx          context.Context
+	exerciseID   uuid.UUID
+	oneRMEntries []domainprogress.Progress1RM
+	volumeValues []domainprogress.ProgressVolume
 }
 
 func (s *ProgressRepoTestSuite) SetupTest() {
@@ -63,15 +51,15 @@ func (s *ProgressRepoTestSuite) SetupTest() {
 
 func (s *ProgressRepoTestSuite) TearDownTest() {
 	if s.pool != nil {
-		for _, k := range s.oneRMKeys {
+		for _, p := range s.oneRMEntries {
 			_, _ = s.pool.Exec(context.Background(), `
 				DELETE FROM gym.progress_1rm WHERE exercise_id = $1 AND user_id = $2 AND date = $3
-			`, k.exerciseID, k.userID, k.date)
+			`, p.ExerciseID, p.UserID, p.Date)
 		}
-		for _, k := range s.volumeKeys {
+		for _, v := range s.volumeValues {
 			_, _ = s.pool.Exec(context.Background(), `
 				DELETE FROM gym.progress_volume WHERE muscle_group_id = $1 AND user_id = $2 AND date = $3
-			`, k.muscleGroupID, k.userID, k.date)
+			`, v.MuscleGroupID, v.UserID, v.Date)
 		}
 		_, _ = s.pool.Exec(context.Background(), `DELETE FROM gym.exercises WHERE id = $1`, s.exerciseID)
 		s.pool.Close()
@@ -82,7 +70,7 @@ func (s *ProgressRepoTestSuite) upsertTest1RM(userID uuid.UUID, date time.Time, 
 	p, err := domainprogress.NewProgress1RM(s.exerciseID, userID, date, estimated1RM)
 	s.Require().NoError(err)
 	s.Require().NoError(s.repo.Upsert1RM(s.ctx, p))
-	s.oneRMKeys = append(s.oneRMKeys, progress1RMKey{exerciseID: s.exerciseID, userID: userID, date: date})
+	s.oneRMEntries = append(s.oneRMEntries, p)
 }
 
 func (s *ProgressRepoTestSuite) insertTestVolume(
@@ -98,7 +86,7 @@ func (s *ProgressRepoTestSuite) insertTestVolume(
 		VALUES ($1, $2, $3, $4)
 	`, v.MuscleGroupID, v.UserID, v.Date, v.TotalKG)
 	s.Require().NoError(err)
-	s.volumeKeys = append(s.volumeKeys, progressVolumeKey{muscleGroupID: v.MuscleGroupID, userID: v.UserID, date: v.Date})
+	s.volumeValues = append(s.volumeValues, v)
 }
 
 func (s *ProgressRepoTestSuite) TestUpsert1RM_InsertThenUpdate() {

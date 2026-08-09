@@ -13,5 +13,11 @@ type TemplateRepository interface {
 	FindByID(ctx context.Context, id uuid.UUID) (domaintemplate.Template, error)
 	Create(ctx context.Context, t domaintemplate.Template) (domaintemplate.Template, error)
 	Update(ctx context.Context, t domaintemplate.Template) (domaintemplate.Template, error)
+	ReplaceExercises(
+		ctx context.Context,
+		templateID uuid.UUID,
+		exercises []domaintemplate.TemplateExercise,
+	) error
+	ReplaceMedia(ctx context.Context, templateID uuid.UUID, media []domaintemplate.TemplateMedia) error
 	SoftDelete(ctx context.Context, id uuid.UUID) error
 }

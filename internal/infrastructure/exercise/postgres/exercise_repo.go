@@ -177,36 +177,61 @@ func (r *ExerciseRepo) Create(ctx context.Context, ex domainexercise.Exercise) (
 	}); err != nil {
 		return domainexercise.Exercise{}, err
 	}
+	return ex, nil
+}
 
-	for _, m := range ex.Media {
+func (r *ExerciseRepo) ReplaceMedia(
+	ctx context.Context,
+	exerciseID uuid.UUID,
+	media []domainexercise.ExerciseMedia,
+) error {
+	conn := r.getter.DefaultTrOrDB(ctx, r.db)
+	if _, err := conn.Exec(ctx, `
+		DELETE FROM gym.exercise_media WHERE exercise_id = @exercise_id
+	`, pgx.NamedArgs{argExerciseID: exerciseID}); err != nil {
+		return err
+	}
+	for _, m := range media {
 		if _, err := conn.Exec(ctx, `
 			INSERT INTO gym.exercise_media (id, exercise_id, media_type, sort_order, s3_key)
 			VALUES (@id, @exercise_id, @media_type, @sort_order, @s3_key)
 		`, pgx.NamedArgs{
 			"id":          m.ID,
-			argExerciseID: m.ExerciseID,
+			argExerciseID: exerciseID,
 			"media_type":  m.MediaType,
 			"sort_order":  m.SortOrder,
 			"s3_key":      m.S3Key,
 		}); err != nil {
-			return domainexercise.Exercise{}, err
+			return err
 		}
 	}
+	return nil
+}
 
-	for _, mg := range ex.MuscleGroups {
+func (r *ExerciseRepo) ReplaceMuscleGroups(
+	ctx context.Context,
+	exerciseID uuid.UUID,
+	groups []domainexercise.ExerciseMuscleGroup,
+) error {
+	conn := r.getter.DefaultTrOrDB(ctx, r.db)
+	if _, err := conn.Exec(ctx, `
+		DELETE FROM gym.exercise_muscle_groups WHERE exercise_id = @exercise_id
+	`, pgx.NamedArgs{argExerciseID: exerciseID}); err != nil {
+		return err
+	}
+	for _, mg := range groups {
 		if _, err := conn.Exec(ctx, `
 			INSERT INTO gym.exercise_muscle_groups (exercise_id, muscle_group_id, is_primary)
 			VALUES (@exercise_id, @muscle_group_id, @is_primary)
 		`, pgx.NamedArgs{
-			argExerciseID:     mg.ExerciseID,
+			argExerciseID:     exerciseID,
 			"muscle_group_id": mg.MuscleGroupID,
 			"is_primary":      mg.IsPrimary,
 		}); err != nil {
-			return domainexercise.Exercise{}, err
+			return err
 		}
 	}
-
-	return ex, nil
+	return nil
 }
 
 func (r *ExerciseRepo) Update(ctx context.Context, ex domainexercise.Exercise) (domainexercise.Exercise, error) {
@@ -233,45 +258,6 @@ func (r *ExerciseRepo) Update(ctx context.Context, ex domainexercise.Exercise) (
 	if tag.RowsAffected() == 0 {
 		return domainexercise.Exercise{}, domainexercise.ErrExerciseNotFound
 	}
-
-	if _, err = conn.Exec(ctx, `
-		DELETE FROM gym.exercise_media WHERE exercise_id = @exercise_id
-	`, pgx.NamedArgs{argExerciseID: ex.ID}); err != nil {
-		return domainexercise.Exercise{}, err
-	}
-	for _, m := range ex.Media {
-		if _, err = conn.Exec(ctx, `
-			INSERT INTO gym.exercise_media (id, exercise_id, media_type, sort_order, s3_key)
-			VALUES (@id, @exercise_id, @media_type, @sort_order, @s3_key)
-		`, pgx.NamedArgs{
-			"id":          m.ID,
-			argExerciseID: m.ExerciseID,
-			"media_type":  m.MediaType,
-			"sort_order":  m.SortOrder,
-			"s3_key":      m.S3Key,
-		}); err != nil {
-			return domainexercise.Exercise{}, err
-		}
-	}
-
-	if _, err = conn.Exec(ctx, `
-		DELETE FROM gym.exercise_muscle_groups WHERE exercise_id = @exercise_id
-	`, pgx.NamedArgs{argExerciseID: ex.ID}); err != nil {
-		return domainexercise.Exercise{}, err
-	}
-	for _, mg := range ex.MuscleGroups {
-		if _, err = conn.Exec(ctx, `
-			INSERT INTO gym.exercise_muscle_groups (exercise_id, muscle_group_id, is_primary)
-			VALUES (@exercise_id, @muscle_group_id, @is_primary)
-		`, pgx.NamedArgs{
-			argExerciseID:     mg.ExerciseID,
-			"muscle_group_id": mg.MuscleGroupID,
-			"is_primary":      mg.IsPrimary,
-		}); err != nil {
-			return domainexercise.Exercise{}, err
-		}
-	}
-
 	return ex, nil
 }
 

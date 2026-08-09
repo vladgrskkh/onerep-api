@@ -83,7 +83,13 @@ func (s *TemplateRepoTestSuite) createTestTemplate(t domaintemplate.Template) do
 	err := s.trManager.Do(s.ctx, func(ctx context.Context) error {
 		var err error
 		created, err = s.repo.Create(ctx, t)
-		return err
+		if err != nil {
+			return err
+		}
+		if err = s.repo.ReplaceExercises(ctx, created.ID, t.Exercises); err != nil {
+			return err
+		}
+		return s.repo.ReplaceMedia(ctx, created.ID, t.Media)
 	})
 	s.Require().NoError(err)
 	s.created = append(s.created, created.ID)
@@ -121,6 +127,24 @@ func (s *TemplateRepoTestSuite) TestCreateAndFindByID() {
 	s.Equal(domaintemplate.MediaTypePhoto, found.Media[0].MediaType)
 	s.Equal(0, found.Media[0].SortOrder)
 	s.Equal("templates/test-photo.jpg", found.Media[0].S3Key)
+}
+
+func (s *TemplateRepoTestSuite) TestCreate_HeaderOnly() {
+	t := s.newTestTemplate("HeaderOnly-" + uuid.NewString())
+	var created domaintemplate.Template
+	err := s.trManager.Do(s.ctx, func(ctx context.Context) error {
+		var err error
+		created, err = s.repo.Create(ctx, t)
+		return err
+	})
+	s.Require().NoError(err)
+	s.created = append(s.created, created.ID)
+
+	found, err := s.repo.FindByID(s.ctx, created.ID)
+	s.Require().NoError(err)
+	s.Equal(t.Name, found.Name)
+	s.Empty(found.Exercises)
+	s.Empty(found.Media)
 }
 
 func (s *TemplateRepoTestSuite) TestFindByID_NotFound() {
@@ -205,6 +229,25 @@ func (s *TemplateRepoTestSuite) TestList_ExcludesSoftDeleted() {
 	s.ErrorIs(err, domaintemplate.ErrTemplateNotFound)
 }
 
+func (s *TemplateRepoTestSuite) TestUpdate_HeaderKeepsChildren() {
+	t := s.createTestTemplate(s.newTestTemplate("UpdateKeepsChildren-" + uuid.NewString()))
+
+	t.Name = "Updated-" + uuid.NewString()
+	t.IsPublic = true
+
+	updated, err := s.updateTestTemplate(t)
+	s.Require().NoError(err)
+	s.Equal(2, updated.Version)
+
+	found, err := s.repo.FindByID(s.ctx, t.ID)
+	s.Require().NoError(err)
+	s.Equal(t.Name, found.Name)
+	s.True(found.IsPublic)
+	s.Equal(2, found.Version)
+	s.Len(found.Exercises, 2)
+	s.Len(found.Media, 1)
+}
+
 func (s *TemplateRepoTestSuite) TestUpdate_ReplacesChildren() {
 	t := s.createTestTemplate(s.newTestTemplate("UpdateChildren-" + uuid.NewString()))
 
@@ -218,7 +261,18 @@ func (s *TemplateRepoTestSuite) TestUpdate_ReplacesChildren() {
 		{ID: uuid.Must(uuid.NewV7()), TemplateID: t.ID, MediaType: domaintemplate.MediaTypePhoto, SortOrder: 0, S3Key: "templates/replacement.jpg"},
 	}
 
-	updated, err := s.updateTestTemplate(t)
+	var updated domaintemplate.Template
+	err := s.trManager.Do(s.ctx, func(ctx context.Context) error {
+		var err error
+		updated, err = s.repo.Update(ctx, t)
+		if err != nil {
+			return err
+		}
+		if err = s.repo.ReplaceExercises(ctx, t.ID, t.Exercises); err != nil {
+			return err
+		}
+		return s.repo.ReplaceMedia(ctx, t.ID, t.Media)
+	})
 	s.Require().NoError(err)
 	s.Equal(2, updated.Version)
 
