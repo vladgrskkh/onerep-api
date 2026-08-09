@@ -2,7 +2,6 @@ package postgres
 
 import (
 	"context"
-	"errors"
 	"strings"
 
 	"github.com/google/uuid"
@@ -280,8 +279,5 @@ func (r *TemplateRepo) SoftDelete(ctx context.Context, id uuid.UUID) error {
 		UPDATE gym.templates SET deleted_at = now(), updated_at = now(), version = version + 1
 		WHERE id = @id
 	`, pgx.NamedArgs{"id": id})
-	if errors.Is(err, pgx.ErrNoRows) {
-		return domaintemplate.ErrTemplateNotFound
-	}
 	return err
 }

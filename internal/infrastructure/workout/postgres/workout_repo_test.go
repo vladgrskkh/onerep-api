@@ -4,6 +4,7 @@ package postgres_test
 
 import (
 	"context"
+	"errors"
 	"testing"
 	"time"
 
@@ -258,6 +259,27 @@ func (s *WorkoutRepoTestSuite) TestFindByID_AttributesSetsWithEqualSortOrder() {
 	s.Equal(we2.ID, byID[we2.ID].Sets[0].WorkoutExerciseID)
 	s.Equal(set3.ID, byID[we2.ID].Sets[0].ID)
 	s.Equal(set4.ID, byID[we2.ID].Sets[1].ID)
+}
+
+func (s *WorkoutRepoTestSuite) TestCreate_RollsBackOnError() {
+	w := s.newTestWorkout(uuid.New())
+	w.Notes = "rollback-me"
+
+	err := s.trManager.Do(s.ctx, func(ctx context.Context) error {
+		created, err := s.repo.Create(ctx, w)
+		s.Require().NoError(err)
+		s.created = append(s.created, created.ID)
+		return errors.New("boom")
+	})
+	s.Require().Error(err)
+
+	_, err = s.repo.FindByID(s.ctx, w.ID)
+	s.ErrorIs(err, domainworkout.ErrWorkoutNotFound)
+
+	var count int
+	err = s.pool.QueryRow(s.ctx, `SELECT COUNT(*) FROM gym.workouts WHERE id = $1`, w.ID).Scan(&count)
+	s.Require().NoError(err)
+	s.Zero(count)
 }
 
 func (s *WorkoutRepoTestSuite) TestAddExercise_IncrementsSortOrder() {

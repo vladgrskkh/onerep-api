@@ -2,7 +2,6 @@ package postgres
 
 import (
 	"context"
-	"errors"
 	"strings"
 
 	"github.com/google/uuid"
@@ -282,8 +281,5 @@ func (r *ExerciseRepo) SoftDelete(ctx context.Context, id uuid.UUID) error {
 		UPDATE gym.exercises SET deleted_at = now(), updated_at = now(), version = version + 1
 		WHERE id = @id
 	`, pgx.NamedArgs{"id": id})
-	if errors.Is(err, pgx.ErrNoRows) {
-		return domainexercise.ErrExerciseNotFound
-	}
 	return err
 }
