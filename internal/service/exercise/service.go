@@ -1,3 +1,5 @@
+// Package exercise contains the exercise use cases and the interfaces the
+// service consumes, declared where they are used per ISP.
 package exercise
 
 import (

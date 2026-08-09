@@ -1,3 +1,5 @@
+// Package template contains the template use cases and the interfaces the
+// service consumes, declared where they are used per ISP.
 package template
 
 import (
