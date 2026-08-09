@@ -207,6 +207,59 @@ func (s *WorkoutRepoTestSuite) TestList_ExcludesSoftDeleted() {
 	s.ErrorIs(err, domainworkout.ErrWorkoutNotFound)
 }
 
+func (s *WorkoutRepoTestSuite) TestFindByID_AttributesSetsWithEqualSortOrder() {
+	w, err := domainworkout.NewWorkout(uuid.New(), nil)
+	s.Require().NoError(err)
+	ex1 := s.insertTestExercise()
+	ex2 := s.insertTestExercise()
+
+	we1, err := domainworkout.NewWorkoutExercise(w.ID, ex1)
+	s.Require().NoError(err)
+	we1.SortOrder = 0
+	set1, err := domainworkout.NewWorkoutSet(we1.ID, 60, 10, nil, nil, false)
+	s.Require().NoError(err)
+	set1.SetNumber = 1
+	set2, err := domainworkout.NewWorkoutSet(we1.ID, 62, 8, nil, nil, false)
+	s.Require().NoError(err)
+	set2.SetNumber = 2
+	we1.Sets = []domainworkout.WorkoutSet{set1, set2}
+
+	we2, err := domainworkout.NewWorkoutExercise(w.ID, ex2)
+	s.Require().NoError(err)
+	we2.SortOrder = 0
+	set3, err := domainworkout.NewWorkoutSet(we2.ID, 100, 5, nil, nil, false)
+	s.Require().NoError(err)
+	set3.SetNumber = 1
+	set4, err := domainworkout.NewWorkoutSet(we2.ID, 102, 3, nil, nil, false)
+	s.Require().NoError(err)
+	set4.SetNumber = 2
+	we2.Sets = []domainworkout.WorkoutSet{set3, set4}
+
+	w.Exercises = []domainworkout.WorkoutExercise{we1, we2}
+	s.createTestWorkout(w)
+
+	found, err := s.repo.FindByID(s.ctx, w.ID)
+	s.Require().NoError(err)
+	s.Require().Len(found.Exercises, 2)
+
+	byID := make(map[uuid.UUID]domainworkout.WorkoutExercise, len(found.Exercises))
+	for _, we := range found.Exercises {
+		byID[we.ID] = we
+	}
+	s.Equal(0, byID[we1.ID].SortOrder)
+	s.Equal(0, byID[we2.ID].SortOrder)
+
+	s.Require().Len(byID[we1.ID].Sets, 2)
+	s.Equal(we1.ID, byID[we1.ID].Sets[0].WorkoutExerciseID)
+	s.Equal(set1.ID, byID[we1.ID].Sets[0].ID)
+	s.Equal(set2.ID, byID[we1.ID].Sets[1].ID)
+
+	s.Require().Len(byID[we2.ID].Sets, 2)
+	s.Equal(we2.ID, byID[we2.ID].Sets[0].WorkoutExerciseID)
+	s.Equal(set3.ID, byID[we2.ID].Sets[0].ID)
+	s.Equal(set4.ID, byID[we2.ID].Sets[1].ID)
+}
+
 func (s *WorkoutRepoTestSuite) TestAddExercise_IncrementsSortOrder() {
 	w := s.createTestWorkout(s.newTestWorkout(uuid.New()))
 

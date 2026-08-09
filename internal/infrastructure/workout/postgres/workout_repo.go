@@ -100,9 +100,8 @@ func (r *WorkoutRepo) FindByID(ctx context.Context, id uuid.UUID) (domainworkout
 	defer rows.Close()
 
 	var (
-		w             domainworkout.Workout
-		exerciseIdx   = -1
-		exercisesSeen = make(map[uuid.UUID]struct{})
+		w           domainworkout.Workout
+		exerciseIdx = make(map[uuid.UUID]int)
 	)
 	for rows.Next() {
 		var (
@@ -127,7 +126,8 @@ func (r *WorkoutRepo) FindByID(ctx context.Context, id uuid.UUID) (domainworkout
 			return domainworkout.Workout{}, scanErr
 		}
 		if weID != nil {
-			if _, seen := exercisesSeen[*weID]; !seen {
+			if _, seen := exerciseIdx[*weID]; !seen {
+				idx := len(w.Exercises)
 				w.Exercises = append(w.Exercises, domainworkout.WorkoutExercise{
 					ID:         *weID,
 					WorkoutID:  w.ID,
@@ -135,21 +135,22 @@ func (r *WorkoutRepo) FindByID(ctx context.Context, id uuid.UUID) (domainworkout
 					SortOrder:  *weSortOrder,
 					Notes:      *weNotes,
 				})
-				exercisesSeen[*weID] = struct{}{}
-				exerciseIdx++
+				exerciseIdx[*weID] = idx
 			}
 		}
-		if wsID != nil && exerciseIdx >= 0 {
-			w.Exercises[exerciseIdx].Sets = append(w.Exercises[exerciseIdx].Sets, domainworkout.WorkoutSet{
-				ID:                *wsID,
-				WorkoutExerciseID: *weID,
-				SetNumber:         *wsSetNumber,
-				WeightKg:          *wsWeightKg,
-				Reps:              *wsReps,
-				RPE:               wsRPE,
-				RestSeconds:       wsRestSeconds,
-				IsWarmup:          *wsIsWarmup,
-			})
+		if wsID != nil {
+			if idx, ok := exerciseIdx[*weID]; ok {
+				w.Exercises[idx].Sets = append(w.Exercises[idx].Sets, domainworkout.WorkoutSet{
+					ID:                *wsID,
+					WorkoutExerciseID: *weID,
+					SetNumber:         *wsSetNumber,
+					WeightKg:          *wsWeightKg,
+					Reps:              *wsReps,
+					RPE:               wsRPE,
+					RestSeconds:       wsRestSeconds,
+					IsWarmup:          *wsIsWarmup,
+				})
+			}
 		}
 	}
 	if rowsErr := rows.Err(); rowsErr != nil {
