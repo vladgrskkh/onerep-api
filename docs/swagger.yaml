@@ -7,6 +7,17 @@ definitions:
     required:
     - exercise_id
     type: object
+  dto.BodyWeightResponse:
+    properties:
+      created_at:
+        type: string
+      id:
+        type: string
+      measured_at:
+        type: string
+      weight_kg:
+        type: number
+    type: object
   dto.ExerciseCreateRequest:
     properties:
       description:
@@ -77,6 +88,15 @@ definitions:
       notes:
         type: string
     type: object
+  dto.LogBodyWeightRequest:
+    properties:
+      measured_at:
+        type: string
+      weight_kg:
+        type: number
+    required:
+    - weight_kg
+    type: object
   dto.LogSetRequest:
     properties:
       is_warmup:
@@ -123,6 +143,13 @@ definitions:
         type: integer
       is_primary:
         type: boolean
+    type: object
+  dto.OneRMResponse:
+    properties:
+      date:
+        type: string
+      estimated_1rm:
+        type: number
     type: object
   dto.StartWorkoutRequest:
     properties:
@@ -210,6 +237,15 @@ definitions:
       name:
         maxLength: 100
         type: string
+    type: object
+  dto.VolumeResponse:
+    properties:
+      date:
+        type: string
+      muscle_group_id:
+        type: integer
+      total_kg:
+        type: number
     type: object
   dto.WorkoutExerciseResponse:
     properties:
@@ -464,6 +500,150 @@ paths:
       summary: Update an exercise
       tags:
       - exercises
+  /progress/1rm:
+    get:
+      consumes:
+      - application/json
+      description: Get the authenticated user's estimated one-rep max history for
+        an exercise, optionally filtered by date range
+      parameters:
+      - description: Exercise ID
+        in: query
+        name: exercise_id
+        required: true
+        type: string
+      - description: Start of the date range (RFC 3339)
+        in: query
+        name: from
+        type: string
+      - description: End of the date range (RFC 3339)
+        in: query
+        name: to
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/dto.OneRMResponse'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get 1RM progress
+      tags:
+      - progress
+  /progress/body-weight:
+    get:
+      consumes:
+      - application/json
+      description: List the authenticated user's body weight entries, optionally filtered
+        by last-updated time
+      parameters:
+      - description: Only entries updated after this RFC 3339 timestamp
+        in: query
+        name: since
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/dto.BodyWeightResponse'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: List body weight entries
+      tags:
+      - progress
+    post:
+      consumes:
+      - application/json
+      description: Record a body weight entry for the authenticated user; measured_at
+        defaults to now
+      parameters:
+      - description: Body weight data
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/dto.LogBodyWeightRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/dto.BodyWeightResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Log a body weight
+      tags:
+      - progress
+  /progress/volume:
+    get:
+      consumes:
+      - application/json
+      description: Get the authenticated user's total volume per muscle group, optionally
+        filtered by date range
+      parameters:
+      - description: Start of the date range (RFC 3339)
+        in: query
+        name: from
+        type: string
+      - description: End of the date range (RFC 3339)
+        in: query
+        name: to
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/dto.VolumeResponse'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get volume progress
+      tags:
+      - progress
   /templates:
     get:
       consumes:

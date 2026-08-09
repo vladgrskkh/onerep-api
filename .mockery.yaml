@@ -55,3 +55,28 @@ packages:
       filename: "{{.InterfaceName | snakecase}}.gen.go"
     interfaces:
       WorkoutService:
+  github.com/vladgrskkh/onerep-api/internal/service/progress:
+    config:
+      dir: internal/service/progress/mocks
+      mockname: "Mock{{.InterfaceName}}"
+      outpkg: "mocks"
+      filename: "{{.InterfaceName | snakecase}}.gen.go"
+    interfaces:
+      ProgressRepository:
+  github.com/vladgrskkh/onerep-api/internal/service/bodyweight:
+    config:
+      dir: internal/service/bodyweight/mocks
+      mockname: "Mock{{.InterfaceName}}"
+      outpkg: "mocks"
+      filename: "{{.InterfaceName | snakecase}}.gen.go"
+    interfaces:
+      BodyWeightRepository:
+  github.com/vladgrskkh/onerep-api/internal/handler/progress:
+    config:
+      dir: internal/handler/progress/mocks
+      mockname: "Mock{{.InterfaceName}}"
+      outpkg: "mocks"
+      filename: "{{.InterfaceName | snakecase}}.gen.go"
+    interfaces:
+      ProgressService:
+      BodyWeightService:

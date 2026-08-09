@@ -271,6 +271,227 @@ const docTemplate = `{
                 }
             }
         },
+        "/progress/1rm": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Get the authenticated user's estimated one-rep max history for an exercise, optionally filtered by date range",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "progress"
+                ],
+                "summary": "Get 1RM progress",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Exercise ID",
+                        "name": "exercise_id",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Start of the date range (RFC 3339)",
+                        "name": "from",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "End of the date range (RFC 3339)",
+                        "name": "to",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/dto.OneRMResponse"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/progress/body-weight": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "List the authenticated user's body weight entries, optionally filtered by last-updated time",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "progress"
+                ],
+                "summary": "List body weight entries",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Only entries updated after this RFC 3339 timestamp",
+                        "name": "since",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/dto.BodyWeightResponse"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Record a body weight entry for the authenticated user; measured_at defaults to now",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "progress"
+                ],
+                "summary": "Log a body weight",
+                "parameters": [
+                    {
+                        "description": "Body weight data",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dto.LogBodyWeightRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/dto.BodyWeightResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/progress/volume": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Get the authenticated user's total volume per muscle group, optionally filtered by date range",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "progress"
+                ],
+                "summary": "Get volume progress",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Start of the date range (RFC 3339)",
+                        "name": "from",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "End of the date range (RFC 3339)",
+                        "name": "to",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/dto.VolumeResponse"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/templates": {
             "get": {
                 "security": [
@@ -1047,6 +1268,23 @@ const docTemplate = `{
                 }
             }
         },
+        "dto.BodyWeightResponse": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "measured_at": {
+                    "type": "string"
+                },
+                "weight_kg": {
+                    "type": "number"
+                }
+            }
+        },
         "dto.ExerciseCreateRequest": {
             "type": "object",
             "required": [
@@ -1153,6 +1391,20 @@ const docTemplate = `{
                 }
             }
         },
+        "dto.LogBodyWeightRequest": {
+            "type": "object",
+            "required": [
+                "weight_kg"
+            ],
+            "properties": {
+                "measured_at": {
+                    "type": "string"
+                },
+                "weight_kg": {
+                    "type": "number"
+                }
+            }
+        },
         "dto.LogSetRequest": {
             "type": "object",
             "required": [
@@ -1220,6 +1472,17 @@ const docTemplate = `{
                 },
                 "is_primary": {
                     "type": "boolean"
+                }
+            }
+        },
+        "dto.OneRMResponse": {
+            "type": "object",
+            "properties": {
+                "date": {
+                    "type": "string"
+                },
+                "estimated_1rm": {
+                    "type": "number"
                 }
             }
         },
@@ -1353,6 +1616,20 @@ const docTemplate = `{
                 "name": {
                     "type": "string",
                     "maxLength": 100
+                }
+            }
+        },
+        "dto.VolumeResponse": {
+            "type": "object",
+            "properties": {
+                "date": {
+                    "type": "string"
+                },
+                "muscle_group_id": {
+                    "type": "integer"
+                },
+                "total_kg": {
+                    "type": "number"
                 }
             }
         },
