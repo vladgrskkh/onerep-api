@@ -1,0 +1,5 @@
+with-expecter: true
+mockname: "Mock{{.InterfaceName}}"
+outpkg: "mocks"
+filename: "{{.InterfaceName | snakecase}}.gen.go"
+packages: {}
