@@ -127,39 +127,45 @@ func (s *TemplateRepoTestSuite) TestList_UserIDFilter() {
 }
 
 func (s *TemplateRepoTestSuite) TestList_IsPublicFilter() {
+	userID1 := uuid.New()
+	userID2 := uuid.New()
 	t1 := s.newTestTemplate("PublicTemplate-" + uuid.NewString())
 	t1.IsPublic = true
+	t1.CreatedByUserID = userID1
 	s.createTestTemplate(t1)
 	t2 := s.newTestTemplate("PrivateTemplate-" + uuid.NewString())
+	t2.CreatedByUserID = userID2
 	s.createTestTemplate(t2)
 
 	isPublic := true
-	listed, err := s.repo.List(s.ctx, servicetemplate.TemplateFilter{IsPublic: &isPublic})
+	listed, err := s.repo.List(s.ctx, servicetemplate.TemplateFilter{UserID: &userID1, IsPublic: &isPublic})
 	s.Require().NoError(err)
 	s.Require().Len(listed, 1)
 	s.Equal(t1.ID, listed[0].ID)
 
 	isPublic = false
-	listed, err = s.repo.List(s.ctx, servicetemplate.TemplateFilter{IsPublic: &isPublic})
+	listed, err = s.repo.List(s.ctx, servicetemplate.TemplateFilter{UserID: &userID2, IsPublic: &isPublic})
 	s.Require().NoError(err)
 	s.Require().Len(listed, 1)
 	s.Equal(t2.ID, listed[0].ID)
 }
 
 func (s *TemplateRepoTestSuite) TestList_SinceFilter() {
+	userID := uuid.New()
 	t := s.newTestTemplate("SinceTemplate-" + uuid.NewString())
+	t.CreatedByUserID = userID
 	t.CreatedAt = time.Now().Add(-2 * time.Hour)
 	t.UpdatedAt = time.Now().Add(-2 * time.Hour)
 	s.createTestTemplate(t)
 
 	since := time.Now().Add(-3 * time.Hour)
-	listed, err := s.repo.List(s.ctx, servicetemplate.TemplateFilter{Since: &since})
+	listed, err := s.repo.List(s.ctx, servicetemplate.TemplateFilter{UserID: &userID, Since: &since})
 	s.Require().NoError(err)
 	s.Require().Len(listed, 1)
 	s.Equal(t.ID, listed[0].ID)
 
 	since = time.Now().Add(-time.Hour)
-	listed, err = s.repo.List(s.ctx, servicetemplate.TemplateFilter{Since: &since})
+	listed, err = s.repo.List(s.ctx, servicetemplate.TemplateFilter{UserID: &userID, Since: &since})
 	s.Require().NoError(err)
 	s.Empty(listed)
 }
