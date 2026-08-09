@@ -1,5 +1,3 @@
-// Package bodyweight contains the body weight use cases and the repository
-// interface the service consumes.
 package bodyweight
 
 import (

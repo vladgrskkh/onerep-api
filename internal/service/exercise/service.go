@@ -1,5 +1,3 @@
-// Package exercise contains the exercise use cases and the repository
-// interfaces the service consumes.
 package exercise
 
 import (

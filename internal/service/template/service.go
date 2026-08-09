@@ -1,5 +1,3 @@
-// Package template contains the template use cases and the repository
-// interface the service consumes.
 package template
 
 import (

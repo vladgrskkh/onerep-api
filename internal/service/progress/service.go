@@ -1,5 +1,3 @@
-// Package progress contains the progress use cases and the repository
-// interface the service consumes.
 package progress
 
 import (

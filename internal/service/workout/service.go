@@ -1,5 +1,3 @@
-// Package workout contains the workout use cases and the repository
-// interface the service consumes.
 package workout
 
 import (
