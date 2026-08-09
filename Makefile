@@ -32,7 +32,7 @@ mock:
 	fi
 
 swagger:
-	swag init --parseDependency -g cmd/server/main.go -o docs/
+	swag init -g cmd/server/main.go -o docs/
 
 check-generate:
 	$(MAKE) generate

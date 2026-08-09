@@ -1,0 +1,283 @@
+basePath: /v1
+definitions:
+  dto.ExerciseCreateRequest:
+    properties:
+      description:
+        type: string
+      muscle_group_ids:
+        items:
+          type: integer
+        type: array
+      name:
+        maxLength: 100
+        type: string
+      notes:
+        type: string
+    required:
+    - name
+    type: object
+  dto.ExerciseMediaResponse:
+    properties:
+      id:
+        type: string
+      media_type:
+        type: string
+      s3_key:
+        type: string
+      sort_order:
+        type: integer
+    type: object
+  dto.ExerciseResponse:
+    properties:
+      created_at:
+        type: string
+      created_by_user_id:
+        type: string
+      description:
+        type: string
+      id:
+        type: string
+      is_built_in:
+        type: boolean
+      media:
+        items:
+          $ref: '#/definitions/dto.ExerciseMediaResponse'
+        type: array
+      muscle_groups:
+        items:
+          $ref: '#/definitions/dto.MuscleGroupResponse'
+        type: array
+      name:
+        type: string
+      notes:
+        type: string
+      updated_at:
+        type: string
+      version:
+        type: integer
+    type: object
+  dto.ExerciseUpdateRequest:
+    properties:
+      description:
+        type: string
+      muscle_group_ids:
+        items:
+          type: integer
+        type: array
+      name:
+        maxLength: 100
+        type: string
+      notes:
+        type: string
+    type: object
+  dto.MuscleGroupResponse:
+    properties:
+      id:
+        type: integer
+      is_primary:
+        type: boolean
+    type: object
+  handler.ErrorDetail:
+    properties:
+      code:
+        type: string
+      details:
+        items:
+          $ref: '#/definitions/handler.ValidationDetail'
+        type: array
+      message:
+        type: string
+      user_message:
+        type: string
+    type: object
+  handler.ErrorResponse:
+    properties:
+      error:
+        $ref: '#/definitions/handler.ErrorDetail'
+    type: object
+  handler.ValidationDetail:
+    properties:
+      field:
+        type: string
+      param:
+        type: string
+      tag:
+        type: string
+    type: object
+host: localhost:8081
+info:
+  contact: {}
+  description: Core gym domain service for OneRep — exercises, templates, workouts,
+    progress
+  title: OneRep Gym API
+  version: "1.0"
+paths:
+  /exercises:
+    get:
+      consumes:
+      - application/json
+      description: List exercises, optionally filtered by search, muscle group, and
+        last-updated time
+      parameters:
+      - description: Search by name
+        in: query
+        name: search
+        type: string
+      - description: Filter by muscle group name
+        in: query
+        name: muscle_group
+        type: string
+      - description: Only exercises updated after this RFC 3339 timestamp
+        in: query
+        name: since
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/dto.ExerciseResponse'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: List exercises
+      tags:
+      - exercises
+    post:
+      consumes:
+      - application/json
+      description: Create a custom exercise for the authenticated user
+      parameters:
+      - description: Exercise data
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/dto.ExerciseCreateRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/dto.ExerciseResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Create an exercise
+      tags:
+      - exercises
+  /exercises/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Soft-delete an existing exercise
+      parameters:
+      - description: Exercise ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Delete an exercise
+      tags:
+      - exercises
+    get:
+      consumes:
+      - application/json
+      description: Get an exercise by ID, including its media and muscle groups
+      parameters:
+      - description: Exercise ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.ExerciseResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get an exercise
+      tags:
+      - exercises
+    patch:
+      consumes:
+      - application/json
+      description: Patch an existing exercise; null fields are left unchanged
+      parameters:
+      - description: Exercise ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Fields to update
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/dto.ExerciseUpdateRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.ExerciseResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Update an exercise
+      tags:
+      - exercises
+securityDefinitions:
+  BearerAuth:
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"

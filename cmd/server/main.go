@@ -7,6 +7,15 @@ import (
 	"time"
 )
 
+// @title OneRep Gym API
+// @version 1.0
+// @description Core gym domain service for OneRep — exercises, templates, workouts, progress
+// @host localhost:8081
+// @BasePath /v1
+// @securityDefinitions.apikey BearerAuth
+// @in header
+// @name Authorization
+
 const readHeaderTimeout = 5 * time.Second
 
 func main() {

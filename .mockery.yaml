@@ -1,4 +1,20 @@
 with-expecter: true
-mockname: "Mock{{.InterfaceName}}"
-outpkg: "mocks"
-filename: "{{.InterfaceName | snakecase}}.gen.go"
+packages:
+  github.com/vladgrskkh/onerep-api/internal/service/exercise:
+    config:
+      dir: internal/service/exercise/mocks
+      mockname: "Mock{{.InterfaceName}}"
+      outpkg: "mocks"
+      filename: "{{.InterfaceName | snakecase}}.gen.go"
+    interfaces:
+      ExerciseRepository:
+      MuscleGroupRepository:
+      TransactionManager:
+  github.com/vladgrskkh/onerep-api/internal/handler/exercise:
+    config:
+      dir: internal/handler/exercise/mocks
+      mockname: "Mock{{.InterfaceName}}"
+      outpkg: "mocks"
+      filename: "{{.InterfaceName | snakecase}}.gen.go"
+    interfaces:
+      ExerciseService:
