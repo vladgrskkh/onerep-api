@@ -39,7 +39,10 @@ type WorkoutSet struct {
 	IsWarmup          bool
 }
 
-func NewWorkout(userID uuid.UUID, templateID *uuid.UUID) Workout {
+func NewWorkout(userID uuid.UUID, templateID *uuid.UUID) (Workout, error) {
+	if userID == uuid.Nil {
+		return Workout{}, ErrInvalidUserID
+	}
 	now := time.Now()
 	return Workout{
 		ID:         uuid.Must(uuid.NewV7()),
@@ -49,15 +52,21 @@ func NewWorkout(userID uuid.UUID, templateID *uuid.UUID) Workout {
 		CreatedAt:  now,
 		UpdatedAt:  now,
 		Version:    1,
-	}
+	}, nil
 }
 
-func NewWorkoutExercise(workoutID, exerciseID uuid.UUID) WorkoutExercise {
+func NewWorkoutExercise(workoutID, exerciseID uuid.UUID) (WorkoutExercise, error) {
+	if workoutID == uuid.Nil {
+		return WorkoutExercise{}, ErrInvalidWorkoutID
+	}
+	if exerciseID == uuid.Nil {
+		return WorkoutExercise{}, ErrInvalidExerciseID
+	}
 	return WorkoutExercise{
 		ID:         uuid.Must(uuid.NewV7()),
 		WorkoutID:  workoutID,
 		ExerciseID: exerciseID,
-	}
+	}, nil
 }
 
 func NewWorkoutSet(
@@ -67,7 +76,22 @@ func NewWorkoutSet(
 	rpe *int,
 	restSeconds *int,
 	isWarmup bool,
-) WorkoutSet {
+) (WorkoutSet, error) {
+	if workoutExerciseID == uuid.Nil {
+		return WorkoutSet{}, ErrInvalidWorkoutExerciseID
+	}
+	if weightKg <= 0 {
+		return WorkoutSet{}, ErrInvalidWeight
+	}
+	if reps <= 0 {
+		return WorkoutSet{}, ErrInvalidReps
+	}
+	if rpe != nil && (*rpe < 1 || *rpe > 10) {
+		return WorkoutSet{}, ErrInvalidRPE
+	}
+	if restSeconds != nil && *restSeconds < 0 {
+		return WorkoutSet{}, ErrInvalidRestSeconds
+	}
 	return WorkoutSet{
 		ID:                uuid.Must(uuid.NewV7()),
 		WorkoutExerciseID: workoutExerciseID,
@@ -76,5 +100,5 @@ func NewWorkoutSet(
 		RPE:               rpe,
 		RestSeconds:       restSeconds,
 		IsWarmup:          isWarmup,
-	}
+	}, nil
 }

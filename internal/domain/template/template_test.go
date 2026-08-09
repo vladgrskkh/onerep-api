@@ -17,8 +17,9 @@ type TemplateTestSuite struct {
 func (s *TemplateTestSuite) TestNewTemplate() {
 	createdBy := uuid.MustParse("9f3b8f3e-4f1d-4f6a-8b3e-3a2f5c9d1e2a")
 
-	tmpl := template.NewTemplate("Push Day", "Chest, shoulders, triceps", createdBy)
+	tmpl, err := template.NewTemplate("  Push Day  ", "Chest, shoulders, triceps", createdBy)
 
+	s.Require().NoError(err)
 	s.NotEqual(uuid.Nil, tmpl.ID)
 	s.Equal(uuid.Version(7), tmpl.ID.Version())
 	s.Equal("Push Day", tmpl.Name)
@@ -32,6 +33,33 @@ func (s *TemplateTestSuite) TestNewTemplate() {
 	s.Equal(1, tmpl.Version)
 	s.Empty(tmpl.Exercises)
 	s.Empty(tmpl.Media)
+}
+
+func (s *TemplateTestSuite) TestNewTemplate_Validation() {
+	createdBy := uuid.MustParse("9f3b8f3e-4f1d-4f6a-8b3e-3a2f5c9d1e2a")
+
+	tests := []struct {
+		name            string
+		templateName    string
+		createdByUserID uuid.UUID
+		wantErr         error
+	}{
+		{name: "valid", templateName: "Push Day", createdByUserID: createdBy},
+		{name: "blank name", templateName: "   ", createdByUserID: createdBy, wantErr: template.ErrInvalidName},
+		{name: "nil user id", templateName: "Push Day", createdByUserID: uuid.Nil, wantErr: template.ErrInvalidUserID},
+	}
+	for _, tt := range tests {
+		s.Run(tt.name, func() {
+			tmpl, err := template.NewTemplate(tt.templateName, "desc", tt.createdByUserID)
+			if tt.wantErr != nil {
+				s.Require().ErrorIs(err, tt.wantErr)
+				s.Equal(uuid.Nil, tmpl.ID)
+				return
+			}
+			s.Require().NoError(err)
+			s.Equal(tt.templateName, tmpl.Name)
+		})
+	}
 }
 
 func (s *TemplateTestSuite) TestMediaTypePhoto() {

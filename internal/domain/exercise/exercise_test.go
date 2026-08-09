@@ -17,8 +17,14 @@ type ExerciseTestSuite struct {
 func (s *ExerciseTestSuite) TestNewExercise() {
 	createdBy := uuid.MustParse("9f3b8f3e-4f1d-4f6a-8b3e-3a2f5c9d1e2a")
 
-	e := exercise.NewExercise("Bench Press", "Chest press with a barbell", "Keep shoulders back", createdBy)
+	e, err := exercise.NewExercise(
+		"  Bench Press  ",
+		"Chest press with a barbell",
+		"Keep shoulders back",
+		createdBy,
+	)
 
+	s.Require().NoError(err)
 	s.NotEqual(uuid.Nil, e.ID)
 	s.Equal(uuid.Version(7), e.ID.Version())
 	s.Equal("Bench Press", e.Name)
@@ -36,11 +42,67 @@ func (s *ExerciseTestSuite) TestNewExercise() {
 	s.Empty(e.MuscleGroups)
 }
 
-func (s *ExerciseTestSuite) TestNewMuscleGroup() {
-	mg := exercise.NewMuscleGroup(1, "chest")
+func (s *ExerciseTestSuite) TestNewExercise_Validation() {
+	createdBy := uuid.MustParse("9f3b8f3e-4f1d-4f6a-8b3e-3a2f5c9d1e2a")
 
+	tests := []struct {
+		name            string
+		exerciseName    string
+		createdByUserID uuid.UUID
+		wantErr         error
+	}{
+		{name: "valid", exerciseName: "Bench Press", createdByUserID: createdBy},
+		{name: "blank name", exerciseName: "   ", createdByUserID: createdBy, wantErr: exercise.ErrInvalidName},
+		{
+			name:            "nil user id",
+			exerciseName:    "Bench Press",
+			createdByUserID: uuid.Nil,
+			wantErr:         exercise.ErrInvalidUserID,
+		},
+	}
+	for _, tt := range tests {
+		s.Run(tt.name, func() {
+			e, err := exercise.NewExercise(tt.exerciseName, "desc", "notes", tt.createdByUserID)
+			if tt.wantErr != nil {
+				s.Require().ErrorIs(err, tt.wantErr)
+				s.Equal(uuid.Nil, e.ID)
+				return
+			}
+			s.Require().NoError(err)
+			s.Equal(tt.exerciseName, e.Name)
+		})
+	}
+}
+
+func (s *ExerciseTestSuite) TestNewMuscleGroup() {
+	mg, err := exercise.NewMuscleGroup(1, " chest ")
+
+	s.Require().NoError(err)
 	s.Equal(1, mg.ID)
 	s.Equal("chest", mg.Name)
+}
+
+func (s *ExerciseTestSuite) TestNewMuscleGroup_Validation() {
+	tests := []struct {
+		name    string
+		id      int
+		mgName  string
+		wantErr error
+	}{
+		{name: "valid", id: 1, mgName: "chest"},
+		{name: "zero id", id: 0, mgName: "chest", wantErr: exercise.ErrInvalidID},
+		{name: "blank name", id: 1, mgName: " ", wantErr: exercise.ErrInvalidName},
+	}
+	for _, tt := range tests {
+		s.Run(tt.name, func() {
+			_, err := exercise.NewMuscleGroup(tt.id, tt.mgName)
+			if tt.wantErr != nil {
+				s.Require().ErrorIs(err, tt.wantErr)
+				return
+			}
+			s.Require().NoError(err)
+		})
+	}
 }
 
 func (s *ExerciseTestSuite) TestMediaTypeConstants() {

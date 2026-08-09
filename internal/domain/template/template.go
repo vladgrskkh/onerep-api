@@ -1,6 +1,7 @@
 package template
 
 import (
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -41,7 +42,14 @@ type TemplateExercise struct {
 	PlannedSets int
 }
 
-func NewTemplate(name, description string, createdByUserID uuid.UUID) Template {
+func NewTemplate(name, description string, createdByUserID uuid.UUID) (Template, error) {
+	name = strings.TrimSpace(name)
+	if name == "" {
+		return Template{}, ErrInvalidName
+	}
+	if createdByUserID == uuid.Nil {
+		return Template{}, ErrInvalidUserID
+	}
 	now := time.Now()
 	return Template{
 		ID:              uuid.Must(uuid.NewV7()),
@@ -52,5 +60,5 @@ func NewTemplate(name, description string, createdByUserID uuid.UUID) Template {
 		CreatedAt:       now,
 		UpdatedAt:       now,
 		Version:         1,
-	}
+	}, nil
 }

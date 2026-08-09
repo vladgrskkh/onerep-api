@@ -1,6 +1,7 @@
 package exercise
 
 import (
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -42,7 +43,14 @@ type ExerciseMuscleGroup struct {
 	IsPrimary     bool
 }
 
-func NewExercise(name, description, notes string, createdByUserID uuid.UUID) Exercise {
+func NewExercise(name, description, notes string, createdByUserID uuid.UUID) (Exercise, error) {
+	name = strings.TrimSpace(name)
+	if name == "" {
+		return Exercise{}, ErrInvalidName
+	}
+	if createdByUserID == uuid.Nil {
+		return Exercise{}, ErrInvalidUserID
+	}
 	now := time.Now()
 	return Exercise{
 		ID:              uuid.Must(uuid.NewV7()),
@@ -54,5 +62,5 @@ func NewExercise(name, description, notes string, createdByUserID uuid.UUID) Exe
 		CreatedAt:       now,
 		UpdatedAt:       now,
 		Version:         1,
-	}
+	}, nil
 }

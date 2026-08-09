@@ -16,7 +16,13 @@ type BodyWeight struct {
 	Version    int
 }
 
-func NewBodyWeight(userID uuid.UUID, weightKg float64, measuredAt time.Time) BodyWeight {
+func NewBodyWeight(userID uuid.UUID, weightKg float64, measuredAt time.Time) (BodyWeight, error) {
+	if userID == uuid.Nil {
+		return BodyWeight{}, ErrInvalidUserID
+	}
+	if weightKg <= 0 {
+		return BodyWeight{}, ErrInvalidWeight
+	}
 	now := time.Now()
 	return BodyWeight{
 		ID:         uuid.Must(uuid.NewV7()),
@@ -26,5 +32,5 @@ func NewBodyWeight(userID uuid.UUID, weightKg float64, measuredAt time.Time) Bod
 		CreatedAt:  now,
 		UpdatedAt:  now,
 		Version:    1,
-	}
+	}, nil
 }
