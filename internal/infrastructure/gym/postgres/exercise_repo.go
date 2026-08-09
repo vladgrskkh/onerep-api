@@ -11,7 +11,6 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	domainexercise "github.com/vladgrskkh/onerep-api/internal/domain/exercise"
-	serviceexercise "github.com/vladgrskkh/onerep-api/internal/service/exercise"
 )
 
 type ExerciseRepo struct {
@@ -24,7 +23,7 @@ func NewExerciseRepo(pool *pgxpool.Pool) *ExerciseRepo {
 
 func (r *ExerciseRepo) List(
 	ctx context.Context,
-	filter serviceexercise.ExerciseFilter,
+	filter domainexercise.ExerciseFilter,
 ) ([]domainexercise.Exercise, error) {
 	query, args := buildListQuery(filter)
 	rows, err := r.pool.Query(ctx, query, args...)
@@ -54,7 +53,7 @@ func (r *ExerciseRepo) List(
 	return exercises, rows.Err()
 }
 
-func buildListQuery(filter serviceexercise.ExerciseFilter) (string, []any) {
+func buildListQuery(filter domainexercise.ExerciseFilter) (string, []any) {
 	var query strings.Builder
 	query.WriteString(
 		`SELECT id, name, description, notes, is_built_in, created_by_user_id, created_at, updated_at, version FROM gym.exercises WHERE deleted_at IS NULL`,

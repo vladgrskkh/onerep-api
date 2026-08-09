@@ -2,7 +2,6 @@ package exercise
 
 import (
 	"context"
-	"time"
 
 	"github.com/google/uuid"
 
@@ -10,18 +9,11 @@ import (
 )
 
 type ExerciseRepository interface {
-	List(ctx context.Context, filter ExerciseFilter) ([]domainexercise.Exercise, error)
+	List(ctx context.Context, filter domainexercise.ExerciseFilter) ([]domainexercise.Exercise, error)
 	FindByID(ctx context.Context, id uuid.UUID) (domainexercise.Exercise, error)
 	Create(ctx context.Context, ex domainexercise.Exercise) (domainexercise.Exercise, error)
 	Update(ctx context.Context, ex domainexercise.Exercise) (domainexercise.Exercise, error)
 	SoftDelete(ctx context.Context, id uuid.UUID) error
-}
-
-type ExerciseFilter struct {
-	Search      string
-	MuscleGroup string
-	Since       *time.Time
-	IsBuiltIn   *bool
 }
 
 type MuscleGroupRepository interface {

@@ -13,7 +13,6 @@ import (
 
 	domaintemplate "github.com/vladgrskkh/onerep-api/internal/domain/template"
 	"github.com/vladgrskkh/onerep-api/internal/infrastructure/gym/postgres"
-	servicetemplate "github.com/vladgrskkh/onerep-api/internal/service/template"
 )
 
 type TemplateRepoTestSuite struct {
@@ -118,7 +117,7 @@ func (s *TemplateRepoTestSuite) TestList_UserIDFilter() {
 	t2.CreatedByUserID = uuid.New()
 	s.createTestTemplate(t2)
 
-	listed, err := s.repo.List(s.ctx, servicetemplate.TemplateFilter{UserID: &userID})
+	listed, err := s.repo.List(s.ctx, domaintemplate.TemplateFilter{UserID: &userID})
 	s.Require().NoError(err)
 	s.Require().Len(listed, 1)
 	s.Equal(t1.ID, listed[0].ID)
@@ -138,13 +137,13 @@ func (s *TemplateRepoTestSuite) TestList_IsPublicFilter() {
 	s.createTestTemplate(t2)
 
 	isPublic := true
-	listed, err := s.repo.List(s.ctx, servicetemplate.TemplateFilter{UserID: &userID1, IsPublic: &isPublic})
+	listed, err := s.repo.List(s.ctx, domaintemplate.TemplateFilter{UserID: &userID1, IsPublic: &isPublic})
 	s.Require().NoError(err)
 	s.Require().Len(listed, 1)
 	s.Equal(t1.ID, listed[0].ID)
 
 	isPublic = false
-	listed, err = s.repo.List(s.ctx, servicetemplate.TemplateFilter{UserID: &userID2, IsPublic: &isPublic})
+	listed, err = s.repo.List(s.ctx, domaintemplate.TemplateFilter{UserID: &userID2, IsPublic: &isPublic})
 	s.Require().NoError(err)
 	s.Require().Len(listed, 1)
 	s.Equal(t2.ID, listed[0].ID)
@@ -159,13 +158,13 @@ func (s *TemplateRepoTestSuite) TestList_SinceFilter() {
 	s.createTestTemplate(t)
 
 	since := time.Now().Add(-3 * time.Hour)
-	listed, err := s.repo.List(s.ctx, servicetemplate.TemplateFilter{UserID: &userID, Since: &since})
+	listed, err := s.repo.List(s.ctx, domaintemplate.TemplateFilter{UserID: &userID, Since: &since})
 	s.Require().NoError(err)
 	s.Require().Len(listed, 1)
 	s.Equal(t.ID, listed[0].ID)
 
 	since = time.Now().Add(-time.Hour)
-	listed, err = s.repo.List(s.ctx, servicetemplate.TemplateFilter{UserID: &userID, Since: &since})
+	listed, err = s.repo.List(s.ctx, domaintemplate.TemplateFilter{UserID: &userID, Since: &since})
 	s.Require().NoError(err)
 	s.Empty(listed)
 }
@@ -176,7 +175,7 @@ func (s *TemplateRepoTestSuite) TestList_ExcludesSoftDeleted() {
 	err := s.repo.SoftDelete(s.ctx, t.ID)
 	s.Require().NoError(err)
 
-	listed, err := s.repo.List(s.ctx, servicetemplate.TemplateFilter{})
+	listed, err := s.repo.List(s.ctx, domaintemplate.TemplateFilter{})
 	s.Require().NoError(err)
 	for _, l := range listed {
 		s.NotEqual(t.ID, l.ID)
@@ -240,7 +239,7 @@ func (s *TemplateRepoTestSuite) TestSoftDelete_RemovesFromList() {
 	err := s.repo.SoftDelete(s.ctx, t.ID)
 	s.Require().NoError(err)
 
-	listed, err := s.repo.List(s.ctx, servicetemplate.TemplateFilter{})
+	listed, err := s.repo.List(s.ctx, domaintemplate.TemplateFilter{})
 	s.Require().NoError(err)
 	for _, l := range listed {
 		s.NotEqual(t.ID, l.ID)

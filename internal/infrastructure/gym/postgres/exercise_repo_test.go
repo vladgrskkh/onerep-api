@@ -13,7 +13,6 @@ import (
 
 	"github.com/vladgrskkh/onerep-api/internal/domain/exercise"
 	"github.com/vladgrskkh/onerep-api/internal/infrastructure/gym/postgres"
-	serviceexercise "github.com/vladgrskkh/onerep-api/internal/service/exercise"
 )
 
 type ExerciseRepoTestSuite struct {
@@ -99,7 +98,7 @@ func (s *ExerciseRepoTestSuite) TestList_Search() {
 	ex := s.createTestExercise(s.newTestExercise("SearchableName-" + uuid.NewString()))
 	s.createTestExercise(s.newTestExercise("UnrelatedName-" + uuid.NewString()))
 
-	listed, err := s.repo.List(s.ctx, serviceexercise.ExerciseFilter{Search: ex.Name})
+	listed, err := s.repo.List(s.ctx, exercise.ExerciseFilter{Search: ex.Name})
 	s.Require().NoError(err)
 	s.Require().Len(listed, 1)
 	s.Equal(ex.ID, listed[0].ID)
@@ -111,12 +110,12 @@ func (s *ExerciseRepoTestSuite) TestList_MuscleGroupFilter() {
 	s.createTestExercise(ex)
 	s.createTestExercise(s.newTestExercise("ChestExercise-" + uuid.NewString()))
 
-	listed, err := s.repo.List(s.ctx, serviceexercise.ExerciseFilter{Search: ex.Name})
+	listed, err := s.repo.List(s.ctx, exercise.ExerciseFilter{Search: ex.Name})
 	s.Require().NoError(err)
 	s.Require().Len(listed, 1)
 	s.Equal(ex.ID, listed[0].ID)
 
-	listed, err = s.repo.List(s.ctx, serviceexercise.ExerciseFilter{MuscleGroup: "quads"})
+	listed, err = s.repo.List(s.ctx, exercise.ExerciseFilter{MuscleGroup: "quads"})
 	s.Require().NoError(err)
 	s.True(len(listed) >= 1)
 	found := false
@@ -135,13 +134,13 @@ func (s *ExerciseRepoTestSuite) TestList_SinceFilter() {
 	s.createTestExercise(ex)
 
 	since := time.Now().Add(-3 * time.Hour)
-	listed, err := s.repo.List(s.ctx, serviceexercise.ExerciseFilter{Search: ex.Name, Since: &since})
+	listed, err := s.repo.List(s.ctx, exercise.ExerciseFilter{Search: ex.Name, Since: &since})
 	s.Require().NoError(err)
 	s.Require().Len(listed, 1)
 	s.Equal(ex.ID, listed[0].ID)
 
 	since = time.Now().Add(-time.Hour)
-	listed, err = s.repo.List(s.ctx, serviceexercise.ExerciseFilter{Search: ex.Name, Since: &since})
+	listed, err = s.repo.List(s.ctx, exercise.ExerciseFilter{Search: ex.Name, Since: &since})
 	s.Require().NoError(err)
 	s.Empty(listed)
 }
@@ -152,13 +151,13 @@ func (s *ExerciseRepoTestSuite) TestList_IsBuiltInFilter() {
 	s.createTestExercise(ex)
 
 	isBuiltIn := true
-	listed, err := s.repo.List(s.ctx, serviceexercise.ExerciseFilter{Search: ex.Name, IsBuiltIn: &isBuiltIn})
+	listed, err := s.repo.List(s.ctx, exercise.ExerciseFilter{Search: ex.Name, IsBuiltIn: &isBuiltIn})
 	s.Require().NoError(err)
 	s.Require().Len(listed, 1)
 	s.Equal(ex.ID, listed[0].ID)
 
 	isBuiltIn = false
-	listed, err = s.repo.List(s.ctx, serviceexercise.ExerciseFilter{Search: ex.Name, IsBuiltIn: &isBuiltIn})
+	listed, err = s.repo.List(s.ctx, exercise.ExerciseFilter{Search: ex.Name, IsBuiltIn: &isBuiltIn})
 	s.Require().NoError(err)
 	s.Empty(listed)
 }
@@ -169,7 +168,7 @@ func (s *ExerciseRepoTestSuite) TestList_ExcludesSoftDeleted() {
 	err := s.repo.SoftDelete(s.ctx, ex.ID)
 	s.Require().NoError(err)
 
-	listed, err := s.repo.List(s.ctx, serviceexercise.ExerciseFilter{Search: ex.Name})
+	listed, err := s.repo.List(s.ctx, exercise.ExerciseFilter{Search: ex.Name})
 	s.Require().NoError(err)
 	s.Empty(listed)
 
@@ -229,7 +228,7 @@ func (s *ExerciseRepoTestSuite) TestSoftDelete_RemovesFromList() {
 	err := s.repo.SoftDelete(s.ctx, ex.ID)
 	s.Require().NoError(err)
 
-	listed, err := s.repo.List(s.ctx, serviceexercise.ExerciseFilter{Search: ex.Name})
+	listed, err := s.repo.List(s.ctx, exercise.ExerciseFilter{Search: ex.Name})
 	s.Require().NoError(err)
 	s.Empty(listed)
 }

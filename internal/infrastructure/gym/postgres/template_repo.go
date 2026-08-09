@@ -11,7 +11,6 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	domaintemplate "github.com/vladgrskkh/onerep-api/internal/domain/template"
-	servicetemplate "github.com/vladgrskkh/onerep-api/internal/service/template"
 )
 
 type TemplateRepo struct {
@@ -24,7 +23,7 @@ func NewTemplateRepo(pool *pgxpool.Pool) *TemplateRepo {
 
 func (r *TemplateRepo) List(
 	ctx context.Context,
-	filter servicetemplate.TemplateFilter,
+	filter domaintemplate.TemplateFilter,
 ) ([]domaintemplate.Template, error) {
 	query, args := buildTemplateListQuery(filter)
 	rows, err := r.pool.Query(ctx, query, args...)
@@ -53,7 +52,7 @@ func (r *TemplateRepo) List(
 	return templates, rows.Err()
 }
 
-func buildTemplateListQuery(filter servicetemplate.TemplateFilter) (string, []any) {
+func buildTemplateListQuery(filter domaintemplate.TemplateFilter) (string, []any) {
 	var query strings.Builder
 	query.WriteString(
 		`SELECT id, name, description, is_public, created_by_user_id, created_at, updated_at, version FROM gym.templates WHERE deleted_at IS NULL`,
