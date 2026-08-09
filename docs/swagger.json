@@ -404,6 +404,12 @@
                             "$ref": "#/definitions/handler.ErrorResponse"
                         }
                     },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    },
                     "404": {
                         "description": "Not Found",
                         "schema": {
@@ -550,7 +556,7 @@
                         "BearerAuth": []
                     }
                 ],
-                "description": "Copy a template, including its exercises and media, as the authenticated user's own",
+                "description": "Copy a public template, or an own private template, including its exercises and media, as the authenticated user's own",
                 "consumes": [
                     "application/json"
                 ],
@@ -579,6 +585,12 @@
                     },
                     "400": {
                         "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
                         "schema": {
                             "$ref": "#/definitions/handler.ErrorResponse"
                         }

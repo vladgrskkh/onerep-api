@@ -36,10 +36,8 @@ func NewTemplateHandler(svc TemplateService, logger *slog.Logger) *TemplateHandl
 // @Security BearerAuth
 // @Router /templates [get]
 func (h *TemplateHandler) List(w http.ResponseWriter, r *http.Request) {
-	var filter domaintemplate.TemplateFilter
-	if userID := handler.UserIDFromContext(r.Context()); userID != uuid.Nil {
-		filter.UserID = &userID
-	}
+	userID := handler.UserIDFromContext(r.Context())
+	filter := domaintemplate.TemplateFilter{UserID: &userID}
 	if sinceStr := r.URL.Query().Get("since"); sinceStr != "" {
 		since, parseErr := time.Parse(time.RFC3339, sinceStr)
 		if parseErr != nil {
@@ -59,7 +57,8 @@ func (h *TemplateHandler) List(w http.ResponseWriter, r *http.Request) {
 	handler.WriteJSON(w, h.logger, http.StatusOK, toTemplateListResponse(templates))
 }
 
-// Get returns a single template.
+// Get returns a single template. Public templates are readable by anyone;
+// private templates only by their owner.
 //
 // @Summary Get a template
 // @Description Get a template by ID, including its exercises and media
@@ -69,6 +68,7 @@ func (h *TemplateHandler) List(w http.ResponseWriter, r *http.Request) {
 // @Param id path string true "Template ID"
 // @Success 200 {object} dto.TemplateResponse
 // @Failure 400 {object} handler.ErrorResponse
+// @Failure 403 {object} handler.ErrorResponse
 // @Failure 404 {object} handler.ErrorResponse
 // @Failure 500 {object} handler.ErrorResponse
 // @Security BearerAuth
@@ -80,7 +80,8 @@ func (h *TemplateHandler) Get(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	t, err := h.svc.Get(r.Context(), templateID)
+	userID := handler.UserIDFromContext(r.Context())
+	t, err := h.svc.Get(r.Context(), templateID, userID)
 	if err != nil {
 		status, detail := mapError(err)
 		handler.WriteError(w, h.logger, status, detail)
@@ -202,16 +203,18 @@ func (h *TemplateHandler) Publish(w http.ResponseWriter, r *http.Request) {
 	handler.WriteJSON(w, h.logger, http.StatusOK, toTemplateResponse(t))
 }
 
-// Fork copies a template under the authenticated user.
+// Fork copies a template under the authenticated user. Public templates may
+// be forked by anyone; private templates only by their owner.
 //
 // @Summary Fork a template
-// @Description Copy a template, including its exercises and media, as the authenticated user's own
+// @Description Copy a public template, or an own private template, including its exercises and media, as the authenticated user's own
 // @Tags templates
 // @Accept json
 // @Produce json
 // @Param id path string true "Template ID"
 // @Success 201 {object} dto.TemplateResponse
 // @Failure 400 {object} handler.ErrorResponse
+// @Failure 403 {object} handler.ErrorResponse
 // @Failure 404 {object} handler.ErrorResponse
 // @Failure 500 {object} handler.ErrorResponse
 // @Security BearerAuth

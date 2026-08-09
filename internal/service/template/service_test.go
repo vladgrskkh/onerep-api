@@ -47,14 +47,56 @@ func (s *ServiceTestSuite) TestList_Success() {
 	s.Equal(expected, got)
 }
 
-func (s *ServiceTestSuite) TestGet_Success() {
+func (s *ServiceTestSuite) TestList_NilUserRejected() {
+	nilUserID := uuid.Nil
+	_, err := s.svc.List(context.Background(), domaintemplate.TemplateFilter{UserID: &nilUserID})
+	s.Require().ErrorIs(err, domaintemplate.ErrInvalidUserID)
+	s.tmplRepo.AssertNotCalled(s.T(), "List", mock.Anything, mock.Anything)
+}
+
+func (s *ServiceTestSuite) TestList_UnscopedRejected() {
+	_, err := s.svc.List(context.Background(), domaintemplate.TemplateFilter{})
+	s.Require().ErrorIs(err, domaintemplate.ErrInvalidUserID)
+	s.tmplRepo.AssertNotCalled(s.T(), "List", mock.Anything, mock.Anything)
+}
+
+func (s *ServiceTestSuite) TestGet_PrivateOwned() {
 	templateID := uuid.Must(uuid.NewV7())
-	expected := domaintemplate.Template{ID: templateID, Name: "Push Day"}
+	userID := uuid.Must(uuid.NewV7())
+	expected := domaintemplate.Template{ID: templateID, Name: "Push Day", CreatedByUserID: userID}
 	s.tmplRepo.EXPECT().FindByID(mock.Anything, templateID).Return(expected, nil)
 
-	got, err := s.svc.Get(context.Background(), templateID)
+	got, err := s.svc.Get(context.Background(), templateID, userID)
 	s.Require().NoError(err)
 	s.Equal(expected, got)
+}
+
+func (s *ServiceTestSuite) TestGet_PublicByAnyone() {
+	templateID := uuid.Must(uuid.NewV7())
+	expected := domaintemplate.Template{
+		ID:              templateID,
+		Name:            "Push Day",
+		IsPublic:        true,
+		CreatedByUserID: uuid.Must(uuid.NewV7()),
+	}
+	s.tmplRepo.EXPECT().FindByID(mock.Anything, templateID).Return(expected, nil)
+
+	got, err := s.svc.Get(context.Background(), templateID, uuid.Must(uuid.NewV7()))
+	s.Require().NoError(err)
+	s.Equal(expected, got)
+}
+
+func (s *ServiceTestSuite) TestGet_PrivateByOther() {
+	templateID := uuid.Must(uuid.NewV7())
+	s.tmplRepo.EXPECT().FindByID(mock.Anything, templateID).
+		Return(domaintemplate.Template{
+			ID:              templateID,
+			Name:            "Push Day",
+			CreatedByUserID: uuid.Must(uuid.NewV7()),
+		}, nil)
+
+	_, err := s.svc.Get(context.Background(), templateID, uuid.Must(uuid.NewV7()))
+	s.Require().ErrorIs(err, domaintemplate.ErrNotOwner)
 }
 
 func (s *ServiceTestSuite) TestGet_NotFound() {
@@ -62,7 +104,7 @@ func (s *ServiceTestSuite) TestGet_NotFound() {
 	s.tmplRepo.EXPECT().FindByID(mock.Anything, templateID).
 		Return(domaintemplate.Template{}, domaintemplate.ErrTemplateNotFound)
 
-	_, err := s.svc.Get(context.Background(), templateID)
+	_, err := s.svc.Get(context.Background(), templateID, uuid.Must(uuid.NewV7()))
 	s.Require().ErrorIs(err, domaintemplate.ErrTemplateNotFound)
 }
 
@@ -285,6 +327,7 @@ func (s *ServiceTestSuite) TestFork_Success() {
 		ID:              sourceID,
 		Name:            "Push Day",
 		Description:     "Chest, shoulders, triceps",
+		IsPublic:        true,
 		CreatedByUserID: uuid.Must(uuid.NewV7()),
 		Exercises: []domaintemplate.TemplateExercise{
 			{TemplateID: sourceID, ExerciseID: exerciseID, SortOrder: 1, PlannedSets: 3},
@@ -341,6 +384,52 @@ func (s *ServiceTestSuite) TestFork_Success() {
 	s.Equal(userID, fork.CreatedByUserID)
 	s.Require().Len(fork.Exercises, 1)
 	s.Require().Len(fork.Media, 1)
+}
+
+func (s *ServiceTestSuite) TestFork_PrivateByOwner() {
+	sourceID := uuid.Must(uuid.NewV7())
+	userID := uuid.Must(uuid.NewV7())
+	exerciseID := uuid.Must(uuid.NewV7())
+
+	source := domaintemplate.Template{
+		ID:              sourceID,
+		Name:            "Push Day",
+		CreatedByUserID: userID,
+		Exercises: []domaintemplate.TemplateExercise{
+			{TemplateID: sourceID, ExerciseID: exerciseID, SortOrder: 1, PlannedSets: 3},
+		},
+	}
+	s.tmplRepo.EXPECT().FindByID(mock.Anything, sourceID).Return(source, nil)
+
+	s.expectTx()
+	s.tmplRepo.EXPECT().Create(mock.Anything, mock.Anything).
+		RunAndReturn(func(_ context.Context, t domaintemplate.Template) (domaintemplate.Template, error) {
+			return t, nil
+		})
+	s.tmplRepo.EXPECT().
+		BatchInsertExercises(mock.Anything, mock.AnythingOfType("[]template.TemplateExercise")).
+		Return(nil)
+	s.tmplRepo.EXPECT().BatchInsertMedia(mock.Anything, mock.AnythingOfType("[]template.TemplateMedia")).Return(nil)
+
+	fork, err := s.svc.Fork(context.Background(), sourceID, userID)
+	s.Require().NoError(err)
+	s.Equal(userID, fork.CreatedByUserID)
+	s.Require().Len(fork.Exercises, 1)
+}
+
+func (s *ServiceTestSuite) TestFork_PrivateByOther() {
+	sourceID := uuid.Must(uuid.NewV7())
+	s.tmplRepo.EXPECT().FindByID(mock.Anything, sourceID).
+		Return(domaintemplate.Template{
+			ID:              sourceID,
+			Name:            "Push Day",
+			CreatedByUserID: uuid.Must(uuid.NewV7()),
+		}, nil)
+
+	_, err := s.svc.Fork(context.Background(), sourceID, uuid.Must(uuid.NewV7()))
+	s.Require().ErrorIs(err, domaintemplate.ErrNotOwner)
+	s.trManager.AssertNotCalled(s.T(), "Do", mock.Anything, mock.Anything)
+	s.tmplRepo.AssertNotCalled(s.T(), "Create", mock.Anything, mock.Anything)
 }
 
 func (s *ServiceTestSuite) TestFork_NotFound() {

@@ -96,18 +96,53 @@ func (s *HandlerTestSuite) TestList_InvalidSince() {
 	s.svc.AssertNotCalled(s.T(), "List", mock.Anything, mock.Anything)
 }
 
+func (s *HandlerTestSuite) TestList_MissingUser() {
+	s.svc.EXPECT().List(mock.Anything, mock.Anything).
+		Return(nil, domaintemplate.ErrInvalidUserID)
+
+	w := s.serve(http.MethodGet, "/v1/templates", "")
+
+	s.Equal(http.StatusBadRequest, w.Code)
+	resp := s.decodeError(w)
+	s.Equal("INVALID_USER_ID", string(resp.Error.Code))
+}
+
 func (s *HandlerTestSuite) TestGet_Success() {
 	templateID := uuid.Must(uuid.NewV7())
-	s.svc.EXPECT().Get(mock.Anything, templateID).
-		Return(domaintemplate.Template{ID: templateID, Name: "Push Day"}, nil)
+	userID := uuid.Must(uuid.NewV7())
+	s.svc.EXPECT().Get(mock.Anything, templateID, userID).
+		Return(domaintemplate.Template{ID: templateID, Name: "Push Day", CreatedByUserID: userID}, nil)
 
-	w := s.serve(http.MethodGet, "/v1/templates/"+templateID.String(), "")
+	req := httptest.NewRequest(http.MethodGet, "/v1/templates/"+templateID.String(), nil)
+	req = req.WithContext(handler.WithUserID(req.Context(), userID))
+	mux := http.NewServeMux()
+	mux.HandleFunc("GET /v1/templates/{id}", s.handler.Get)
+	w := httptest.NewRecorder()
+	mux.ServeHTTP(w, req)
 
 	s.Equal(http.StatusOK, w.Code)
 	var resp dto.TemplateResponse
 	s.Require().NoError(json.Unmarshal(w.Body.Bytes(), &resp))
 	s.Equal(templateID, resp.ID)
 	s.Equal("Push Day", resp.Name)
+}
+
+func (s *HandlerTestSuite) TestGet_PrivateByOther() {
+	templateID := uuid.Must(uuid.NewV7())
+	userID := uuid.Must(uuid.NewV7())
+	s.svc.EXPECT().Get(mock.Anything, templateID, userID).
+		Return(domaintemplate.Template{}, domaintemplate.ErrNotOwner)
+
+	req := httptest.NewRequest(http.MethodGet, "/v1/templates/"+templateID.String(), nil)
+	req = req.WithContext(handler.WithUserID(req.Context(), userID))
+	mux := http.NewServeMux()
+	mux.HandleFunc("GET /v1/templates/{id}", s.handler.Get)
+	w := httptest.NewRecorder()
+	mux.ServeHTTP(w, req)
+
+	s.Equal(http.StatusForbidden, w.Code)
+	resp := s.decodeError(w)
+	s.Equal("FORBIDDEN", string(resp.Error.Code))
 }
 
 func (s *HandlerTestSuite) TestGet_InvalidID() {
@@ -121,7 +156,7 @@ func (s *HandlerTestSuite) TestGet_InvalidID() {
 
 func (s *HandlerTestSuite) TestGet_NotFound() {
 	templateID := uuid.Must(uuid.NewV7())
-	s.svc.EXPECT().Get(mock.Anything, templateID).
+	s.svc.EXPECT().Get(mock.Anything, templateID, mock.Anything).
 		Return(domaintemplate.Template{}, domaintemplate.ErrTemplateNotFound)
 
 	w := s.serve(http.MethodGet, "/v1/templates/"+templateID.String(), "")
@@ -311,6 +346,24 @@ func (s *HandlerTestSuite) TestFork_Success() {
 	var resp dto.TemplateResponse
 	s.Require().NoError(json.Unmarshal(w.Body.Bytes(), &resp))
 	s.Equal(forkedID, resp.ID)
+}
+
+func (s *HandlerTestSuite) TestFork_PrivateByOther() {
+	templateID := uuid.Must(uuid.NewV7())
+	userID := uuid.Must(uuid.NewV7())
+	s.svc.EXPECT().Fork(mock.Anything, templateID, userID).
+		Return(domaintemplate.Template{}, domaintemplate.ErrNotOwner)
+
+	req := httptest.NewRequest(http.MethodPost, "/v1/templates/"+templateID.String()+"/fork", nil)
+	req = req.WithContext(handler.WithUserID(req.Context(), userID))
+	mux := http.NewServeMux()
+	mux.HandleFunc("POST /v1/templates/{id}/fork", s.handler.Fork)
+	w := httptest.NewRecorder()
+	mux.ServeHTTP(w, req)
+
+	s.Equal(http.StatusForbidden, w.Code)
+	resp := s.decodeError(w)
+	s.Equal("FORBIDDEN", string(resp.Error.Code))
 }
 
 func (s *HandlerTestSuite) TestFork_InvalidID() {

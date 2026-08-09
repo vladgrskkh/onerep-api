@@ -142,9 +142,9 @@ func (_c *MockTemplateService_Fork_Call) RunAndReturn(run func(context.Context, 
 	return _c
 }
 
-// Get provides a mock function with given fields: ctx, id
-func (_m *MockTemplateService) Get(ctx context.Context, id uuid.UUID) (domaintemplate.Template, error) {
-	ret := _m.Called(ctx, id)
+// Get provides a mock function with given fields: ctx, id, userID
+func (_m *MockTemplateService) Get(ctx context.Context, id uuid.UUID, userID uuid.UUID) (domaintemplate.Template, error) {
+	ret := _m.Called(ctx, id, userID)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Get")
@@ -152,17 +152,17 @@ func (_m *MockTemplateService) Get(ctx context.Context, id uuid.UUID) (domaintem
 
 	var r0 domaintemplate.Template
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID) (domaintemplate.Template, error)); ok {
-		return rf(ctx, id)
+	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID, uuid.UUID) (domaintemplate.Template, error)); ok {
+		return rf(ctx, id, userID)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID) domaintemplate.Template); ok {
-		r0 = rf(ctx, id)
+	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID, uuid.UUID) domaintemplate.Template); ok {
+		r0 = rf(ctx, id, userID)
 	} else {
 		r0 = ret.Get(0).(domaintemplate.Template)
 	}
 
-	if rf, ok := ret.Get(1).(func(context.Context, uuid.UUID) error); ok {
-		r1 = rf(ctx, id)
+	if rf, ok := ret.Get(1).(func(context.Context, uuid.UUID, uuid.UUID) error); ok {
+		r1 = rf(ctx, id, userID)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -178,13 +178,14 @@ type MockTemplateService_Get_Call struct {
 // Get is a helper method to define mock.On call
 //   - ctx context.Context
 //   - id uuid.UUID
-func (_e *MockTemplateService_Expecter) Get(ctx interface{}, id interface{}) *MockTemplateService_Get_Call {
-	return &MockTemplateService_Get_Call{Call: _e.mock.On("Get", ctx, id)}
+//   - userID uuid.UUID
+func (_e *MockTemplateService_Expecter) Get(ctx interface{}, id interface{}, userID interface{}) *MockTemplateService_Get_Call {
+	return &MockTemplateService_Get_Call{Call: _e.mock.On("Get", ctx, id, userID)}
 }
 
-func (_c *MockTemplateService_Get_Call) Run(run func(ctx context.Context, id uuid.UUID)) *MockTemplateService_Get_Call {
+func (_c *MockTemplateService_Get_Call) Run(run func(ctx context.Context, id uuid.UUID, userID uuid.UUID)) *MockTemplateService_Get_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context), args[1].(uuid.UUID))
+		run(args[0].(context.Context), args[1].(uuid.UUID), args[2].(uuid.UUID))
 	})
 	return _c
 }
@@ -194,7 +195,7 @@ func (_c *MockTemplateService_Get_Call) Return(_a0 domaintemplate.Template, _a1 
 	return _c
 }
 
-func (_c *MockTemplateService_Get_Call) RunAndReturn(run func(context.Context, uuid.UUID) (domaintemplate.Template, error)) *MockTemplateService_Get_Call {
+func (_c *MockTemplateService_Get_Call) RunAndReturn(run func(context.Context, uuid.UUID, uuid.UUID) (domaintemplate.Template, error)) *MockTemplateService_Get_Call {
 	_c.Call.Return(run)
 	return _c
 }

@@ -46,17 +46,33 @@ func NewTemplateService(
 	}
 }
 
-// List returns templates matching the filter.
+// List returns templates matching the filter. The filter must be scoped to a
+// non-nil user so that private templates are never listed to everyone.
 func (s *TemplateService) List(
 	ctx context.Context,
 	filter domaintemplate.TemplateFilter,
 ) ([]domaintemplate.Template, error) {
+	if filter.UserID == nil || *filter.UserID == uuid.Nil {
+		return nil, domaintemplate.ErrInvalidUserID
+	}
 	return s.templates.List(ctx, filter)
 }
 
 // Get returns a single template by ID, including its exercises and media.
-func (s *TemplateService) Get(ctx context.Context, id uuid.UUID) (domaintemplate.Template, error) {
-	return s.templates.FindByID(ctx, id)
+// Public templates are readable by anyone; private templates only by their
+// owner.
+func (s *TemplateService) Get(
+	ctx context.Context,
+	id, userID uuid.UUID,
+) (domaintemplate.Template, error) {
+	t, err := s.templates.FindByID(ctx, id)
+	if err != nil {
+		return domaintemplate.Template{}, err
+	}
+	if !t.IsPublic && t.CreatedByUserID != userID {
+		return domaintemplate.Template{}, domaintemplate.ErrNotOwner
+	}
+	return t, nil
 }
 
 // Create creates a template and inserts its exercises in one transaction.
@@ -154,11 +170,15 @@ func (s *TemplateService) Publish(ctx context.Context, id, userID uuid.UUID) (do
 }
 
 // Fork copies a template, including its exercises and media, under the given
-// user as the new owner.
+// user as the new owner. Public templates may be forked by anyone; private
+// templates only by their owner.
 func (s *TemplateService) Fork(ctx context.Context, id, userID uuid.UUID) (domaintemplate.Template, error) {
 	source, err := s.templates.FindByID(ctx, id)
 	if err != nil {
 		return domaintemplate.Template{}, err
+	}
+	if !source.IsPublic && source.CreatedByUserID != userID {
+		return domaintemplate.Template{}, domaintemplate.ErrNotOwner
 	}
 
 	fork, err := domaintemplate.NewTemplate(source.Name, source.Description, userID)

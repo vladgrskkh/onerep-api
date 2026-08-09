@@ -411,6 +411,12 @@ const docTemplate = `{
                             "$ref": "#/definitions/handler.ErrorResponse"
                         }
                     },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    },
                     "404": {
                         "description": "Not Found",
                         "schema": {
@@ -557,7 +563,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Copy a template, including its exercises and media, as the authenticated user's own",
+                "description": "Copy a public template, or an own private template, including its exercises and media, as the authenticated user's own",
                 "consumes": [
                     "application/json"
                 ],
@@ -586,6 +592,12 @@ const docTemplate = `{
                     },
                     "400": {
                         "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
                         "schema": {
                             "$ref": "#/definitions/handler.ErrorResponse"
                         }
