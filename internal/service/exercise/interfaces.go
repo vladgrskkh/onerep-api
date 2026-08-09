@@ -9,7 +9,6 @@ import (
 	domainexercise "github.com/vladgrskkh/onerep-api/internal/domain/exercise"
 )
 
-//nolint:revive // mandated name; the package name matches the domain it serves
 type ExerciseRepository interface {
 	List(ctx context.Context, filter ExerciseFilter) ([]domainexercise.Exercise, error)
 	FindByID(ctx context.Context, id uuid.UUID) (domainexercise.Exercise, error)
@@ -18,7 +17,6 @@ type ExerciseRepository interface {
 	SoftDelete(ctx context.Context, id uuid.UUID) error
 }
 
-//nolint:revive // mandated name; the package name matches the domain it serves
 type ExerciseFilter struct {
 	Search      string
 	MuscleGroup string

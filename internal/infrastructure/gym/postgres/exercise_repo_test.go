@@ -45,7 +45,8 @@ func (s *ExerciseRepoTestSuite) TearDownTest() {
 }
 
 func (s *ExerciseRepoTestSuite) newTestExercise(name string) exercise.Exercise {
-	ex := exercise.NewExercise(name, "Description", "Notes", uuid.New())
+	ex, err := exercise.NewExercise(name, "Description", "Notes", uuid.New())
+	s.Require().NoError(err)
 	ex.Media = []exercise.ExerciseMedia{
 		{ID: uuid.Must(uuid.NewV7()), ExerciseID: ex.ID, MediaType: exercise.MediaTypeVideo, SortOrder: 0, S3Key: "exercises/test-video.mp4"},
 		{ID: uuid.Must(uuid.NewV7()), ExerciseID: ex.ID, MediaType: exercise.MediaTypePhoto, SortOrder: 1, S3Key: "exercises/test-photo.jpg"},
@@ -216,8 +217,9 @@ func (s *ExerciseRepoTestSuite) TestUpdate_VersionConflict() {
 }
 
 func (s *ExerciseRepoTestSuite) TestUpdate_NotFound() {
-	ex := exercise.NewExercise("NotFound-"+uuid.NewString(), "Description", "Notes", uuid.New())
-	_, err := s.repo.Update(s.ctx, ex)
+	ex, err := exercise.NewExercise("NotFound-"+uuid.NewString(), "Description", "Notes", uuid.New())
+	s.Require().NoError(err)
+	_, err = s.repo.Update(s.ctx, ex)
 	s.ErrorIs(err, exercise.ErrExerciseNotFound)
 }
 
