@@ -172,6 +172,29 @@ func (s *HandlerTestSuite) TestGet1RM_InvalidTo() {
 	)
 }
 
+func (s *HandlerTestSuite) TestGet1RM_InvertedRange() {
+	exerciseID := uuid.Must(uuid.NewV7())
+	w := s.serve(
+		http.MethodGet,
+		"/v1/progress/1rm?exercise_id="+exerciseID.String()+
+			"&from=2026-01-01T00%3A00%3A00Z&to=2025-01-01T00%3A00%3A00Z",
+		"",
+	)
+
+	s.Equal(http.StatusBadRequest, w.Code)
+	resp := s.decodeError(w)
+	s.Equal("INVALID_DATE_RANGE", string(resp.Error.Code))
+	s.progressSvc.AssertNotCalled(
+		s.T(),
+		"Get1RM",
+		mock.Anything,
+		mock.Anything,
+		mock.Anything,
+		mock.Anything,
+		mock.Anything,
+	)
+}
+
 func (s *HandlerTestSuite) TestGet1RM_ServiceError() {
 	userID := uuid.Must(uuid.NewV7())
 	exerciseID := uuid.Must(uuid.NewV7())
@@ -248,6 +271,26 @@ func (s *HandlerTestSuite) TestGetVolume_Success() {
 
 func (s *HandlerTestSuite) TestGetVolume_InvalidTo() {
 	w := s.serve(http.MethodGet, "/v1/progress/volume?to=not-a-timestamp", "")
+
+	s.Equal(http.StatusBadRequest, w.Code)
+	resp := s.decodeError(w)
+	s.Equal("INVALID_DATE_RANGE", string(resp.Error.Code))
+	s.progressSvc.AssertNotCalled(
+		s.T(),
+		"GetVolume",
+		mock.Anything,
+		mock.Anything,
+		mock.Anything,
+		mock.Anything,
+	)
+}
+
+func (s *HandlerTestSuite) TestGetVolume_InvertedRange() {
+	w := s.serve(
+		http.MethodGet,
+		"/v1/progress/volume?from=2026-01-01T00%3A00%3A00Z&to=2025-01-01T00%3A00%3A00Z",
+		"",
+	)
 
 	s.Equal(http.StatusBadRequest, w.Code)
 	resp := s.decodeError(w)

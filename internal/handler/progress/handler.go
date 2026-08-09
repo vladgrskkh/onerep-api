@@ -73,6 +73,10 @@ func (h *ProgressHandler) Get1RM(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
+	if from != nil && to != nil && from.After(*to) {
+		handler.WriteError(w, h.logger, http.StatusBadRequest, invalidDateRangeDetail())
+		return
+	}
 
 	userID := handler.UserIDFromContext(r.Context())
 	progress, err := h.progress.Get1RM(r.Context(), userID, exerciseID, from, to)
@@ -116,6 +120,10 @@ func (h *ProgressHandler) GetVolume(w http.ResponseWriter, r *http.Request) {
 			handler.WriteError(w, h.logger, http.StatusBadRequest, invalidDateRangeDetail())
 			return
 		}
+	}
+	if from != nil && to != nil && from.After(*to) {
+		handler.WriteError(w, h.logger, http.StatusBadRequest, invalidDateRangeDetail())
+		return
 	}
 
 	userID := handler.UserIDFromContext(r.Context())
