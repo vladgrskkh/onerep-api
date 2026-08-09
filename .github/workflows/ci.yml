@@ -70,7 +70,11 @@ jobs:
       - name: Run migrations
         run: |
           go install github.com/pressly/goose/v3/cmd/goose@v3.27.3
-          goose -dir migrations postgres "$DATABASE_URL" up
+          if ls migrations/*.sql >/dev/null 2>&1; then
+            goose -dir migrations postgres "$DATABASE_URL" up
+          else
+            echo "No migration files found, skipping goose"
+          fi
       - name: Run tests
         run: go test ./... -v -count=1 -race
 

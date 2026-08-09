@@ -4,7 +4,10 @@ import (
 	"log/slog"
 	"net/http"
 	"os"
+	"time"
 )
+
+const readHeaderTimeout = 5 * time.Second
 
 func main() {
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
@@ -15,13 +18,19 @@ func main() {
 	}
 
 	mux := http.NewServeMux()
-	mux.HandleFunc("GET /health", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("GET /health", func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		w.Write([]byte(`{"status":"ok"}`))
+		_, _ = w.Write([]byte(`{"status":"ok"}`))
 	})
 
+	server := &http.Server{
+		Addr:              ":" + port,
+		Handler:           mux,
+		ReadHeaderTimeout: readHeaderTimeout,
+	}
+
 	logger.Info("starting gym api", "port", port)
-	if err := http.ListenAndServe(":"+port, mux); err != nil {
+	if err := server.ListenAndServe(); err != nil {
 		logger.Error("server error", "error", err)
 		os.Exit(1)
 	}

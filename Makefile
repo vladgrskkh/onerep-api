@@ -25,7 +25,11 @@ tools:
 generate: mock swagger
 
 mock:
-	mockery
+	@if grep -q '^packages:' .mockery.yaml 2>/dev/null; then \
+		mockery; \
+	else \
+		echo "No interfaces configured in .mockery.yaml, skipping mock generation"; \
+	fi
 
 swagger:
 	swag init --parseDependency -g cmd/server/main.go -o docs/
