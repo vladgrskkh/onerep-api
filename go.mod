@@ -5,6 +5,7 @@ go 1.26
 require (
 	github.com/avito-tech/go-transaction-manager/drivers/pgxv5/v2 v2.0.4
 	github.com/avito-tech/go-transaction-manager/trm/v2 v2.0.2
+	github.com/go-playground/validator/v10 v10.30.3
 	github.com/golangci/golangci-lint/v2 v2.12.2
 	github.com/google/uuid v1.6.0
 	github.com/jackc/pgx/v5 v5.10.0
@@ -89,7 +90,6 @@ require (
 	github.com/go-openapi/swag v0.22.3 // indirect
 	github.com/go-playground/locales v0.14.1 // indirect
 	github.com/go-playground/universal-translator v0.18.1 // indirect
-	github.com/go-playground/validator/v10 v10.30.3 // indirect
 	github.com/go-toolsmith/astcast v1.1.0 // indirect
 	github.com/go-toolsmith/astcopy v1.1.0 // indirect
 	github.com/go-toolsmith/astequal v1.2.0 // indirect
