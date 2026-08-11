@@ -29,7 +29,7 @@ func (s *TemplateTestSuite) TestNewTemplate() {
 	s.False(tmpl.CreatedAt.IsZero())
 	s.False(tmpl.UpdatedAt.IsZero())
 	s.WithinDuration(time.Now(), tmpl.CreatedAt, time.Minute)
-	s.Nil(tmpl.DeletedAt)
+	s.True(tmpl.DeletedAt.IsZero())
 	s.Equal(1, tmpl.Version)
 	s.Empty(tmpl.Exercises)
 	s.Empty(tmpl.Media)

@@ -31,15 +31,21 @@ func (s *ExerciseTestSuite) TestNewExercise() {
 	s.Equal("Chest press with a barbell", e.Description)
 	s.Equal("Keep shoulders back", e.Notes)
 	s.False(e.IsBuiltIn)
-	s.NotNil(e.CreatedByUserID)
-	s.Equal(createdBy, *e.CreatedByUserID)
+	s.Equal(createdBy, e.CreatedByUserID)
 	s.False(e.CreatedAt.IsZero())
 	s.False(e.UpdatedAt.IsZero())
 	s.WithinDuration(time.Now(), e.CreatedAt, time.Minute)
-	s.Nil(e.DeletedAt)
+	s.True(e.DeletedAt.IsZero())
 	s.Equal(1, e.Version)
 	s.Empty(e.Media)
 	s.Empty(e.MuscleGroups)
+}
+
+func (s *ExerciseTestSuite) TestNewExercise_BuiltIn() {
+	e, err := exercise.NewExercise("Squat", "desc", "notes", uuid.Nil)
+
+	s.Require().NoError(err)
+	s.Equal(uuid.Nil, e.CreatedByUserID)
 }
 
 func (s *ExerciseTestSuite) TestNewExercise_Validation() {
@@ -53,12 +59,6 @@ func (s *ExerciseTestSuite) TestNewExercise_Validation() {
 	}{
 		{name: "valid", exerciseName: "Bench Press", createdByUserID: createdBy},
 		{name: "blank name", exerciseName: "   ", createdByUserID: createdBy, wantErr: exercise.ErrInvalidName},
-		{
-			name:            "nil user id",
-			exerciseName:    "Bench Press",
-			createdByUserID: uuid.Nil,
-			wantErr:         exercise.ErrInvalidUserID,
-		},
 	}
 	for _, tt := range tests {
 		s.Run(tt.name, func() {

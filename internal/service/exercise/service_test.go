@@ -88,7 +88,7 @@ func (s *ServiceTestSuite) TestCreate_Success() {
 	s.expectTx()
 	s.exerciseRepo.EXPECT().
 		Create(mock.Anything, mock.MatchedBy(func(ex domainexercise.Exercise) bool {
-			return ex.Name == "Bench Press" && ex.CreatedByUserID != nil && *ex.CreatedByUserID == userID
+			return ex.Name == "Bench Press" && ex.CreatedByUserID == userID
 		})).
 		Return(&domainexercise.Exercise{ID: exerciseID, Name: "Bench Press"}, nil)
 	s.exerciseRepo.EXPECT().BatchInsertMuscleGroups(mock.Anything, exerciseID, groups).Return(nil)

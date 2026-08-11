@@ -47,12 +47,12 @@ func NewTemplateService(
 }
 
 // List returns templates matching the filter. The filter must be scoped to a
-// non-nil user so that private templates are never listed to everyone.
+// user so that private templates are never listed to everyone.
 func (s *TemplateService) List(
 	ctx context.Context,
 	filter domaintemplate.TemplateFilter,
 ) ([]*domaintemplate.Template, error) {
-	if filter.UserID == nil || *filter.UserID == uuid.Nil {
+	if filter.UserID == uuid.Nil {
 		return nil, domaintemplate.ErrInvalidUserID
 	}
 	return s.templates.List(ctx, filter)

@@ -7,7 +7,7 @@ import (
 )
 
 type TemplateFilter struct {
-	UserID   *uuid.UUID
+	UserID   uuid.UUID
 	IsPublic *bool
 	Since    time.Time
 }

@@ -3,6 +3,7 @@ package postgres
 import (
 	"context"
 	"strings"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -17,6 +18,14 @@ const (
 	argTemplateID = "template_id"
 	argSortOrder  = "sort_order"
 )
+
+// valueOrNilTime converts a scanned SQL NULL into the zero-time sentinel.
+func valueOrNilTime(p *time.Time) time.Time {
+	if p == nil {
+		return time.Time{}
+	}
+	return *p
+}
 
 type TemplateRepo struct {
 	db     trmpgx.Tr
@@ -65,9 +74,9 @@ func buildTemplateListQuery(filter domaintemplate.TemplateFilter) (string, pgx.N
 	)
 	args := pgx.NamedArgs{}
 
-	if filter.UserID != nil {
+	if filter.UserID != uuid.Nil {
 		query.WriteString(` AND created_by_user_id = @user_id`)
-		args["user_id"] = *filter.UserID
+		args["user_id"] = filter.UserID
 	}
 	if filter.IsPublic != nil {
 		query.WriteString(` AND is_public = @is_public`)
@@ -110,6 +119,7 @@ func (r *TemplateRepo) FindByID(ctx context.Context, id uuid.UUID) (*domaintempl
 			t = &domaintemplate.Template{}
 		}
 		var (
+			deletedAt     *time.Time
 			teExerciseID  *uuid.UUID
 			teSortOrder   *int
 			tePlannedSets *int
@@ -120,12 +130,13 @@ func (r *TemplateRepo) FindByID(ctx context.Context, id uuid.UUID) (*domaintempl
 		)
 		if scanErr := rows.Scan(
 			&t.ID, &t.Name, &t.Description, &t.IsPublic, &t.CreatedByUserID,
-			&t.CreatedAt, &t.UpdatedAt, &t.DeletedAt, &t.Version,
+			&t.CreatedAt, &t.UpdatedAt, &deletedAt, &t.Version,
 			&teExerciseID, &teSortOrder, &tePlannedSets,
 			&mID, &mMediaType, &mSortOrder, &mS3Key,
 		); scanErr != nil {
 			return nil, scanErr
 		}
+		t.DeletedAt = valueOrNilTime(deletedAt)
 		if teExerciseID != nil {
 			if _, seen := exercisesSeen[*teExerciseID]; !seen {
 				t.Exercises = append(t.Exercises, domaintemplate.TemplateExercise{

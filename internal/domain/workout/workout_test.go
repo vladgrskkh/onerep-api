@@ -24,15 +24,14 @@ func (s *WorkoutTestSuite) TestNewWorkout() {
 	s.NotEqual(uuid.Nil, w.ID)
 	s.Equal(uuid.Version(7), w.ID.Version())
 	s.Equal(userID, w.UserID)
-	s.NotNil(w.TemplateID)
-	s.Equal(templateID, *w.TemplateID)
+	s.Equal(templateID, w.TemplateID)
 	s.False(w.StartedAt.IsZero())
 	s.WithinDuration(time.Now(), w.StartedAt, time.Minute)
-	s.Nil(w.FinishedAt)
+	s.True(w.FinishedAt.IsZero())
 	s.Empty(w.Notes)
 	s.False(w.CreatedAt.IsZero())
 	s.False(w.UpdatedAt.IsZero())
-	s.Nil(w.DeletedAt)
+	s.True(w.DeletedAt.IsZero())
 	s.Equal(1, w.Version)
 	s.Empty(w.Exercises)
 }
@@ -43,8 +42,8 @@ func (s *WorkoutTestSuite) TestNewWorkout_NoTemplate() {
 	w, err := workout.NewWorkout(userID, uuid.Nil)
 
 	s.Require().NoError(err)
-	s.Nil(w.TemplateID)
-	s.Nil(w.FinishedAt)
+	s.Equal(uuid.Nil, w.TemplateID)
+	s.True(w.FinishedAt.IsZero())
 	s.Equal(userID, w.UserID)
 }
 
@@ -119,10 +118,8 @@ func (s *WorkoutTestSuite) TestNewWorkoutExercise_Validation() {
 
 func (s *WorkoutTestSuite) TestNewWorkoutSet() {
 	workoutExerciseID := uuid.MustParse("9f3b8f3e-4f1d-4f6a-8b3e-3a2f5c9d1e2a")
-	rpe := 8
-	restSeconds := 90
 
-	ws, err := workout.NewWorkoutSet(workoutExerciseID, 82.5, 5, &rpe, &restSeconds, false)
+	ws, err := workout.NewWorkoutSet(workoutExerciseID, 82.5, 5, 8, 90, false)
 
 	s.Require().NoError(err)
 	s.NotEqual(uuid.Nil, ws.ID)
@@ -130,30 +127,26 @@ func (s *WorkoutTestSuite) TestNewWorkoutSet() {
 	s.Equal(workoutExerciseID, ws.WorkoutExerciseID)
 	s.InEpsilon(82.5, ws.WeightKg, 1e-6)
 	s.Equal(5, ws.Reps)
-	s.NotNil(ws.RPE)
-	s.Equal(8, *ws.RPE)
-	s.NotNil(ws.RestSeconds)
-	s.Equal(90, *ws.RestSeconds)
+	s.Equal(8, ws.RPE)
+	s.Equal(90, ws.RestSeconds)
 	s.False(ws.IsWarmup)
 }
 
-func (s *WorkoutTestSuite) TestNewWorkoutSet_OptionalNil() {
+func (s *WorkoutTestSuite) TestNewWorkoutSet_OptionalZero() {
 	workoutExerciseID := uuid.MustParse("9f3b8f3e-4f1d-4f6a-8b3e-3a2f5c9d1e2a")
 
-	ws, err := workout.NewWorkoutSet(workoutExerciseID, 20, 12, nil, nil, true)
+	ws, err := workout.NewWorkoutSet(workoutExerciseID, 20, 12, 0, 0, true)
 
 	s.Require().NoError(err)
-	s.Nil(ws.RPE)
-	s.Nil(ws.RestSeconds)
+	s.Zero(ws.RPE)
+	s.Zero(ws.RestSeconds)
 	s.True(ws.IsWarmup)
 }
 
 func (s *WorkoutTestSuite) TestNewWorkoutSet_Validation() {
 	weID := uuid.MustParse("9f3b8f3e-4f1d-4f6a-8b3e-3a2f5c9d1e2a")
-	rpe := 8
-	rpeBelowRange := 0
+	rpeBelowRange := -1
 	rpeAboveRange := 11
-	restSeconds := 90
 	negativeRestSeconds := -1
 
 	tests := []struct {
@@ -161,11 +154,12 @@ func (s *WorkoutTestSuite) TestNewWorkoutSet_Validation() {
 		workoutExerciseID uuid.UUID
 		weightKg          float64
 		reps              int
-		rpe               *int
-		restSeconds       *int
+		rpe               int
+		restSeconds       int
 		wantErr           error
 	}{
-		{name: "valid", workoutExerciseID: weID, weightKg: 82.5, reps: 5, rpe: &rpe, restSeconds: &restSeconds},
+		{name: "valid", workoutExerciseID: weID, weightKg: 82.5, reps: 5, rpe: 8, restSeconds: 90},
+		{name: "unset rpe and rest seconds", workoutExerciseID: weID, weightKg: 82.5, reps: 5},
 		{
 			name:              "nil workout exercise id",
 			workoutExerciseID: uuid.Nil,
@@ -180,7 +174,7 @@ func (s *WorkoutTestSuite) TestNewWorkoutSet_Validation() {
 			workoutExerciseID: weID,
 			weightKg:          82.5,
 			reps:              5,
-			rpe:               &rpeBelowRange,
+			rpe:               rpeBelowRange,
 			wantErr:           workout.ErrInvalidRPE,
 		},
 		{
@@ -188,7 +182,7 @@ func (s *WorkoutTestSuite) TestNewWorkoutSet_Validation() {
 			workoutExerciseID: weID,
 			weightKg:          82.5,
 			reps:              5,
-			rpe:               &rpeAboveRange,
+			rpe:               rpeAboveRange,
 			wantErr:           workout.ErrInvalidRPE,
 		},
 		{
@@ -196,7 +190,7 @@ func (s *WorkoutTestSuite) TestNewWorkoutSet_Validation() {
 			workoutExerciseID: weID,
 			weightKg:          82.5,
 			reps:              5,
-			restSeconds:       &negativeRestSeconds,
+			restSeconds:       negativeRestSeconds,
 			wantErr:           workout.ErrInvalidRestSeconds,
 		},
 	}

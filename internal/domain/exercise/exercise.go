@@ -20,10 +20,10 @@ type Exercise struct {
 	Description     string
 	Notes           string
 	IsBuiltIn       bool
-	CreatedByUserID *uuid.UUID
+	CreatedByUserID uuid.UUID
 	CreatedAt       time.Time
 	UpdatedAt       time.Time
-	DeletedAt       *time.Time
+	DeletedAt       time.Time
 	Version         int
 	Media           []ExerciseMedia
 	MuscleGroups    []ExerciseMuscleGroup
@@ -43,13 +43,12 @@ type ExerciseMuscleGroup struct {
 	IsPrimary     bool
 }
 
+// NewExercise creates a user exercise. A nil createdByUserID marks a
+// built-in exercise.
 func NewExercise(name, description, notes string, createdByUserID uuid.UUID) (Exercise, error) {
 	name = strings.TrimSpace(name)
 	if name == "" {
 		return Exercise{}, ErrInvalidName
-	}
-	if createdByUserID == uuid.Nil {
-		return Exercise{}, ErrInvalidUserID
 	}
 	now := time.Now()
 	return Exercise{
@@ -58,7 +57,7 @@ func NewExercise(name, description, notes string, createdByUserID uuid.UUID) (Ex
 		Description:     description,
 		Notes:           notes,
 		IsBuiltIn:       false,
-		CreatedByUserID: &createdByUserID,
+		CreatedByUserID: createdByUserID,
 		CreatedAt:       now,
 		UpdatedAt:       now,
 		Version:         1,

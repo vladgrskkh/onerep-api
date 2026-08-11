@@ -40,18 +40,14 @@ func toFinishCommand(workoutID uuid.UUID) serviceworkout.FinishWorkoutCommand {
 // toWorkoutResponse maps the domain workout to the HTTP response.
 func toWorkoutResponse(w *domainworkout.Workout) dto.WorkoutResponse {
 	resp := dto.WorkoutResponse{
-		ID:        w.ID,
-		UserID:    w.UserID,
-		StartedAt: w.StartedAt,
-		Notes:     w.Notes,
-		CreatedAt: w.CreatedAt,
-		UpdatedAt: w.UpdatedAt,
-	}
-	if w.TemplateID != nil {
-		resp.TemplateID = *w.TemplateID
-	}
-	if w.FinishedAt != nil {
-		resp.FinishedAt = *w.FinishedAt
+		ID:         w.ID,
+		UserID:     w.UserID,
+		TemplateID: w.TemplateID,
+		StartedAt:  w.StartedAt,
+		FinishedAt: w.FinishedAt,
+		Notes:      w.Notes,
+		CreatedAt:  w.CreatedAt,
+		UpdatedAt:  w.UpdatedAt,
 	}
 	for i := range w.Exercises {
 		resp.Exercises = append(resp.Exercises, toWorkoutExerciseResponse(&w.Exercises[i]))
@@ -85,20 +81,15 @@ func toWorkoutExerciseResponse(e *domainworkout.WorkoutExercise) dto.WorkoutExer
 
 // toWorkoutSetResponse maps the domain workout set to the HTTP response.
 func toWorkoutSetResponse(s *domainworkout.WorkoutSet) dto.WorkoutSetResponse {
-	resp := dto.WorkoutSetResponse{
-		ID:        s.ID,
-		SetNumber: s.SetNumber,
-		WeightKg:  s.WeightKg,
-		Reps:      s.Reps,
-		IsWarmup:  s.IsWarmup,
+	return dto.WorkoutSetResponse{
+		ID:          s.ID,
+		SetNumber:   s.SetNumber,
+		WeightKg:    s.WeightKg,
+		Reps:        s.Reps,
+		RPE:         s.RPE,
+		RestSeconds: s.RestSeconds,
+		IsWarmup:    s.IsWarmup,
 	}
-	if s.RPE != nil {
-		resp.RPE = *s.RPE
-	}
-	if s.RestSeconds != nil {
-		resp.RestSeconds = *s.RestSeconds
-	}
-	return resp
 }
 
 // toLogSetResponse maps the domain set result to the HTTP response.

@@ -19,6 +19,54 @@ const (
 	argNotes      = "notes"
 )
 
+// nullIfZeroUUID converts the nil-UUID empty sentinel into a SQL NULL.
+func nullIfZeroUUID(id uuid.UUID) any {
+	if id == uuid.Nil {
+		return nil
+	}
+	return id
+}
+
+// nullIfZeroTime converts the zero-time empty sentinel into a SQL NULL.
+func nullIfZeroTime(t time.Time) any {
+	if t.IsZero() {
+		return nil
+	}
+	return t
+}
+
+// nullIfZeroInt converts the zero int empty sentinel into a SQL NULL.
+func nullIfZeroInt(n int) any {
+	if n == 0 {
+		return nil
+	}
+	return n
+}
+
+// valueOrNilUUID converts a scanned SQL NULL into the nil-UUID sentinel.
+func valueOrNilUUID(p *uuid.UUID) uuid.UUID {
+	if p == nil {
+		return uuid.Nil
+	}
+	return *p
+}
+
+// valueOrNilTime converts a scanned SQL NULL into the zero-time sentinel.
+func valueOrNilTime(p *time.Time) time.Time {
+	if p == nil {
+		return time.Time{}
+	}
+	return *p
+}
+
+// valueOrNilInt converts a scanned SQL NULL into the zero int sentinel.
+func valueOrNilInt(p *int) int {
+	if p == nil {
+		return 0
+	}
+	return *p
+}
+
 type WorkoutRepo struct {
 	db     trmpgx.Tr
 	getter *trmpgx.CtxGetter
@@ -42,12 +90,16 @@ func (r *WorkoutRepo) List(
 	var workouts []*domainworkout.Workout
 	for rows.Next() {
 		w := &domainworkout.Workout{}
+		var (
+			templateID *uuid.UUID
+			finishedAt *time.Time
+		)
 		if scanErr := rows.Scan(
 			&w.ID,
 			&w.UserID,
-			&w.TemplateID,
+			&templateID,
 			&w.StartedAt,
-			&w.FinishedAt,
+			&finishedAt,
 			&w.Notes,
 			&w.CreatedAt,
 			&w.UpdatedAt,
@@ -55,6 +107,8 @@ func (r *WorkoutRepo) List(
 		); scanErr != nil {
 			return nil, scanErr
 		}
+		w.TemplateID = valueOrNilUUID(templateID)
+		w.FinishedAt = valueOrNilTime(finishedAt)
 		workouts = append(workouts, w)
 	}
 	return workouts, rows.Err()
@@ -67,9 +121,9 @@ func buildWorkoutListQuery(filter domainworkout.WorkoutFilter) (string, pgx.Name
 	)
 	args := pgx.NamedArgs{}
 
-	if filter.UserID != nil {
+	if filter.UserID != uuid.Nil {
 		query.WriteString(` AND user_id = @user_id`)
-		args["user_id"] = *filter.UserID
+		args["user_id"] = filter.UserID
 	}
 	if !filter.Since.IsZero() {
 		query.WriteString(` AND updated_at > @since`)
@@ -107,6 +161,9 @@ func (r *WorkoutRepo) FindByID(ctx context.Context, id uuid.UUID) (*domainworkou
 			w = &domainworkout.Workout{}
 		}
 		var (
+			templateID    *uuid.UUID
+			finishedAt    *time.Time
+			deletedAt     *time.Time
 			weID          *uuid.UUID
 			weExerciseID  *uuid.UUID
 			weSortOrder   *int
@@ -120,13 +177,16 @@ func (r *WorkoutRepo) FindByID(ctx context.Context, id uuid.UUID) (*domainworkou
 			wsIsWarmup    *bool
 		)
 		if scanErr := rows.Scan(
-			&w.ID, &w.UserID, &w.TemplateID, &w.StartedAt, &w.FinishedAt, &w.Notes,
-			&w.CreatedAt, &w.UpdatedAt, &w.DeletedAt, &w.Version,
+			&w.ID, &w.UserID, &templateID, &w.StartedAt, &finishedAt, &w.Notes,
+			&w.CreatedAt, &w.UpdatedAt, &deletedAt, &w.Version,
 			&weID, &weExerciseID, &weSortOrder, &weNotes,
 			&wsID, &wsSetNumber, &wsWeightKg, &wsReps, &wsRPE, &wsRestSeconds, &wsIsWarmup,
 		); scanErr != nil {
 			return nil, scanErr
 		}
+		w.TemplateID = valueOrNilUUID(templateID)
+		w.FinishedAt = valueOrNilTime(finishedAt)
+		w.DeletedAt = valueOrNilTime(deletedAt)
 		if weID != nil {
 			if _, seen := exerciseIdx[*weID]; !seen {
 				idx := len(w.Exercises)
@@ -148,8 +208,8 @@ func (r *WorkoutRepo) FindByID(ctx context.Context, id uuid.UUID) (*domainworkou
 					SetNumber:         *wsSetNumber,
 					WeightKg:          *wsWeightKg,
 					Reps:              *wsReps,
-					RPE:               wsRPE,
-					RestSeconds:       wsRestSeconds,
+					RPE:               valueOrNilInt(wsRPE),
+					RestSeconds:       valueOrNilInt(wsRestSeconds),
 					IsWarmup:          *wsIsWarmup,
 				})
 			}
@@ -172,9 +232,9 @@ func (r *WorkoutRepo) Create(ctx context.Context, w domainworkout.Workout) (*dom
 	`, pgx.NamedArgs{
 		"id":          w.ID,
 		"user_id":     w.UserID,
-		"template_id": w.TemplateID,
+		"template_id": nullIfZeroUUID(w.TemplateID),
 		"started_at":  w.StartedAt,
-		argFinishedAt: w.FinishedAt,
+		argFinishedAt: nullIfZeroTime(w.FinishedAt),
 		argNotes:      w.Notes,
 		"created_at":  w.CreatedAt,
 		"updated_at":  w.UpdatedAt,
@@ -229,8 +289,8 @@ func (r *WorkoutRepo) LogSet(
 		"workout_exercise_id": set.WorkoutExerciseID,
 		"weight_kg":           set.WeightKg,
 		"reps":                set.Reps,
-		"rpe":                 set.RPE,
-		"rest_seconds":        set.RestSeconds,
+		"rpe":                 nullIfZeroInt(set.RPE),
+		"rest_seconds":        nullIfZeroInt(set.RestSeconds),
 		"is_warmup":           set.IsWarmup,
 	}).Scan(&set.SetNumber)
 	if err != nil {
@@ -279,8 +339,8 @@ func (r *WorkoutRepo) BatchInsertSets(ctx context.Context, sets []domainworkout.
 			"set_number":          set.SetNumber,
 			"weight_kg":           set.WeightKg,
 			"reps":                set.Reps,
-			"rpe":                 set.RPE,
-			"rest_seconds":        set.RestSeconds,
+			"rpe":                 nullIfZeroInt(set.RPE),
+			"rest_seconds":        nullIfZeroInt(set.RestSeconds),
 			"is_warmup":           set.IsWarmup,
 		})
 	}
@@ -298,7 +358,7 @@ func (r *WorkoutRepo) Update(ctx context.Context, w domainworkout.Workout) (*dom
 		WHERE id = @id AND version = @expected_version
 	`, pgx.NamedArgs{
 		argNotes:           w.Notes,
-		argFinishedAt:      w.FinishedAt,
+		argFinishedAt:      nullIfZeroTime(w.FinishedAt),
 		"updated_at":       w.UpdatedAt,
 		"version":          w.Version,
 		"id":               w.ID,

@@ -68,6 +68,9 @@ func (s *ExerciseService) Get(ctx context.Context, id uuid.UUID) (*domainexercis
 
 // Create creates an exercise and attaches its muscle groups to it.
 func (s *ExerciseService) Create(ctx context.Context, cmd CreateExerciseCommand) (*domainexercise.Exercise, error) {
+	if cmd.UserID == uuid.Nil {
+		return nil, domainexercise.ErrInvalidUserID
+	}
 	ex, err := domainexercise.NewExercise(cmd.Name, cmd.Description, cmd.Notes, cmd.UserID)
 	if err != nil {
 		return nil, err

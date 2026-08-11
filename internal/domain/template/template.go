@@ -21,7 +21,7 @@ type Template struct {
 	CreatedByUserID uuid.UUID
 	CreatedAt       time.Time
 	UpdatedAt       time.Time
-	DeletedAt       *time.Time
+	DeletedAt       time.Time
 	Version         int
 	Exercises       []TemplateExercise
 	Media           []TemplateMedia

@@ -50,7 +50,7 @@ func (s *MuscleGroupRepoTestSuite) TestList_ReturnsAllSeededGroups() {
 	for i, g := range groups {
 		s.Equal(i+1, g.ID)
 		s.Equal(expected[i], g.Name)
-		s.Equal(exercise.MuscleGroup{ID: i + 1, Name: expected[i]}, g)
+		s.Equal(&exercise.MuscleGroup{ID: i + 1, Name: expected[i]}, g)
 	}
 }
 

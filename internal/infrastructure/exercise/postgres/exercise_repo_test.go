@@ -101,7 +101,7 @@ func (s *ExerciseRepoTestSuite) TestCreateAndFindByID() {
 	s.Equal("Description", found.Description)
 	s.Equal("Notes", found.Notes)
 	s.False(found.IsBuiltIn)
-	s.NotNil(found.CreatedByUserID)
+	s.Equal(ex.CreatedByUserID, found.CreatedByUserID)
 	s.Equal(1, found.Version)
 	s.Len(found.Media, 2)
 	s.Equal(exercise.MediaTypeVideo, found.Media[0].MediaType)
@@ -131,6 +131,16 @@ func (s *ExerciseRepoTestSuite) TestCreate_HeaderOnly() {
 	s.Equal(ex.Name, found.Name)
 	s.Empty(found.Media)
 	s.Empty(found.MuscleGroups)
+}
+
+func (s *ExerciseRepoTestSuite) TestCreate_BuiltInWithoutCreator() {
+	ex, err := exercise.NewExercise("BuiltIn-"+uuid.NewString(), "Description", "Notes", uuid.Nil)
+	s.Require().NoError(err)
+	created := s.createTestExercise(ex)
+
+	found, err := s.repo.FindByID(s.ctx, created.ID)
+	s.Require().NoError(err)
+	s.Equal(uuid.Nil, found.CreatedByUserID)
 }
 
 func (s *ExerciseRepoTestSuite) TestBatchInsertMedia_AndMuscleGroups() {

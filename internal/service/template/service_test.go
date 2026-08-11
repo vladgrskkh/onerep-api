@@ -38,7 +38,7 @@ func (s *ServiceTestSuite) expectTx() {
 
 func (s *ServiceTestSuite) TestList_Success() {
 	userID := uuid.Must(uuid.NewV7())
-	filter := domaintemplate.TemplateFilter{UserID: &userID}
+	filter := domaintemplate.TemplateFilter{UserID: userID}
 	expected := []*domaintemplate.Template{{ID: uuid.Must(uuid.NewV7()), Name: "Push Day"}}
 	s.tmplRepo.EXPECT().List(mock.Anything, filter).Return(expected, nil)
 
@@ -49,8 +49,7 @@ func (s *ServiceTestSuite) TestList_Success() {
 }
 
 func (s *ServiceTestSuite) TestList_NilUserRejected() {
-	nilUserID := uuid.Nil
-	_, err := s.svc.List(context.Background(), domaintemplate.TemplateFilter{UserID: &nilUserID})
+	_, err := s.svc.List(context.Background(), domaintemplate.TemplateFilter{})
 	s.Require().ErrorIs(err, domaintemplate.ErrInvalidUserID)
 	s.tmplRepo.AssertNotCalled(s.T(), "List", mock.Anything, mock.Anything)
 }

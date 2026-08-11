@@ -3,6 +3,7 @@ package postgres
 import (
 	"context"
 	"strings"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -14,6 +15,30 @@ import (
 )
 
 const argExerciseID = "exercise_id"
+
+// nullIfZeroUUID converts the nil-UUID empty sentinel into a SQL NULL.
+func nullIfZeroUUID(id uuid.UUID) any {
+	if id == uuid.Nil {
+		return nil
+	}
+	return id
+}
+
+// valueOrNilUUID converts a scanned SQL NULL into the nil-UUID sentinel.
+func valueOrNilUUID(p *uuid.UUID) uuid.UUID {
+	if p == nil {
+		return uuid.Nil
+	}
+	return *p
+}
+
+// valueOrNilTime converts a scanned SQL NULL into the zero-time sentinel.
+func valueOrNilTime(p *time.Time) time.Time {
+	if p == nil {
+		return time.Time{}
+	}
+	return *p
+}
 
 type ExerciseRepo struct {
 	db     trmpgx.Tr
@@ -38,19 +63,21 @@ func (r *ExerciseRepo) List(
 	var exercises []*domainexercise.Exercise
 	for rows.Next() {
 		ex := &domainexercise.Exercise{}
+		var createdBy *uuid.UUID
 		if scanErr := rows.Scan(
 			&ex.ID,
 			&ex.Name,
 			&ex.Description,
 			&ex.Notes,
 			&ex.IsBuiltIn,
-			&ex.CreatedByUserID,
+			&createdBy,
 			&ex.CreatedAt,
 			&ex.UpdatedAt,
 			&ex.Version,
 		); scanErr != nil {
 			return nil, scanErr
 		}
+		ex.CreatedByUserID = valueOrNilUUID(createdBy)
 		exercises = append(exercises, ex)
 	}
 	return exercises, rows.Err()
@@ -115,6 +142,8 @@ func (r *ExerciseRepo) FindByID(ctx context.Context, id uuid.UUID) (*domainexerc
 			ex = &domainexercise.Exercise{}
 		}
 		var (
+			createdBy   *uuid.UUID
+			deletedAt   *time.Time
 			mID         *uuid.UUID
 			mMediaType  *string
 			mSortOrder  *int
@@ -123,13 +152,15 @@ func (r *ExerciseRepo) FindByID(ctx context.Context, id uuid.UUID) (*domainexerc
 			mgIsPrimary *bool
 		)
 		if scanErr := rows.Scan(
-			&ex.ID, &ex.Name, &ex.Description, &ex.Notes, &ex.IsBuiltIn, &ex.CreatedByUserID,
-			&ex.CreatedAt, &ex.UpdatedAt, &ex.DeletedAt, &ex.Version,
+			&ex.ID, &ex.Name, &ex.Description, &ex.Notes, &ex.IsBuiltIn, &createdBy,
+			&ex.CreatedAt, &ex.UpdatedAt, &deletedAt, &ex.Version,
 			&mID, &mMediaType, &mSortOrder, &mS3Key,
 			&mgID, &mgIsPrimary,
 		); scanErr != nil {
 			return nil, scanErr
 		}
+		ex.CreatedByUserID = valueOrNilUUID(createdBy)
+		ex.DeletedAt = valueOrNilTime(deletedAt)
 		if mID != nil {
 			if _, seen := mediaSeen[*mID]; !seen {
 				ex.Media = append(ex.Media, domainexercise.ExerciseMedia{
@@ -173,7 +204,7 @@ func (r *ExerciseRepo) Create(ctx context.Context, ex domainexercise.Exercise) (
 		"description":        ex.Description,
 		"notes":              ex.Notes,
 		"is_built_in":        ex.IsBuiltIn,
-		"created_by_user_id": ex.CreatedByUserID,
+		"created_by_user_id": nullIfZeroUUID(ex.CreatedByUserID),
 		"created_at":         ex.CreatedAt,
 		"updated_at":         ex.UpdatedAt,
 		"version":            ex.Version,

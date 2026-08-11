@@ -50,7 +50,7 @@ func (s *ServiceTestSuite) TestStart_Success() {
 	userID := uuid.Must(uuid.NewV7())
 	s.workoutRepo.EXPECT().
 		List(mock.Anything, mock.MatchedBy(func(f domainworkout.WorkoutFilter) bool {
-			return f.UserID != nil && *f.UserID == userID && f.Since.IsZero()
+			return f.UserID == userID && f.Since.IsZero()
 		})).
 		Return([]*domainworkout.Workout{}, nil)
 
@@ -58,7 +58,7 @@ func (s *ServiceTestSuite) TestStart_Success() {
 	s.expectTx()
 	s.workoutRepo.EXPECT().
 		Create(mock.Anything, mock.MatchedBy(func(w domainworkout.Workout) bool {
-			return w.UserID == userID && w.TemplateID == nil && w.FinishedAt == nil && w.Version == 1
+			return w.UserID == userID && w.TemplateID == uuid.Nil && w.FinishedAt.IsZero() && w.Version == 1
 		})).
 		RunAndReturn(func(_ context.Context, w domainworkout.Workout) (*domainworkout.Workout, error) {
 			createdID = w.ID
@@ -95,7 +95,7 @@ func (s *ServiceTestSuite) TestStart_FromPublicTemplate() {
 	s.expectTx()
 	s.workoutRepo.EXPECT().
 		Create(mock.Anything, mock.MatchedBy(func(w domainworkout.Workout) bool {
-			return w.TemplateID != nil && *w.TemplateID == templateID
+			return w.TemplateID == templateID
 		})).
 		RunAndReturn(func(_ context.Context, w domainworkout.Workout) (*domainworkout.Workout, error) {
 			createdID = w.ID
@@ -197,7 +197,7 @@ func (s *ServiceTestSuite) TestStart_ActiveWorkoutExists() {
 	userID := uuid.Must(uuid.NewV7())
 	finished := time.Now().Add(-time.Hour)
 	s.workoutRepo.EXPECT().List(mock.Anything, mock.Anything).Return([]*domainworkout.Workout{
-		{ID: uuid.Must(uuid.NewV7()), UserID: userID, FinishedAt: &finished},
+		{ID: uuid.Must(uuid.NewV7()), UserID: userID, FinishedAt: finished},
 		{ID: uuid.Must(uuid.NewV7()), UserID: userID},
 	}, nil)
 
@@ -229,7 +229,7 @@ func (s *ServiceTestSuite) TestGetActive_Success() {
 	activeID := uuid.Must(uuid.NewV7())
 	finished := time.Now().Add(-time.Hour)
 	s.workoutRepo.EXPECT().List(mock.Anything, mock.Anything).Return([]*domainworkout.Workout{
-		{ID: uuid.Must(uuid.NewV7()), UserID: userID, FinishedAt: &finished},
+		{ID: uuid.Must(uuid.NewV7()), UserID: userID, FinishedAt: finished},
 		{ID: activeID, UserID: userID},
 	}, nil)
 
@@ -279,7 +279,7 @@ func (s *ServiceTestSuite) TestList_Success() {
 	userID := uuid.Must(uuid.NewV7())
 	since := time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC)
 	expected := []*domainworkout.Workout{{ID: uuid.Must(uuid.NewV7()), UserID: userID}}
-	s.workoutRepo.EXPECT().List(mock.Anything, domainworkout.WorkoutFilter{UserID: &userID, Since: since}).
+	s.workoutRepo.EXPECT().List(mock.Anything, domainworkout.WorkoutFilter{UserID: userID, Since: since}).
 		Return(expected, nil)
 
 	got, err := s.svc.List(context.Background(), userID, since)

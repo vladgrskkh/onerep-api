@@ -33,17 +33,15 @@ func toUpdateCommand(req dto.ExerciseUpdateRequest, exerciseID uuid.UUID) servic
 // toExerciseResponse maps the domain exercise to the HTTP response.
 func toExerciseResponse(ex *domainexercise.Exercise) dto.ExerciseResponse {
 	resp := dto.ExerciseResponse{
-		ID:          ex.ID,
-		Name:        ex.Name,
-		Description: ex.Description,
-		Notes:       ex.Notes,
-		IsBuiltIn:   ex.IsBuiltIn,
-		CreatedAt:   ex.CreatedAt,
-		UpdatedAt:   ex.UpdatedAt,
-		Version:     ex.Version,
-	}
-	if ex.CreatedByUserID != nil {
-		resp.CreatedByUserID = *ex.CreatedByUserID
+		ID:              ex.ID,
+		Name:            ex.Name,
+		Description:     ex.Description,
+		Notes:           ex.Notes,
+		IsBuiltIn:       ex.IsBuiltIn,
+		CreatedByUserID: ex.CreatedByUserID,
+		CreatedAt:       ex.CreatedAt,
+		UpdatedAt:       ex.UpdatedAt,
+		Version:         ex.Version,
 	}
 	for _, m := range ex.Media {
 		resp.Media = append(resp.Media, dto.ExerciseMediaResponse{

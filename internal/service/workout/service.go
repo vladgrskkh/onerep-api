@@ -128,12 +128,12 @@ func (s *WorkoutService) Start(ctx context.Context, cmd StartWorkoutCommand) (*d
 
 // GetActive returns the user's active (unfinished) workout.
 func (s *WorkoutService) GetActive(ctx context.Context, userID uuid.UUID) (*domainworkout.Workout, error) {
-	workouts, err := s.workouts.List(ctx, domainworkout.WorkoutFilter{UserID: &userID})
+	workouts, err := s.workouts.List(ctx, domainworkout.WorkoutFilter{UserID: userID})
 	if err != nil {
 		return nil, err
 	}
 	for _, w := range workouts {
-		if w.FinishedAt == nil {
+		if w.FinishedAt.IsZero() {
 			return w, nil
 		}
 	}
@@ -155,7 +155,7 @@ func (s *WorkoutService) List(
 	if userID == uuid.Nil {
 		return nil, domainworkout.ErrInvalidUserID
 	}
-	return s.workouts.List(ctx, domainworkout.WorkoutFilter{UserID: &userID, Since: since})
+	return s.workouts.List(ctx, domainworkout.WorkoutFilter{UserID: userID, Since: since})
 }
 
 // AddExercise appends an exercise to the user's workout.
@@ -188,18 +188,8 @@ func (s *WorkoutService) LogSet(
 		return nil, err
 	}
 
-	var (
-		rpe         *int
-		restSeconds *int
-	)
-	if cmd.RPE != 0 {
-		rpe = &cmd.RPE
-	}
-	if cmd.RestSeconds != 0 {
-		restSeconds = &cmd.RestSeconds
-	}
 	set, err := domainworkout.NewWorkoutSet(
-		cmd.WorkoutExerciseID, cmd.WeightKg, cmd.Reps, rpe, restSeconds, cmd.IsWarmup,
+		cmd.WorkoutExerciseID, cmd.WeightKg, cmd.Reps, cmd.RPE, cmd.RestSeconds, cmd.IsWarmup,
 	)
 	if err != nil {
 		return nil, err
@@ -276,12 +266,12 @@ func (s *WorkoutService) ownedWorkout(ctx context.Context, id, userID uuid.UUID)
 
 // findActive reports whether the user already has an unfinished workout.
 func (s *WorkoutService) findActive(ctx context.Context, userID uuid.UUID) (bool, error) {
-	workouts, err := s.workouts.List(ctx, domainworkout.WorkoutFilter{UserID: &userID})
+	workouts, err := s.workouts.List(ctx, domainworkout.WorkoutFilter{UserID: userID})
 	if err != nil {
 		return false, err
 	}
 	for _, w := range workouts {
-		if w.FinishedAt == nil {
+		if w.FinishedAt.IsZero() {
 			return true, nil
 		}
 	}
