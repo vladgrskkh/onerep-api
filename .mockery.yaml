@@ -63,6 +63,14 @@ packages:
       filename: "{{.InterfaceName | snakecase}}.gen.go"
     interfaces:
       ProgressRepository:
+  github.com/vladgrskkh/onerep-api/internal/infrastructure/workout/redis:
+    config:
+      dir: internal/infrastructure/workout/redis/mocks
+      mockname: "Mock{{.InterfaceName}}"
+      outpkg: "mocks"
+      filename: "{{.InterfaceName | snakecase}}.gen.go"
+    interfaces:
+      VolumeCalculator:
   github.com/vladgrskkh/onerep-api/internal/service/bodyweight:
     config:
       dir: internal/service/bodyweight/mocks
