@@ -53,7 +53,7 @@ func (h *ExerciseHandler) List(w http.ResponseWriter, r *http.Request) {
 		MuscleGroup: r.URL.Query().Get("muscle_group"),
 	}
 
-	since, _, parseErr := handler.ParseRFC3339QueryParam(r, "since")
+	since, parseErr := handler.ParseRFC3339QueryParam(r, "since")
 	if parseErr != nil {
 		handler.WriteError(w, h.logger, http.StatusBadRequest, invalidSinceDetail())
 		return

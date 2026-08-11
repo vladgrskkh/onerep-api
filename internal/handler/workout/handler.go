@@ -104,7 +104,7 @@ func (h *WorkoutHandler) Start(w http.ResponseWriter, r *http.Request) {
 func (h *WorkoutHandler) List(w http.ResponseWriter, r *http.Request) {
 	userID := handler.UserIDFromContext(r.Context())
 
-	since, _, parseErr := handler.ParseRFC3339QueryParam(r, "since")
+	since, parseErr := handler.ParseRFC3339QueryParam(r, "since")
 	if parseErr != nil {
 		handler.WriteError(w, h.logger, http.StatusBadRequest, invalidSinceDetail())
 		return

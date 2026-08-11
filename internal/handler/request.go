@@ -45,16 +45,16 @@ func jsonFieldName(fld reflect.StructField) string {
 	return name
 }
 
-// ParseRFC3339QueryParam parses an RFC 3339 query parameter. When the
-// parameter is absent, present is false and the returned time is zero.
-func ParseRFC3339QueryParam(r *http.Request, key string) (time.Time, bool, error) {
+// ParseRFC3339QueryParam parses an RFC 3339 query parameter. A missing
+// parameter yields a zero time and a nil error.
+func ParseRFC3339QueryParam(r *http.Request, key string) (time.Time, error) {
 	raw := r.URL.Query().Get(key)
 	if raw == "" {
-		return time.Time{}, false, nil
+		return time.Time{}, nil
 	}
 	t, err := time.Parse(time.RFC3339, raw)
 	if err != nil {
-		return time.Time{}, false, err
+		return time.Time{}, err
 	}
-	return t, true, nil
+	return t, nil
 }

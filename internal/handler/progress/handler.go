@@ -74,12 +74,12 @@ func (h *ProgressHandler) Get1RM(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	from, _, parseErr := handler.ParseRFC3339QueryParam(r, "from")
+	from, parseErr := handler.ParseRFC3339QueryParam(r, "from")
 	if parseErr != nil {
 		handler.WriteError(w, h.logger, http.StatusBadRequest, invalidDateRangeDetail())
 		return
 	}
-	to, _, parseErr := handler.ParseRFC3339QueryParam(r, "to")
+	to, parseErr := handler.ParseRFC3339QueryParam(r, "to")
 	if parseErr != nil {
 		handler.WriteError(w, h.logger, http.StatusBadRequest, invalidDateRangeDetail())
 		return
@@ -121,12 +121,12 @@ func (h *ProgressHandler) Get1RM(w http.ResponseWriter, r *http.Request) {
 // @Security BearerAuth
 // @Router /progress/volume [get]
 func (h *ProgressHandler) GetVolume(w http.ResponseWriter, r *http.Request) {
-	from, _, parseErr := handler.ParseRFC3339QueryParam(r, "from")
+	from, parseErr := handler.ParseRFC3339QueryParam(r, "from")
 	if parseErr != nil {
 		handler.WriteError(w, h.logger, http.StatusBadRequest, invalidDateRangeDetail())
 		return
 	}
-	to, _, parseErr := handler.ParseRFC3339QueryParam(r, "to")
+	to, parseErr := handler.ParseRFC3339QueryParam(r, "to")
 	if parseErr != nil {
 		handler.WriteError(w, h.logger, http.StatusBadRequest, invalidDateRangeDetail())
 		return
@@ -165,7 +165,7 @@ func (h *ProgressHandler) GetVolume(w http.ResponseWriter, r *http.Request) {
 // @Security BearerAuth
 // @Router /progress/body-weight [get]
 func (h *ProgressHandler) GetBodyWeight(w http.ResponseWriter, r *http.Request) {
-	since, _, parseErr := handler.ParseRFC3339QueryParam(r, "since")
+	since, parseErr := handler.ParseRFC3339QueryParam(r, "since")
 	if parseErr != nil {
 		handler.WriteError(w, h.logger, http.StatusBadRequest, invalidSinceDetail())
 		return
