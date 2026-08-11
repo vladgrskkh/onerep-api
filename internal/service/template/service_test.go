@@ -2,6 +2,7 @@ package template_test
 
 import (
 	"context"
+	"errors"
 	"testing"
 
 	"github.com/google/uuid"
@@ -455,6 +456,106 @@ func (s *ServiceTestSuite) TestSoftDelete_Success() {
 
 	err := s.svc.SoftDelete(context.Background(), templateID, userID)
 	s.NoError(err)
+}
+
+func (s *ServiceTestSuite) TestUploadMedia_Success() {
+	templateID := uuid.Must(uuid.NewV7())
+	userID := uuid.Must(uuid.NewV7())
+	s.tmplRepo.EXPECT().FindByID(mock.Anything, templateID).
+		Return(&domaintemplate.Template{
+			ID:              templateID,
+			Name:            "Push Day",
+			CreatedByUserID: userID,
+		}, nil)
+	s.tmplRepo.EXPECT().InsertMedia(mock.Anything, mock.MatchedBy(func(m domaintemplate.TemplateMedia) bool {
+		return m.ID != uuid.Nil &&
+			m.TemplateID == templateID &&
+			m.MediaType == domaintemplate.MediaTypePhoto &&
+			m.SortOrder == 0 &&
+			m.S3Key == "templates/push-day.jpg"
+	})).Return(nil)
+
+	got, err := s.svc.UploadMedia(context.Background(), servicetemplate.UploadTemplateMediaCommand{
+		TemplateID: templateID,
+		UserID:     userID,
+		S3Key:      "templates/push-day.jpg",
+		SortOrder:  0,
+	})
+	s.Require().NoError(err)
+	s.Equal(templateID, got.TemplateID)
+	s.Equal(domaintemplate.MediaTypePhoto, got.MediaType)
+	s.Equal("templates/push-day.jpg", got.S3Key)
+	s.NotEqual(uuid.Nil, got.ID)
+}
+
+func (s *ServiceTestSuite) TestUploadMedia_NotFound() {
+	templateID := uuid.Must(uuid.NewV7())
+	s.tmplRepo.EXPECT().FindByID(mock.Anything, templateID).
+		Return(nil, domaintemplate.ErrTemplateNotFound)
+
+	_, err := s.svc.UploadMedia(context.Background(), servicetemplate.UploadTemplateMediaCommand{
+		TemplateID: templateID,
+		UserID:     uuid.Must(uuid.NewV7()),
+		S3Key:      "templates/push-day.jpg",
+	})
+	s.Require().ErrorIs(err, domaintemplate.ErrTemplateNotFound)
+	s.tmplRepo.AssertNotCalled(s.T(), "InsertMedia", mock.Anything, mock.Anything)
+}
+
+func (s *ServiceTestSuite) TestUploadMedia_NotOwner() {
+	templateID := uuid.Must(uuid.NewV7())
+	s.tmplRepo.EXPECT().FindByID(mock.Anything, templateID).
+		Return(&domaintemplate.Template{
+			ID:              templateID,
+			Name:            "Push Day",
+			CreatedByUserID: uuid.Must(uuid.NewV7()),
+		}, nil)
+
+	_, err := s.svc.UploadMedia(context.Background(), servicetemplate.UploadTemplateMediaCommand{
+		TemplateID: templateID,
+		UserID:     uuid.Must(uuid.NewV7()),
+		S3Key:      "templates/push-day.jpg",
+	})
+	s.Require().ErrorIs(err, domaintemplate.ErrNotOwner)
+	s.tmplRepo.AssertNotCalled(s.T(), "InsertMedia", mock.Anything, mock.Anything)
+}
+
+func (s *ServiceTestSuite) TestUploadMedia_EmptyS3Key() {
+	templateID := uuid.Must(uuid.NewV7())
+	userID := uuid.Must(uuid.NewV7())
+	s.tmplRepo.EXPECT().FindByID(mock.Anything, templateID).
+		Return(&domaintemplate.Template{
+			ID:              templateID,
+			Name:            "Push Day",
+			CreatedByUserID: userID,
+		}, nil)
+
+	_, err := s.svc.UploadMedia(context.Background(), servicetemplate.UploadTemplateMediaCommand{
+		TemplateID: templateID,
+		UserID:     userID,
+	})
+	s.Require().ErrorIs(err, domaintemplate.ErrInvalidS3Key)
+	s.tmplRepo.AssertNotCalled(s.T(), "InsertMedia", mock.Anything, mock.Anything)
+}
+
+func (s *ServiceTestSuite) TestUploadMedia_InsertFails() {
+	templateID := uuid.Must(uuid.NewV7())
+	userID := uuid.Must(uuid.NewV7())
+	s.tmplRepo.EXPECT().FindByID(mock.Anything, templateID).
+		Return(&domaintemplate.Template{
+			ID:              templateID,
+			Name:            "Push Day",
+			CreatedByUserID: userID,
+		}, nil)
+	s.tmplRepo.EXPECT().InsertMedia(mock.Anything, mock.Anything).
+		Return(errors.New("insert failed"))
+
+	_, err := s.svc.UploadMedia(context.Background(), servicetemplate.UploadTemplateMediaCommand{
+		TemplateID: templateID,
+		UserID:     userID,
+		S3Key:      "templates/push-day.jpg",
+	})
+	s.Require().ErrorContains(err, "insert failed")
 }
 
 func (s *ServiceTestSuite) TestSoftDelete_NotOwner() {

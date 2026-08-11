@@ -35,6 +35,15 @@ type ListExercisesCommand struct {
 	Since       time.Time
 }
 
+// UploadExerciseMediaCommand carries the fields needed to attach an uploaded
+// media object to an exercise.
+type UploadExerciseMediaCommand struct {
+	ExerciseID uuid.UUID
+	MediaType  domainexercise.MediaType
+	S3Key      string
+	SortOrder  int
+}
+
 // Filter converts the command into the domain list filter.
 func (c ListExercisesCommand) Filter() domainexercise.ExerciseFilter {
 	return domainexercise.ExerciseFilter{

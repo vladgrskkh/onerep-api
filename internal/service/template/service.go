@@ -15,6 +15,7 @@ type TemplateRepository interface {
 	FindByID(ctx context.Context, id uuid.UUID) (*domaintemplate.Template, error)
 	Create(ctx context.Context, t domaintemplate.Template) (*domaintemplate.Template, error)
 	Update(ctx context.Context, t domaintemplate.Template) (*domaintemplate.Template, error)
+	InsertMedia(ctx context.Context, m domaintemplate.TemplateMedia) error
 	ReplaceExercises(
 		ctx context.Context,
 		templateID uuid.UUID,
@@ -243,6 +244,36 @@ func (s *TemplateService) SoftDelete(ctx context.Context, id, userID uuid.UUID) 
 		return domaintemplate.ErrNotOwner
 	}
 	return s.templates.SoftDelete(ctx, id)
+}
+
+// UploadMedia attaches an uploaded photo to an owned template. Template
+// media is photo-only.
+func (s *TemplateService) UploadMedia(
+	ctx context.Context,
+	cmd UploadTemplateMediaCommand,
+) (*domaintemplate.TemplateMedia, error) {
+	t, err := s.templates.FindByID(ctx, cmd.TemplateID)
+	if err != nil {
+		return nil, err
+	}
+	if t.CreatedByUserID != cmd.UserID {
+		return nil, domaintemplate.ErrNotOwner
+	}
+	if strings.TrimSpace(cmd.S3Key) == "" {
+		return nil, domaintemplate.ErrInvalidS3Key
+	}
+
+	media := domaintemplate.TemplateMedia{
+		ID:         uuid.Must(uuid.NewV7()),
+		TemplateID: cmd.TemplateID,
+		MediaType:  domaintemplate.MediaTypePhoto,
+		SortOrder:  cmd.SortOrder,
+		S3Key:      cmd.S3Key,
+	}
+	if err = s.templates.InsertMedia(ctx, media); err != nil {
+		return nil, err
+	}
+	return &media, nil
 }
 
 // buildExercises converts command exercises into domain rows, assigning each

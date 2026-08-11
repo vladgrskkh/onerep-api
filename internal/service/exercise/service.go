@@ -15,6 +15,7 @@ type ExerciseRepository interface {
 	FindByID(ctx context.Context, id uuid.UUID) (*domainexercise.Exercise, error)
 	Create(ctx context.Context, ex domainexercise.Exercise) (*domainexercise.Exercise, error)
 	Update(ctx context.Context, ex domainexercise.Exercise) (*domainexercise.Exercise, error)
+	InsertMedia(ctx context.Context, m domainexercise.ExerciseMedia) error
 	ReplaceMedia(ctx context.Context, exerciseID uuid.UUID, media []domainexercise.ExerciseMedia) error
 	ReplaceMuscleGroups(
 		ctx context.Context,
@@ -166,6 +167,41 @@ func (s *ExerciseService) SoftDelete(ctx context.Context, id uuid.UUID) error {
 		return domainexercise.ErrCannotEditBuiltIn
 	}
 	return s.exercises.SoftDelete(ctx, id)
+}
+
+// UploadMedia attaches an uploaded media object to an existing exercise.
+// Built-in exercises are read-only and reject media uploads.
+func (s *ExerciseService) UploadMedia(
+	ctx context.Context,
+	cmd UploadExerciseMediaCommand,
+) (*domainexercise.ExerciseMedia, error) {
+	ex, err := s.exercises.FindByID(ctx, cmd.ExerciseID)
+	if err != nil {
+		return nil, err
+	}
+	if ex.IsBuiltIn {
+		return nil, domainexercise.ErrCannotEditBuiltIn
+	}
+	switch cmd.MediaType {
+	case domainexercise.MediaTypePhoto, domainexercise.MediaTypeVideo:
+	default:
+		return nil, domainexercise.ErrInvalidMediaType
+	}
+	if strings.TrimSpace(cmd.S3Key) == "" {
+		return nil, domainexercise.ErrInvalidS3Key
+	}
+
+	media := domainexercise.ExerciseMedia{
+		ID:         uuid.Must(uuid.NewV7()),
+		ExerciseID: cmd.ExerciseID,
+		MediaType:  cmd.MediaType,
+		SortOrder:  cmd.SortOrder,
+		S3Key:      cmd.S3Key,
+	}
+	if err = s.exercises.InsertMedia(ctx, media); err != nil {
+		return nil, err
+	}
+	return &media, nil
 }
 
 // resolveMuscleGroups validates the given muscle group IDs and builds the

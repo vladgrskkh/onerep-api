@@ -25,3 +25,12 @@ type UpdateTemplateCommand struct {
 	Description *string
 	Exercises   *[]TemplateExerciseCommand
 }
+
+// UploadTemplateMediaCommand carries the fields needed to attach an uploaded
+// photo to a template.
+type UploadTemplateMediaCommand struct {
+	TemplateID uuid.UUID
+	UserID     uuid.UUID
+	S3Key      string
+	SortOrder  int
+}

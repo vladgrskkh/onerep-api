@@ -2,6 +2,7 @@ package exercise_test
 
 import (
 	"context"
+	"errors"
 	"testing"
 	"time"
 
@@ -243,6 +244,101 @@ func (s *ServiceTestSuite) TestSoftDelete_BuiltInRejected() {
 	err := s.svc.SoftDelete(context.Background(), exerciseID)
 	s.Require().ErrorIs(err, domainexercise.ErrCannotEditBuiltIn)
 	s.exerciseRepo.AssertNotCalled(s.T(), "SoftDelete", mock.Anything, mock.Anything)
+}
+
+func (s *ServiceTestSuite) TestUploadMedia_Success() {
+	exerciseID := uuid.Must(uuid.NewV7())
+	s.exerciseRepo.EXPECT().FindByID(mock.Anything, exerciseID).
+		Return(&domainexercise.Exercise{ID: exerciseID, Name: "Squat"}, nil)
+	s.exerciseRepo.EXPECT().InsertMedia(mock.Anything, mock.MatchedBy(func(m domainexercise.ExerciseMedia) bool {
+		return m.ID != uuid.Nil &&
+			m.ExerciseID == exerciseID &&
+			m.MediaType == domainexercise.MediaTypePhoto &&
+			m.SortOrder == 0 &&
+			m.S3Key == "exercises/squat.jpg"
+	})).Return(nil)
+
+	got, err := s.svc.UploadMedia(context.Background(), serviceexercise.UploadExerciseMediaCommand{
+		ExerciseID: exerciseID,
+		MediaType:  domainexercise.MediaTypePhoto,
+		S3Key:      "exercises/squat.jpg",
+		SortOrder:  0,
+	})
+	s.Require().NoError(err)
+	s.Equal(exerciseID, got.ExerciseID)
+	s.Equal(domainexercise.MediaTypePhoto, got.MediaType)
+	s.Equal("exercises/squat.jpg", got.S3Key)
+	s.NotEqual(uuid.Nil, got.ID)
+}
+
+func (s *ServiceTestSuite) TestUploadMedia_NotFound() {
+	exerciseID := uuid.Must(uuid.NewV7())
+	s.exerciseRepo.EXPECT().FindByID(mock.Anything, exerciseID).
+		Return(nil, domainexercise.ErrExerciseNotFound)
+
+	_, err := s.svc.UploadMedia(context.Background(), serviceexercise.UploadExerciseMediaCommand{
+		ExerciseID: exerciseID,
+		MediaType:  domainexercise.MediaTypePhoto,
+		S3Key:      "exercises/squat.jpg",
+	})
+	s.Require().ErrorIs(err, domainexercise.ErrExerciseNotFound)
+	s.exerciseRepo.AssertNotCalled(s.T(), "InsertMedia", mock.Anything, mock.Anything)
+}
+
+func (s *ServiceTestSuite) TestUploadMedia_BuiltInRejected() {
+	exerciseID := uuid.Must(uuid.NewV7())
+	s.exerciseRepo.EXPECT().FindByID(mock.Anything, exerciseID).
+		Return(&domainexercise.Exercise{ID: exerciseID, Name: "Squat", IsBuiltIn: true}, nil)
+
+	_, err := s.svc.UploadMedia(context.Background(), serviceexercise.UploadExerciseMediaCommand{
+		ExerciseID: exerciseID,
+		MediaType:  domainexercise.MediaTypePhoto,
+		S3Key:      "exercises/squat.jpg",
+	})
+	s.Require().ErrorIs(err, domainexercise.ErrCannotEditBuiltIn)
+	s.exerciseRepo.AssertNotCalled(s.T(), "InsertMedia", mock.Anything, mock.Anything)
+}
+
+func (s *ServiceTestSuite) TestUploadMedia_InvalidMediaType() {
+	exerciseID := uuid.Must(uuid.NewV7())
+	s.exerciseRepo.EXPECT().FindByID(mock.Anything, exerciseID).
+		Return(&domainexercise.Exercise{ID: exerciseID, Name: "Squat"}, nil)
+
+	_, err := s.svc.UploadMedia(context.Background(), serviceexercise.UploadExerciseMediaCommand{
+		ExerciseID: exerciseID,
+		MediaType:  "gif",
+		S3Key:      "exercises/squat.gif",
+	})
+	s.Require().ErrorIs(err, domainexercise.ErrInvalidMediaType)
+	s.exerciseRepo.AssertNotCalled(s.T(), "InsertMedia", mock.Anything, mock.Anything)
+}
+
+func (s *ServiceTestSuite) TestUploadMedia_EmptyS3Key() {
+	exerciseID := uuid.Must(uuid.NewV7())
+	s.exerciseRepo.EXPECT().FindByID(mock.Anything, exerciseID).
+		Return(&domainexercise.Exercise{ID: exerciseID, Name: "Squat"}, nil)
+
+	_, err := s.svc.UploadMedia(context.Background(), serviceexercise.UploadExerciseMediaCommand{
+		ExerciseID: exerciseID,
+		MediaType:  domainexercise.MediaTypePhoto,
+	})
+	s.Require().ErrorIs(err, domainexercise.ErrInvalidS3Key)
+	s.exerciseRepo.AssertNotCalled(s.T(), "InsertMedia", mock.Anything, mock.Anything)
+}
+
+func (s *ServiceTestSuite) TestUploadMedia_InsertFails() {
+	exerciseID := uuid.Must(uuid.NewV7())
+	s.exerciseRepo.EXPECT().FindByID(mock.Anything, exerciseID).
+		Return(&domainexercise.Exercise{ID: exerciseID, Name: "Squat"}, nil)
+	s.exerciseRepo.EXPECT().InsertMedia(mock.Anything, mock.Anything).
+		Return(errors.New("insert failed"))
+
+	_, err := s.svc.UploadMedia(context.Background(), serviceexercise.UploadExerciseMediaCommand{
+		ExerciseID: exerciseID,
+		MediaType:  domainexercise.MediaTypePhoto,
+		S3Key:      "exercises/squat.jpg",
+	})
+	s.Require().ErrorContains(err, "insert failed")
 }
 
 func TestServiceSuite(t *testing.T) {
