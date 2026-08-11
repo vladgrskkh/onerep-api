@@ -89,8 +89,8 @@ func (s *WorkoutRepoTestSuite) newTestWorkout(userID uuid.UUID) domainworkout.Wo
 	return w
 }
 
-func (s *WorkoutRepoTestSuite) createTestWorkout(w domainworkout.Workout) domainworkout.Workout {
-	var created domainworkout.Workout
+func (s *WorkoutRepoTestSuite) createTestWorkout(w domainworkout.Workout) *domainworkout.Workout {
+	var created *domainworkout.Workout
 	err := s.trManager.Do(s.ctx, func(ctx context.Context) error {
 		var err error
 		created, err = s.repo.Create(ctx, w)
@@ -108,9 +108,9 @@ func (s *WorkoutRepoTestSuite) createTestWorkout(w domainworkout.Workout) domain
 				if err != nil {
 					return err
 				}
-				createdWE.Sets = append(createdWE.Sets, createdSet)
+				createdWE.Sets = append(createdWE.Sets, *createdSet)
 			}
-			created.Exercises = append(created.Exercises, createdWE)
+			created.Exercises = append(created.Exercises, *createdWE)
 		}
 		return nil
 	})
@@ -119,8 +119,8 @@ func (s *WorkoutRepoTestSuite) createTestWorkout(w domainworkout.Workout) domain
 	return created
 }
 
-func (s *WorkoutRepoTestSuite) updateTestWorkout(w domainworkout.Workout) (domainworkout.Workout, error) {
-	var updated domainworkout.Workout
+func (s *WorkoutRepoTestSuite) updateTestWorkout(w domainworkout.Workout) (*domainworkout.Workout, error) {
+	var updated *domainworkout.Workout
 	err := s.trManager.Do(s.ctx, func(ctx context.Context) error {
 		var err error
 		updated, err = s.repo.Update(ctx, w)
@@ -159,7 +159,7 @@ func (s *WorkoutRepoTestSuite) TestCreate_HeaderOnly() {
 	userID := uuid.New()
 	w, err := domainworkout.NewWorkout(userID, nil)
 	s.Require().NoError(err)
-	var created domainworkout.Workout
+	var created *domainworkout.Workout
 	err = s.trManager.Do(s.ctx, func(ctx context.Context) error {
 		var err error
 		created, err = s.repo.Create(ctx, w)
@@ -217,13 +217,13 @@ func (s *WorkoutRepoTestSuite) TestList_SinceFilter() {
 	s.createTestWorkout(w)
 
 	since := time.Now().Add(-time.Hour)
-	listed, err := s.repo.List(s.ctx, domainworkout.WorkoutFilter{UserID: &userID, Since: &since})
+	listed, err := s.repo.List(s.ctx, domainworkout.WorkoutFilter{UserID: &userID, Since: since})
 	s.Require().NoError(err)
 	s.Require().Len(listed, 1)
 	s.Equal(w.ID, listed[0].ID)
 
 	since = time.Now().Add(time.Hour)
-	listed, err = s.repo.List(s.ctx, domainworkout.WorkoutFilter{UserID: &userID, Since: &since})
+	listed, err = s.repo.List(s.ctx, domainworkout.WorkoutFilter{UserID: &userID, Since: since})
 	s.Require().NoError(err)
 	s.Empty(listed)
 }
@@ -434,7 +434,7 @@ func (s *WorkoutRepoTestSuite) TestUpdate_HeaderOnly() {
 	w.Notes = "updated notes"
 	finishedAt := time.Now()
 	w.FinishedAt = &finishedAt
-	updated, err := s.updateTestWorkout(w)
+	updated, err := s.updateTestWorkout(*w)
 	s.Require().NoError(err)
 	s.Equal(2, updated.Version)
 
@@ -450,11 +450,11 @@ func (s *WorkoutRepoTestSuite) TestUpdate_VersionConflict() {
 	w := s.createTestWorkout(s.newTestWorkout(uuid.New()))
 
 	w.Notes = "first update"
-	_, err := s.updateTestWorkout(w)
+	_, err := s.updateTestWorkout(*w)
 	s.Require().NoError(err)
 
 	w.Version = 1
-	_, err = s.updateTestWorkout(w)
+	_, err = s.updateTestWorkout(*w)
 	s.ErrorIs(err, domainworkout.ErrWorkoutNotFound)
 }
 

@@ -50,14 +50,12 @@ func NewTemplateHandler(svc TemplateService, logger *slog.Logger) *TemplateHandl
 func (h *TemplateHandler) List(w http.ResponseWriter, r *http.Request) {
 	userID := handler.UserIDFromContext(r.Context())
 	filter := domaintemplate.TemplateFilter{UserID: &userID}
-	since, present, parseErr := handler.ParseRFC3339QueryParam(r, "since")
+	since, _, parseErr := handler.ParseRFC3339QueryParam(r, "since")
 	if parseErr != nil {
 		handler.WriteError(w, h.logger, http.StatusBadRequest, invalidSinceDetail())
 		return
 	}
-	if present {
-		filter.Since = &since
-	}
+	filter.Since = since
 
 	templates, err := h.svc.List(r.Context(), filter)
 	if err != nil {

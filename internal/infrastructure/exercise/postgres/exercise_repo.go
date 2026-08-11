@@ -27,7 +27,7 @@ func NewExerciseRepo(pool *pgxpool.Pool) *ExerciseRepo {
 func (r *ExerciseRepo) List(
 	ctx context.Context,
 	filter domainexercise.ExerciseFilter,
-) ([]domainexercise.Exercise, error) {
+) ([]*domainexercise.Exercise, error) {
 	query, args := buildExerciseListQuery(filter)
 	rows, err := r.getter.DefaultTrOrDB(ctx, r.db).Query(ctx, query, args)
 	if err != nil {
@@ -35,9 +35,9 @@ func (r *ExerciseRepo) List(
 	}
 	defer rows.Close()
 
-	var exercises []domainexercise.Exercise
+	var exercises []*domainexercise.Exercise
 	for rows.Next() {
-		var ex domainexercise.Exercise
+		ex := &domainexercise.Exercise{}
 		if scanErr := rows.Scan(
 			&ex.ID,
 			&ex.Name,
@@ -78,16 +78,16 @@ func buildExerciseListQuery(filter domainexercise.ExerciseFilter) (string, pgx.N
 		query.WriteString(` AND is_built_in = @is_built_in`)
 		args["is_built_in"] = *filter.IsBuiltIn
 	}
-	if filter.Since != nil {
+	if !filter.Since.IsZero() {
 		query.WriteString(` AND updated_at > @since`)
-		args["since"] = *filter.Since
+		args["since"] = filter.Since
 	}
 	query.WriteString(` ORDER BY name`)
 
 	return query.String(), args
 }
 
-func (r *ExerciseRepo) FindByID(ctx context.Context, id uuid.UUID) (domainexercise.Exercise, error) {
+func (r *ExerciseRepo) FindByID(ctx context.Context, id uuid.UUID) (*domainexercise.Exercise, error) {
 	conn := r.getter.DefaultTrOrDB(ctx, r.db)
 	rows, err := conn.Query(ctx, `
 		SELECT e.id, e.name, e.description, e.notes, e.is_built_in, e.created_by_user_id,
@@ -101,16 +101,19 @@ func (r *ExerciseRepo) FindByID(ctx context.Context, id uuid.UUID) (domainexerci
 		ORDER BY m.sort_order, emg.is_primary DESC
 	`, pgx.NamedArgs{"id": id})
 	if err != nil {
-		return domainexercise.Exercise{}, err
+		return nil, err
 	}
 	defer rows.Close()
 
 	var (
-		ex         domainexercise.Exercise
+		ex         *domainexercise.Exercise
 		mediaSeen  = make(map[uuid.UUID]struct{})
 		groupsSeen = make(map[int]struct{})
 	)
 	for rows.Next() {
+		if ex == nil {
+			ex = &domainexercise.Exercise{}
+		}
 		var (
 			mID         *uuid.UUID
 			mMediaType  *string
@@ -125,7 +128,7 @@ func (r *ExerciseRepo) FindByID(ctx context.Context, id uuid.UUID) (domainexerci
 			&mID, &mMediaType, &mSortOrder, &mS3Key,
 			&mgID, &mgIsPrimary,
 		); scanErr != nil {
-			return domainexercise.Exercise{}, scanErr
+			return nil, scanErr
 		}
 		if mID != nil {
 			if _, seen := mediaSeen[*mID]; !seen {
@@ -151,15 +154,15 @@ func (r *ExerciseRepo) FindByID(ctx context.Context, id uuid.UUID) (domainexerci
 		}
 	}
 	if rowsErr := rows.Err(); rowsErr != nil {
-		return domainexercise.Exercise{}, rowsErr
+		return nil, rowsErr
 	}
-	if ex.ID == uuid.Nil {
-		return domainexercise.Exercise{}, domainexercise.ErrExerciseNotFound
+	if ex == nil {
+		return nil, domainexercise.ErrExerciseNotFound
 	}
 	return ex, nil
 }
 
-func (r *ExerciseRepo) Create(ctx context.Context, ex domainexercise.Exercise) (domainexercise.Exercise, error) {
+func (r *ExerciseRepo) Create(ctx context.Context, ex domainexercise.Exercise) (*domainexercise.Exercise, error) {
 	conn := r.getter.DefaultTrOrDB(ctx, r.db)
 	if _, err := conn.Exec(ctx, `
 		INSERT INTO gym.exercises (id, name, description, notes, is_built_in, created_by_user_id, created_at, updated_at, version)
@@ -175,9 +178,9 @@ func (r *ExerciseRepo) Create(ctx context.Context, ex domainexercise.Exercise) (
 		"updated_at":         ex.UpdatedAt,
 		"version":            ex.Version,
 	}); err != nil {
-		return domainexercise.Exercise{}, err
+		return nil, err
 	}
-	return ex, nil
+	return &ex, nil
 }
 
 func (r *ExerciseRepo) InsertMedia(ctx context.Context, m domainexercise.ExerciseMedia) error {
@@ -279,7 +282,7 @@ func (r *ExerciseRepo) ReplaceMuscleGroups(
 	return r.BatchInsertMuscleGroups(ctx, groups)
 }
 
-func (r *ExerciseRepo) Update(ctx context.Context, ex domainexercise.Exercise) (domainexercise.Exercise, error) {
+func (r *ExerciseRepo) Update(ctx context.Context, ex domainexercise.Exercise) (*domainexercise.Exercise, error) {
 	conn := r.getter.DefaultTrOrDB(ctx, r.db)
 
 	ex.Version++
@@ -298,12 +301,12 @@ func (r *ExerciseRepo) Update(ctx context.Context, ex domainexercise.Exercise) (
 		"expected_version": ex.Version - 1,
 	})
 	if err != nil {
-		return domainexercise.Exercise{}, err
+		return nil, err
 	}
 	if tag.RowsAffected() == 0 {
-		return domainexercise.Exercise{}, domainexercise.ErrExerciseNotFound
+		return nil, domainexercise.ErrExerciseNotFound
 	}
-	return ex, nil
+	return &ex, nil
 }
 
 func (r *ExerciseRepo) SoftDelete(ctx context.Context, id uuid.UUID) error {

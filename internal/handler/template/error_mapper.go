@@ -17,12 +17,15 @@ const (
 
 	errCodeTemplateNotFound = "TEMPLATE_NOT_FOUND"
 	errUserTemplateNotFound = "Template not found"
-	errCodeForbidden        = "FORBIDDEN"
-	errUserForbidden        = "You do not have access to this template"
-	errCodeInvalidName      = "INVALID_NAME"
-	errUserInvalidName      = "Name must not be empty"
-	errCodeInvalidUserID    = "INVALID_USER_ID"
-	errUserInvalidUserID    = "You must be logged in to create templates"
+
+	errCodeForbidden = "FORBIDDEN"
+	errUserForbidden = "You do not have access to this template"
+
+	errCodeInvalidName = "INVALID_NAME"
+	errUserInvalidName = "Name must not be empty"
+
+	errCodeInvalidUserID = "INVALID_USER_ID"
+	errUserInvalidUserID = "You must be logged in to create templates"
 )
 
 func invalidRequestBodyDetail() handler.ErrorDetail {

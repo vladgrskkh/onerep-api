@@ -120,22 +120,24 @@ func (_c *MockTemplateRepository_BatchInsertMedia_Call) RunAndReturn(run func(co
 }
 
 // Create provides a mock function with given fields: ctx, t
-func (_m *MockTemplateRepository) Create(ctx context.Context, t template.Template) (template.Template, error) {
+func (_m *MockTemplateRepository) Create(ctx context.Context, t template.Template) (*template.Template, error) {
 	ret := _m.Called(ctx, t)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Create")
 	}
 
-	var r0 template.Template
+	var r0 *template.Template
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, template.Template) (template.Template, error)); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, template.Template) (*template.Template, error)); ok {
 		return rf(ctx, t)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, template.Template) template.Template); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, template.Template) *template.Template); ok {
 		r0 = rf(ctx, t)
 	} else {
-		r0 = ret.Get(0).(template.Template)
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*template.Template)
+		}
 	}
 
 	if rf, ok := ret.Get(1).(func(context.Context, template.Template) error); ok {
@@ -166,33 +168,35 @@ func (_c *MockTemplateRepository_Create_Call) Run(run func(ctx context.Context, 
 	return _c
 }
 
-func (_c *MockTemplateRepository_Create_Call) Return(_a0 template.Template, _a1 error) *MockTemplateRepository_Create_Call {
+func (_c *MockTemplateRepository_Create_Call) Return(_a0 *template.Template, _a1 error) *MockTemplateRepository_Create_Call {
 	_c.Call.Return(_a0, _a1)
 	return _c
 }
 
-func (_c *MockTemplateRepository_Create_Call) RunAndReturn(run func(context.Context, template.Template) (template.Template, error)) *MockTemplateRepository_Create_Call {
+func (_c *MockTemplateRepository_Create_Call) RunAndReturn(run func(context.Context, template.Template) (*template.Template, error)) *MockTemplateRepository_Create_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // FindByID provides a mock function with given fields: ctx, id
-func (_m *MockTemplateRepository) FindByID(ctx context.Context, id uuid.UUID) (template.Template, error) {
+func (_m *MockTemplateRepository) FindByID(ctx context.Context, id uuid.UUID) (*template.Template, error) {
 	ret := _m.Called(ctx, id)
 
 	if len(ret) == 0 {
 		panic("no return value specified for FindByID")
 	}
 
-	var r0 template.Template
+	var r0 *template.Template
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID) (template.Template, error)); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID) (*template.Template, error)); ok {
 		return rf(ctx, id)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID) template.Template); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID) *template.Template); ok {
 		r0 = rf(ctx, id)
 	} else {
-		r0 = ret.Get(0).(template.Template)
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*template.Template)
+		}
 	}
 
 	if rf, ok := ret.Get(1).(func(context.Context, uuid.UUID) error); ok {
@@ -223,34 +227,34 @@ func (_c *MockTemplateRepository_FindByID_Call) Run(run func(ctx context.Context
 	return _c
 }
 
-func (_c *MockTemplateRepository_FindByID_Call) Return(_a0 template.Template, _a1 error) *MockTemplateRepository_FindByID_Call {
+func (_c *MockTemplateRepository_FindByID_Call) Return(_a0 *template.Template, _a1 error) *MockTemplateRepository_FindByID_Call {
 	_c.Call.Return(_a0, _a1)
 	return _c
 }
 
-func (_c *MockTemplateRepository_FindByID_Call) RunAndReturn(run func(context.Context, uuid.UUID) (template.Template, error)) *MockTemplateRepository_FindByID_Call {
+func (_c *MockTemplateRepository_FindByID_Call) RunAndReturn(run func(context.Context, uuid.UUID) (*template.Template, error)) *MockTemplateRepository_FindByID_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // List provides a mock function with given fields: ctx, filter
-func (_m *MockTemplateRepository) List(ctx context.Context, filter template.TemplateFilter) ([]template.Template, error) {
+func (_m *MockTemplateRepository) List(ctx context.Context, filter template.TemplateFilter) ([]*template.Template, error) {
 	ret := _m.Called(ctx, filter)
 
 	if len(ret) == 0 {
 		panic("no return value specified for List")
 	}
 
-	var r0 []template.Template
+	var r0 []*template.Template
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, template.TemplateFilter) ([]template.Template, error)); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, template.TemplateFilter) ([]*template.Template, error)); ok {
 		return rf(ctx, filter)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, template.TemplateFilter) []template.Template); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, template.TemplateFilter) []*template.Template); ok {
 		r0 = rf(ctx, filter)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]template.Template)
+			r0 = ret.Get(0).([]*template.Template)
 		}
 	}
 
@@ -282,12 +286,12 @@ func (_c *MockTemplateRepository_List_Call) Run(run func(ctx context.Context, fi
 	return _c
 }
 
-func (_c *MockTemplateRepository_List_Call) Return(_a0 []template.Template, _a1 error) *MockTemplateRepository_List_Call {
+func (_c *MockTemplateRepository_List_Call) Return(_a0 []*template.Template, _a1 error) *MockTemplateRepository_List_Call {
 	_c.Call.Return(_a0, _a1)
 	return _c
 }
 
-func (_c *MockTemplateRepository_List_Call) RunAndReturn(run func(context.Context, template.TemplateFilter) ([]template.Template, error)) *MockTemplateRepository_List_Call {
+func (_c *MockTemplateRepository_List_Call) RunAndReturn(run func(context.Context, template.TemplateFilter) ([]*template.Template, error)) *MockTemplateRepository_List_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -436,22 +440,24 @@ func (_c *MockTemplateRepository_SoftDelete_Call) RunAndReturn(run func(context.
 }
 
 // Update provides a mock function with given fields: ctx, t
-func (_m *MockTemplateRepository) Update(ctx context.Context, t template.Template) (template.Template, error) {
+func (_m *MockTemplateRepository) Update(ctx context.Context, t template.Template) (*template.Template, error) {
 	ret := _m.Called(ctx, t)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Update")
 	}
 
-	var r0 template.Template
+	var r0 *template.Template
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, template.Template) (template.Template, error)); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, template.Template) (*template.Template, error)); ok {
 		return rf(ctx, t)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, template.Template) template.Template); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, template.Template) *template.Template); ok {
 		r0 = rf(ctx, t)
 	} else {
-		r0 = ret.Get(0).(template.Template)
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*template.Template)
+		}
 	}
 
 	if rf, ok := ret.Get(1).(func(context.Context, template.Template) error); ok {
@@ -482,12 +488,12 @@ func (_c *MockTemplateRepository_Update_Call) Run(run func(ctx context.Context, 
 	return _c
 }
 
-func (_c *MockTemplateRepository_Update_Call) Return(_a0 template.Template, _a1 error) *MockTemplateRepository_Update_Call {
+func (_c *MockTemplateRepository_Update_Call) Return(_a0 *template.Template, _a1 error) *MockTemplateRepository_Update_Call {
 	_c.Call.Return(_a0, _a1)
 	return _c
 }
 
-func (_c *MockTemplateRepository_Update_Call) RunAndReturn(run func(context.Context, template.Template) (template.Template, error)) *MockTemplateRepository_Update_Call {
+func (_c *MockTemplateRepository_Update_Call) RunAndReturn(run func(context.Context, template.Template) (*template.Template, error)) *MockTemplateRepository_Update_Call {
 	_c.Call.Return(run)
 	return _c
 }

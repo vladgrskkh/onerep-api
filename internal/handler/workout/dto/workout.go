@@ -7,7 +7,7 @@ import (
 )
 
 type StartWorkoutRequest struct {
-	TemplateID *uuid.UUID `json:"template_id"`
+	TemplateID uuid.UUID `json:"template_id,omitzero"`
 }
 
 type AddExerciseRequest struct {
@@ -17,8 +17,8 @@ type AddExerciseRequest struct {
 type LogSetRequest struct {
 	WeightKg    float64 `json:"weight_kg"    validate:"required,gt=0"`
 	Reps        int     `json:"reps"         validate:"required,gt=0"`
-	RPE         *int    `json:"rpe"          validate:"omitempty,min=1,max=10"`
-	RestSeconds *int    `json:"rest_seconds" validate:"omitempty,min=0"`
+	RPE         int     `json:"rpe"          validate:"omitempty,min=1,max=10"`
+	RestSeconds int     `json:"rest_seconds" validate:"omitempty,min=0"`
 	IsWarmup    bool    `json:"is_warmup"`
 }
 

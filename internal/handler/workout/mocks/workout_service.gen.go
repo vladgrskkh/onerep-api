@@ -269,7 +269,7 @@ func (_c *MockWorkoutService_GetActive_Call) RunAndReturn(run func(context.Conte
 }
 
 // List provides a mock function with given fields: ctx, userID, since
-func (_m *MockWorkoutService) List(ctx context.Context, userID uuid.UUID, since *time.Time) ([]*domainworkout.Workout, error) {
+func (_m *MockWorkoutService) List(ctx context.Context, userID uuid.UUID, since time.Time) ([]*domainworkout.Workout, error) {
 	ret := _m.Called(ctx, userID, since)
 
 	if len(ret) == 0 {
@@ -278,10 +278,10 @@ func (_m *MockWorkoutService) List(ctx context.Context, userID uuid.UUID, since 
 
 	var r0 []*domainworkout.Workout
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID, *time.Time) ([]*domainworkout.Workout, error)); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID, time.Time) ([]*domainworkout.Workout, error)); ok {
 		return rf(ctx, userID, since)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID, *time.Time) []*domainworkout.Workout); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID, time.Time) []*domainworkout.Workout); ok {
 		r0 = rf(ctx, userID, since)
 	} else {
 		if ret.Get(0) != nil {
@@ -289,7 +289,7 @@ func (_m *MockWorkoutService) List(ctx context.Context, userID uuid.UUID, since 
 		}
 	}
 
-	if rf, ok := ret.Get(1).(func(context.Context, uuid.UUID, *time.Time) error); ok {
+	if rf, ok := ret.Get(1).(func(context.Context, uuid.UUID, time.Time) error); ok {
 		r1 = rf(ctx, userID, since)
 	} else {
 		r1 = ret.Error(1)
@@ -306,14 +306,14 @@ type MockWorkoutService_List_Call struct {
 // List is a helper method to define mock.On call
 //   - ctx context.Context
 //   - userID uuid.UUID
-//   - since *time.Time
+//   - since time.Time
 func (_e *MockWorkoutService_Expecter) List(ctx interface{}, userID interface{}, since interface{}) *MockWorkoutService_List_Call {
 	return &MockWorkoutService_List_Call{Call: _e.mock.On("List", ctx, userID, since)}
 }
 
-func (_c *MockWorkoutService_List_Call) Run(run func(ctx context.Context, userID uuid.UUID, since *time.Time)) *MockWorkoutService_List_Call {
+func (_c *MockWorkoutService_List_Call) Run(run func(ctx context.Context, userID uuid.UUID, since time.Time)) *MockWorkoutService_List_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context), args[1].(uuid.UUID), args[2].(*time.Time))
+		run(args[0].(context.Context), args[1].(uuid.UUID), args[2].(time.Time))
 	})
 	return _c
 }
@@ -323,28 +323,30 @@ func (_c *MockWorkoutService_List_Call) Return(_a0 []*domainworkout.Workout, _a1
 	return _c
 }
 
-func (_c *MockWorkoutService_List_Call) RunAndReturn(run func(context.Context, uuid.UUID, *time.Time) ([]*domainworkout.Workout, error)) *MockWorkoutService_List_Call {
+func (_c *MockWorkoutService_List_Call) RunAndReturn(run func(context.Context, uuid.UUID, time.Time) ([]*domainworkout.Workout, error)) *MockWorkoutService_List_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // LogSet provides a mock function with given fields: ctx, cmd, userID
-func (_m *MockWorkoutService) LogSet(ctx context.Context, cmd workout.LogSetCommand, userID uuid.UUID) (workout.SetResult, error) {
+func (_m *MockWorkoutService) LogSet(ctx context.Context, cmd workout.LogSetCommand, userID uuid.UUID) (*domainworkout.SetResult, error) {
 	ret := _m.Called(ctx, cmd, userID)
 
 	if len(ret) == 0 {
 		panic("no return value specified for LogSet")
 	}
 
-	var r0 workout.SetResult
+	var r0 *domainworkout.SetResult
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, workout.LogSetCommand, uuid.UUID) (workout.SetResult, error)); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, workout.LogSetCommand, uuid.UUID) (*domainworkout.SetResult, error)); ok {
 		return rf(ctx, cmd, userID)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, workout.LogSetCommand, uuid.UUID) workout.SetResult); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, workout.LogSetCommand, uuid.UUID) *domainworkout.SetResult); ok {
 		r0 = rf(ctx, cmd, userID)
 	} else {
-		r0 = ret.Get(0).(workout.SetResult)
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*domainworkout.SetResult)
+		}
 	}
 
 	if rf, ok := ret.Get(1).(func(context.Context, workout.LogSetCommand, uuid.UUID) error); ok {
@@ -376,12 +378,12 @@ func (_c *MockWorkoutService_LogSet_Call) Run(run func(ctx context.Context, cmd 
 	return _c
 }
 
-func (_c *MockWorkoutService_LogSet_Call) Return(_a0 workout.SetResult, _a1 error) *MockWorkoutService_LogSet_Call {
+func (_c *MockWorkoutService_LogSet_Call) Return(_a0 *domainworkout.SetResult, _a1 error) *MockWorkoutService_LogSet_Call {
 	_c.Call.Return(_a0, _a1)
 	return _c
 }
 
-func (_c *MockWorkoutService_LogSet_Call) RunAndReturn(run func(context.Context, workout.LogSetCommand, uuid.UUID) (workout.SetResult, error)) *MockWorkoutService_LogSet_Call {
+func (_c *MockWorkoutService_LogSet_Call) RunAndReturn(run func(context.Context, workout.LogSetCommand, uuid.UUID) (*domainworkout.SetResult, error)) *MockWorkoutService_LogSet_Call {
 	_c.Call.Return(run)
 	return _c
 }

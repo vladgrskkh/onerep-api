@@ -52,12 +52,12 @@ func (s *BodyWeightRepoTestSuite) createTestBodyWeight(
 	userID uuid.UUID,
 	weightKg float64,
 	measuredAt time.Time,
-) domainbodyweight.BodyWeight {
+) *domainbodyweight.BodyWeight {
 	bw, err := domainbodyweight.NewBodyWeight(userID, weightKg, measuredAt)
 	s.Require().NoError(err)
 	bw.UpdatedAt = measuredAt
 
-	var created domainbodyweight.BodyWeight
+	var created *domainbodyweight.BodyWeight
 	err = s.trManager.Do(s.ctx, func(ctx context.Context) error {
 		var err error
 		created, err = s.repo.Create(ctx, bw)
@@ -74,7 +74,7 @@ func (s *BodyWeightRepoTestSuite) TestCreateAndList_RoundTrip() {
 	older := s.createTestBodyWeight(userID, 80.5, time.Now().Add(-48*time.Hour))
 	newer := s.createTestBodyWeight(userID, 81.2, time.Now().Add(-24*time.Hour))
 
-	listed, err := s.repo.List(s.ctx, userID, nil)
+	listed, err := s.repo.List(s.ctx, userID, time.Time{})
 	s.Require().NoError(err)
 	s.Require().Len(listed, 2)
 	s.Equal(newer.ID, listed[0].ID)
@@ -86,7 +86,7 @@ func (s *BodyWeightRepoTestSuite) TestCreateAndList_RoundTrip() {
 }
 
 func (s *BodyWeightRepoTestSuite) TestList_Empty() {
-	listed, err := s.repo.List(s.ctx, uuid.New(), nil)
+	listed, err := s.repo.List(s.ctx, uuid.New(), time.Time{})
 	s.Require().NoError(err)
 	s.Empty(listed)
 }
@@ -96,12 +96,12 @@ func (s *BodyWeightRepoTestSuite) TestList_SinceFilter() {
 	s.createTestBodyWeight(userID, 80.5, time.Now().Add(-48*time.Hour))
 
 	since := time.Now().Add(-72 * time.Hour)
-	listed, err := s.repo.List(s.ctx, userID, &since)
+	listed, err := s.repo.List(s.ctx, userID, since)
 	s.Require().NoError(err)
 	s.Require().Len(listed, 1)
 
 	since = time.Now().Add(-time.Hour)
-	listed, err = s.repo.List(s.ctx, userID, &since)
+	listed, err = s.repo.List(s.ctx, userID, since)
 	s.Require().NoError(err)
 	s.Empty(listed)
 }
@@ -112,7 +112,7 @@ func (s *BodyWeightRepoTestSuite) TestList_DoesNotMixUsers() {
 	s.createTestBodyWeight(userA, 80.5, time.Now().Add(-24*time.Hour))
 	s.createTestBodyWeight(userB, 90.0, time.Now().Add(-24*time.Hour))
 
-	listed, err := s.repo.List(s.ctx, userA, nil)
+	listed, err := s.repo.List(s.ctx, userA, time.Time{})
 	s.Require().NoError(err)
 	s.Require().Len(listed, 1)
 	s.Equal(userA, listed[0].UserID)

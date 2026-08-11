@@ -11,10 +11,10 @@ import (
 )
 
 type ExerciseRepository interface {
-	List(ctx context.Context, filter domainexercise.ExerciseFilter) ([]domainexercise.Exercise, error)
-	FindByID(ctx context.Context, id uuid.UUID) (domainexercise.Exercise, error)
-	Create(ctx context.Context, ex domainexercise.Exercise) (domainexercise.Exercise, error)
-	Update(ctx context.Context, ex domainexercise.Exercise) (domainexercise.Exercise, error)
+	List(ctx context.Context, filter domainexercise.ExerciseFilter) ([]*domainexercise.Exercise, error)
+	FindByID(ctx context.Context, id uuid.UUID) (*domainexercise.Exercise, error)
+	Create(ctx context.Context, ex domainexercise.Exercise) (*domainexercise.Exercise, error)
+	Update(ctx context.Context, ex domainexercise.Exercise) (*domainexercise.Exercise, error)
 	ReplaceMedia(ctx context.Context, exerciseID uuid.UUID, media []domainexercise.ExerciseMedia) error
 	ReplaceMuscleGroups(
 		ctx context.Context,
@@ -30,7 +30,7 @@ type ExerciseRepository interface {
 }
 
 type MuscleGroupRepository interface {
-	List(ctx context.Context) ([]domainexercise.MuscleGroup, error)
+	List(ctx context.Context) ([]*domainexercise.MuscleGroup, error)
 }
 
 // TransactionManager runs a function inside a transaction.
@@ -58,24 +58,12 @@ func NewExerciseService(
 
 // List returns exercises matching the command filters.
 func (s *ExerciseService) List(ctx context.Context, cmd ListExercisesCommand) ([]*domainexercise.Exercise, error) {
-	exercises, err := s.exercises.List(ctx, cmd.Filter())
-	if err != nil {
-		return nil, err
-	}
-	out := make([]*domainexercise.Exercise, len(exercises))
-	for i := range exercises {
-		out[i] = &exercises[i]
-	}
-	return out, nil
+	return s.exercises.List(ctx, cmd.Filter())
 }
 
 // Get returns a single exercise by ID, including its media and muscle groups.
 func (s *ExerciseService) Get(ctx context.Context, id uuid.UUID) (*domainexercise.Exercise, error) {
-	ex, err := s.exercises.FindByID(ctx, id)
-	if err != nil {
-		return nil, err
-	}
-	return &ex, nil
+	return s.exercises.FindByID(ctx, id)
 }
 
 // Create creates an exercise and attaches its muscle groups to it.
@@ -90,7 +78,7 @@ func (s *ExerciseService) Create(ctx context.Context, cmd CreateExerciseCommand)
 		return nil, err
 	}
 
-	var created domainexercise.Exercise
+	var created *domainexercise.Exercise
 	err = s.trManager.Do(ctx, func(ctx context.Context) error {
 		created, err = s.exercises.Create(ctx, ex)
 		if err != nil {
@@ -105,7 +93,7 @@ func (s *ExerciseService) Create(ctx context.Context, cmd CreateExerciseCommand)
 	if err != nil {
 		return nil, err
 	}
-	return &created, nil
+	return created, nil
 }
 
 // Update applies the non-nil fields of the command to an existing exercise
@@ -143,9 +131,9 @@ func (s *ExerciseService) Update(ctx context.Context, cmd UpdateExerciseCommand)
 
 	ex.UpdatedAt = time.Now()
 
-	var updated domainexercise.Exercise
+	var updated *domainexercise.Exercise
 	err = s.trManager.Do(ctx, func(ctx context.Context) error {
-		updated, err = s.exercises.Update(ctx, ex)
+		updated, err = s.exercises.Update(ctx, *ex)
 		if err != nil {
 			return err
 		}
@@ -162,7 +150,7 @@ func (s *ExerciseService) Update(ctx context.Context, cmd UpdateExerciseCommand)
 	if err != nil {
 		return nil, err
 	}
-	return &updated, nil
+	return updated, nil
 }
 
 // SoftDelete marks an exercise as deleted. Built-in exercises are read-only.

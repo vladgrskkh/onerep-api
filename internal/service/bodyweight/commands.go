@@ -7,9 +7,9 @@ import (
 )
 
 // LogBodyWeightCommand carries the fields needed to log a body weight.
-// MeasuredAt defaults to the current time when nil.
+// A zero MeasuredAt defaults to the current time.
 type LogBodyWeightCommand struct {
 	UserID     uuid.UUID
 	WeightKg   float64
-	MeasuredAt *time.Time
+	MeasuredAt time.Time
 }

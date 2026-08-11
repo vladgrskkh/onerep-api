@@ -26,17 +26,17 @@ func NewBodyWeightRepo(pool *pgxpool.Pool) *BodyWeightRepo {
 func (r *BodyWeightRepo) List(
 	ctx context.Context,
 	userID uuid.UUID,
-	since *time.Time,
-) ([]domainbodyweight.BodyWeight, error) {
+	since time.Time,
+) ([]*domainbodyweight.BodyWeight, error) {
 	var query strings.Builder
 	query.WriteString(
 		`SELECT id, user_id, weight_kg, measured_at, created_at, updated_at, version FROM gym.body_weights WHERE user_id = @user_id`,
 	)
 	args := pgx.NamedArgs{"user_id": userID}
 
-	if since != nil {
+	if !since.IsZero() {
 		query.WriteString(` AND updated_at > @since`)
-		args["since"] = *since
+		args["since"] = since
 	}
 	query.WriteString(` ORDER BY measured_at DESC`)
 
@@ -46,9 +46,9 @@ func (r *BodyWeightRepo) List(
 	}
 	defer rows.Close()
 
-	var weights []domainbodyweight.BodyWeight
+	var weights []*domainbodyweight.BodyWeight
 	for rows.Next() {
-		var bw domainbodyweight.BodyWeight
+		bw := &domainbodyweight.BodyWeight{}
 		if scanErr := rows.Scan(
 			&bw.ID,
 			&bw.UserID,
@@ -68,7 +68,7 @@ func (r *BodyWeightRepo) List(
 func (r *BodyWeightRepo) Create(
 	ctx context.Context,
 	bw domainbodyweight.BodyWeight,
-) (domainbodyweight.BodyWeight, error) {
+) (*domainbodyweight.BodyWeight, error) {
 	conn := r.getter.DefaultTrOrDB(ctx, r.db)
 	if _, err := conn.Exec(ctx, `
 		INSERT INTO gym.body_weights (id, user_id, weight_kg, measured_at, created_at, updated_at, version)
@@ -82,7 +82,7 @@ func (r *BodyWeightRepo) Create(
 		"updated_at":  bw.UpdatedAt,
 		"version":     bw.Version,
 	}); err != nil {
-		return domainbodyweight.BodyWeight{}, err
+		return nil, err
 	}
-	return bw, nil
+	return &bw, nil
 }

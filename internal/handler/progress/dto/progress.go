@@ -25,6 +25,6 @@ type BodyWeightResponse struct {
 }
 
 type LogBodyWeightRequest struct {
-	WeightKg   float64    `json:"weight_kg"   validate:"required,gt=0"`
-	MeasuredAt *time.Time `json:"measured_at"`
+	WeightKg   float64   `json:"weight_kg"            validate:"required,gt=0"`
+	MeasuredAt time.Time `json:"measured_at,omitzero"`
 }

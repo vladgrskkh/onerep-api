@@ -53,14 +53,12 @@ func (h *ExerciseHandler) List(w http.ResponseWriter, r *http.Request) {
 		MuscleGroup: r.URL.Query().Get("muscle_group"),
 	}
 
-	since, present, parseErr := handler.ParseRFC3339QueryParam(r, "since")
+	since, _, parseErr := handler.ParseRFC3339QueryParam(r, "since")
 	if parseErr != nil {
 		handler.WriteError(w, h.logger, http.StatusBadRequest, invalidSinceDetail())
 		return
 	}
-	if present {
-		cmd.Since = &since
-	}
+	cmd.Since = since
 
 	exercises, err := h.svc.List(r.Context(), cmd)
 	if err != nil {
@@ -81,7 +79,6 @@ func (h *ExerciseHandler) List(w http.ResponseWriter, r *http.Request) {
 // @Param id path string true "Exercise ID"
 // @Success 200 {object} dto.ExerciseResponse
 // @Failure 400 {object} handler.ErrorResponse
-// @Failure 500 {object} handler.ErrorResponse
 // @Failure 404 {object} handler.ErrorResponse
 // @Failure 500 {object} handler.ErrorResponse
 // @Security BearerAuth
@@ -117,7 +114,6 @@ func (h *ExerciseHandler) Get(w http.ResponseWriter, r *http.Request) {
 // @Param request body dto.ExerciseCreateRequest true "Exercise data"
 // @Success 201 {object} dto.ExerciseResponse
 // @Failure 400 {object} handler.ErrorResponse
-// @Failure 500 {object} handler.ErrorResponse
 // @Failure 404 {object} handler.ErrorResponse
 // @Failure 500 {object} handler.ErrorResponse
 // @Security BearerAuth
@@ -165,7 +161,6 @@ func (h *ExerciseHandler) Create(w http.ResponseWriter, r *http.Request) {
 // @Param request body dto.ExerciseUpdateRequest true "Fields to update"
 // @Success 200 {object} dto.ExerciseResponse
 // @Failure 400 {object} handler.ErrorResponse
-// @Failure 500 {object} handler.ErrorResponse
 // @Failure 404 {object} handler.ErrorResponse
 // @Failure 500 {object} handler.ErrorResponse
 // @Security BearerAuth
@@ -219,7 +214,6 @@ func (h *ExerciseHandler) Update(w http.ResponseWriter, r *http.Request) {
 // @Param id path string true "Exercise ID"
 // @Success 204
 // @Failure 400 {object} handler.ErrorResponse
-// @Failure 500 {object} handler.ErrorResponse
 // @Failure 404 {object} handler.ErrorResponse
 // @Failure 500 {object} handler.ErrorResponse
 // @Security BearerAuth

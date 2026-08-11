@@ -28,7 +28,7 @@ func (_m *MockProgressService) EXPECT() *MockProgressService_Expecter {
 }
 
 // Get1RM provides a mock function with given fields: ctx, userID, exerciseID, from, to
-func (_m *MockProgressService) Get1RM(ctx context.Context, userID uuid.UUID, exerciseID uuid.UUID, from *time.Time, to *time.Time) ([]*progress.Progress1RM, error) {
+func (_m *MockProgressService) Get1RM(ctx context.Context, userID uuid.UUID, exerciseID uuid.UUID, from time.Time, to time.Time) ([]*progress.Progress1RM, error) {
 	ret := _m.Called(ctx, userID, exerciseID, from, to)
 
 	if len(ret) == 0 {
@@ -37,10 +37,10 @@ func (_m *MockProgressService) Get1RM(ctx context.Context, userID uuid.UUID, exe
 
 	var r0 []*progress.Progress1RM
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID, uuid.UUID, *time.Time, *time.Time) ([]*progress.Progress1RM, error)); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID, uuid.UUID, time.Time, time.Time) ([]*progress.Progress1RM, error)); ok {
 		return rf(ctx, userID, exerciseID, from, to)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID, uuid.UUID, *time.Time, *time.Time) []*progress.Progress1RM); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID, uuid.UUID, time.Time, time.Time) []*progress.Progress1RM); ok {
 		r0 = rf(ctx, userID, exerciseID, from, to)
 	} else {
 		if ret.Get(0) != nil {
@@ -48,7 +48,7 @@ func (_m *MockProgressService) Get1RM(ctx context.Context, userID uuid.UUID, exe
 		}
 	}
 
-	if rf, ok := ret.Get(1).(func(context.Context, uuid.UUID, uuid.UUID, *time.Time, *time.Time) error); ok {
+	if rf, ok := ret.Get(1).(func(context.Context, uuid.UUID, uuid.UUID, time.Time, time.Time) error); ok {
 		r1 = rf(ctx, userID, exerciseID, from, to)
 	} else {
 		r1 = ret.Error(1)
@@ -66,15 +66,15 @@ type MockProgressService_Get1RM_Call struct {
 //   - ctx context.Context
 //   - userID uuid.UUID
 //   - exerciseID uuid.UUID
-//   - from *time.Time
-//   - to *time.Time
+//   - from time.Time
+//   - to time.Time
 func (_e *MockProgressService_Expecter) Get1RM(ctx interface{}, userID interface{}, exerciseID interface{}, from interface{}, to interface{}) *MockProgressService_Get1RM_Call {
 	return &MockProgressService_Get1RM_Call{Call: _e.mock.On("Get1RM", ctx, userID, exerciseID, from, to)}
 }
 
-func (_c *MockProgressService_Get1RM_Call) Run(run func(ctx context.Context, userID uuid.UUID, exerciseID uuid.UUID, from *time.Time, to *time.Time)) *MockProgressService_Get1RM_Call {
+func (_c *MockProgressService_Get1RM_Call) Run(run func(ctx context.Context, userID uuid.UUID, exerciseID uuid.UUID, from time.Time, to time.Time)) *MockProgressService_Get1RM_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context), args[1].(uuid.UUID), args[2].(uuid.UUID), args[3].(*time.Time), args[4].(*time.Time))
+		run(args[0].(context.Context), args[1].(uuid.UUID), args[2].(uuid.UUID), args[3].(time.Time), args[4].(time.Time))
 	})
 	return _c
 }
@@ -84,13 +84,13 @@ func (_c *MockProgressService_Get1RM_Call) Return(_a0 []*progress.Progress1RM, _
 	return _c
 }
 
-func (_c *MockProgressService_Get1RM_Call) RunAndReturn(run func(context.Context, uuid.UUID, uuid.UUID, *time.Time, *time.Time) ([]*progress.Progress1RM, error)) *MockProgressService_Get1RM_Call {
+func (_c *MockProgressService_Get1RM_Call) RunAndReturn(run func(context.Context, uuid.UUID, uuid.UUID, time.Time, time.Time) ([]*progress.Progress1RM, error)) *MockProgressService_Get1RM_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // GetVolume provides a mock function with given fields: ctx, userID, from, to
-func (_m *MockProgressService) GetVolume(ctx context.Context, userID uuid.UUID, from *time.Time, to *time.Time) ([]*progress.ProgressVolume, error) {
+func (_m *MockProgressService) GetVolume(ctx context.Context, userID uuid.UUID, from time.Time, to time.Time) ([]*progress.ProgressVolume, error) {
 	ret := _m.Called(ctx, userID, from, to)
 
 	if len(ret) == 0 {
@@ -99,10 +99,10 @@ func (_m *MockProgressService) GetVolume(ctx context.Context, userID uuid.UUID, 
 
 	var r0 []*progress.ProgressVolume
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID, *time.Time, *time.Time) ([]*progress.ProgressVolume, error)); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID, time.Time, time.Time) ([]*progress.ProgressVolume, error)); ok {
 		return rf(ctx, userID, from, to)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID, *time.Time, *time.Time) []*progress.ProgressVolume); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID, time.Time, time.Time) []*progress.ProgressVolume); ok {
 		r0 = rf(ctx, userID, from, to)
 	} else {
 		if ret.Get(0) != nil {
@@ -110,7 +110,7 @@ func (_m *MockProgressService) GetVolume(ctx context.Context, userID uuid.UUID, 
 		}
 	}
 
-	if rf, ok := ret.Get(1).(func(context.Context, uuid.UUID, *time.Time, *time.Time) error); ok {
+	if rf, ok := ret.Get(1).(func(context.Context, uuid.UUID, time.Time, time.Time) error); ok {
 		r1 = rf(ctx, userID, from, to)
 	} else {
 		r1 = ret.Error(1)
@@ -127,15 +127,15 @@ type MockProgressService_GetVolume_Call struct {
 // GetVolume is a helper method to define mock.On call
 //   - ctx context.Context
 //   - userID uuid.UUID
-//   - from *time.Time
-//   - to *time.Time
+//   - from time.Time
+//   - to time.Time
 func (_e *MockProgressService_Expecter) GetVolume(ctx interface{}, userID interface{}, from interface{}, to interface{}) *MockProgressService_GetVolume_Call {
 	return &MockProgressService_GetVolume_Call{Call: _e.mock.On("GetVolume", ctx, userID, from, to)}
 }
 
-func (_c *MockProgressService_GetVolume_Call) Run(run func(ctx context.Context, userID uuid.UUID, from *time.Time, to *time.Time)) *MockProgressService_GetVolume_Call {
+func (_c *MockProgressService_GetVolume_Call) Run(run func(ctx context.Context, userID uuid.UUID, from time.Time, to time.Time)) *MockProgressService_GetVolume_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context), args[1].(uuid.UUID), args[2].(*time.Time), args[3].(*time.Time))
+		run(args[0].(context.Context), args[1].(uuid.UUID), args[2].(time.Time), args[3].(time.Time))
 	})
 	return _c
 }
@@ -145,7 +145,7 @@ func (_c *MockProgressService_GetVolume_Call) Return(_a0 []*progress.ProgressVol
 	return _c
 }
 
-func (_c *MockProgressService_GetVolume_Call) RunAndReturn(run func(context.Context, uuid.UUID, *time.Time, *time.Time) ([]*progress.ProgressVolume, error)) *MockProgressService_GetVolume_Call {
+func (_c *MockProgressService_GetVolume_Call) RunAndReturn(run func(context.Context, uuid.UUID, time.Time, time.Time) ([]*progress.ProgressVolume, error)) *MockProgressService_GetVolume_Call {
 	_c.Call.Return(run)
 	return _c
 }

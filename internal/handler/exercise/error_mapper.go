@@ -15,16 +15,21 @@ const (
 	errMsgInvalidSince  = "invalid since parameter"
 	errUserInvalidSince = "The since parameter must be an RFC 3339 timestamp"
 
-	errCodeExerciseNotFound     = "EXERCISE_NOT_FOUND"
-	errUserExerciseNotFound     = "Exercise not found"
-	errCodeMuscleGroupNotFound  = "MUSCLE_GROUP_NOT_FOUND"
-	errUserMuscleGroupNotFound  = "One or more muscle groups do not exist"
-	errCodeCannotEditBuiltIn    = "CANNOT_EDIT_BUILT_IN"
-	errUserCannotEditBuiltIn    = "Built-in exercises cannot be edited"
-	errCodeInvalidName          = "INVALID_NAME"
-	errUserInvalidName          = "Name must not be empty"
-	errCodeInvalidUserID        = "INVALID_USER_ID"
-	errUserInvalidUserID        = "You must be logged in to create exercises"
+	errCodeExerciseNotFound = "EXERCISE_NOT_FOUND"
+	errUserExerciseNotFound = "Exercise not found"
+
+	errCodeMuscleGroupNotFound = "MUSCLE_GROUP_NOT_FOUND"
+	errUserMuscleGroupNotFound = "One or more muscle groups do not exist"
+
+	errCodeCannotEditBuiltIn = "CANNOT_EDIT_BUILT_IN"
+	errUserCannotEditBuiltIn = "Built-in exercises cannot be edited"
+
+	errCodeInvalidName = "INVALID_NAME"
+	errUserInvalidName = "Name must not be empty"
+
+	errCodeInvalidUserID = "INVALID_USER_ID"
+	errUserInvalidUserID = "You must be logged in to create exercises"
+
 	errCodeInvalidMuscleGroupID = "INVALID_MUSCLE_GROUP_ID"
 	errUserInvalidMuscleGroupID = "Muscle group IDs must be positive"
 )

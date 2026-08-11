@@ -10,8 +10,8 @@ import (
 )
 
 type BodyWeightRepository interface {
-	List(ctx context.Context, userID uuid.UUID, since *time.Time) ([]domainbodyweight.BodyWeight, error)
-	Create(ctx context.Context, bw domainbodyweight.BodyWeight) (domainbodyweight.BodyWeight, error)
+	List(ctx context.Context, userID uuid.UUID, since time.Time) ([]*domainbodyweight.BodyWeight, error)
+	Create(ctx context.Context, bw domainbodyweight.BodyWeight) (*domainbodyweight.BodyWeight, error)
 }
 
 // BodyWeightService reads and writes the user's body weight entries.
@@ -30,18 +30,14 @@ func (s *BodyWeightService) LogBodyWeight(
 	cmd LogBodyWeightCommand,
 ) (*domainbodyweight.BodyWeight, error) {
 	measuredAt := time.Now()
-	if cmd.MeasuredAt != nil {
-		measuredAt = *cmd.MeasuredAt
+	if !cmd.MeasuredAt.IsZero() {
+		measuredAt = cmd.MeasuredAt
 	}
 	bw, err := domainbodyweight.NewBodyWeight(cmd.UserID, cmd.WeightKg, measuredAt)
 	if err != nil {
 		return nil, err
 	}
-	created, err := s.weights.Create(ctx, bw)
-	if err != nil {
-		return nil, err
-	}
-	return &created, nil
+	return s.weights.Create(ctx, bw)
 }
 
 // ListBodyWeight returns the user's body weight entries, optionally only
@@ -49,18 +45,10 @@ func (s *BodyWeightService) LogBodyWeight(
 func (s *BodyWeightService) ListBodyWeight(
 	ctx context.Context,
 	userID uuid.UUID,
-	since *time.Time,
+	since time.Time,
 ) ([]*domainbodyweight.BodyWeight, error) {
 	if userID == uuid.Nil {
 		return nil, domainbodyweight.ErrInvalidUserID
 	}
-	weights, err := s.weights.List(ctx, userID, since)
-	if err != nil {
-		return nil, err
-	}
-	out := make([]*domainbodyweight.BodyWeight, len(weights))
-	for i := range weights {
-		out[i] = &weights[i]
-	}
-	return out, nil
+	return s.weights.List(ctx, userID, since)
 }

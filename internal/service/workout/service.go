@@ -21,24 +21,24 @@ const (
 )
 
 type WorkoutRepository interface {
-	List(ctx context.Context, filter domainworkout.WorkoutFilter) ([]domainworkout.Workout, error)
-	FindByID(ctx context.Context, id uuid.UUID) (domainworkout.Workout, error)
-	Create(ctx context.Context, w domainworkout.Workout) (domainworkout.Workout, error)
-	AddExercise(ctx context.Context, workoutID, exerciseID uuid.UUID) (domainworkout.WorkoutExercise, error)
+	List(ctx context.Context, filter domainworkout.WorkoutFilter) ([]*domainworkout.Workout, error)
+	FindByID(ctx context.Context, id uuid.UUID) (*domainworkout.Workout, error)
+	Create(ctx context.Context, w domainworkout.Workout) (*domainworkout.Workout, error)
+	AddExercise(ctx context.Context, workoutID, exerciseID uuid.UUID) (*domainworkout.WorkoutExercise, error)
 	BatchInsertExercises(ctx context.Context, exercises []domainworkout.WorkoutExercise) error
 	LogSet(
 		ctx context.Context,
 		workoutExerciseID uuid.UUID,
 		set domainworkout.WorkoutSet,
-	) (domainworkout.WorkoutSet, error)
-	Update(ctx context.Context, w domainworkout.Workout) (domainworkout.Workout, error)
+	) (*domainworkout.WorkoutSet, error)
+	Update(ctx context.Context, w domainworkout.Workout) (*domainworkout.Workout, error)
 	SoftDelete(ctx context.Context, id uuid.UUID) error
-	Finish(ctx context.Context, id uuid.UUID, finishedAt time.Time) (domainworkout.Workout, error)
+	Finish(ctx context.Context, id uuid.UUID, finishedAt time.Time) (*domainworkout.Workout, error)
 }
 
 // TemplateRepository reads templates for starting a workout from a template.
 type TemplateRepository interface {
-	FindByID(ctx context.Context, id uuid.UUID) (domaintemplate.Template, error)
+	FindByID(ctx context.Context, id uuid.UUID) (*domaintemplate.Template, error)
 }
 
 // ProgressRepository reads and writes the user's 1RM progress for the
@@ -57,14 +57,6 @@ type VolumeQueue interface {
 // TransactionManager runs a function inside a transaction.
 type TransactionManager interface {
 	Do(ctx context.Context, fn func(ctx context.Context) error) error
-}
-
-// SetResult reports a logged set together with its PR status.
-type SetResult struct {
-	domainworkout.WorkoutSet
-
-	IsPR         bool
-	Estimated1RM float64
 }
 
 type WorkoutService struct {
@@ -95,9 +87,9 @@ func NewWorkoutService(
 // exercises are copied into the workout; a nil or zero TemplateID starts a
 // workout without one.
 func (s *WorkoutService) Start(ctx context.Context, cmd StartWorkoutCommand) (*domainworkout.Workout, error) {
-	templateID := cmd.TemplateID
-	if templateID != nil && *templateID == uuid.Nil {
-		templateID = nil
+	var templateID *uuid.UUID
+	if cmd.TemplateID != uuid.Nil {
+		templateID = &cmd.TemplateID
 	}
 
 	workout, err := domainworkout.NewWorkout(cmd.UserID, templateID)
@@ -121,7 +113,7 @@ func (s *WorkoutService) Start(ctx context.Context, cmd StartWorkoutCommand) (*d
 		}
 	}
 
-	var created domainworkout.Workout
+	var created *domainworkout.Workout
 	err = s.trManager.Do(ctx, func(ctx context.Context) error {
 		created, err = s.workouts.Create(ctx, workout)
 		if err != nil {
@@ -136,7 +128,7 @@ func (s *WorkoutService) Start(ctx context.Context, cmd StartWorkoutCommand) (*d
 	if err != nil {
 		return nil, err
 	}
-	return &created, nil
+	return created, nil
 }
 
 // GetActive returns the user's active (unfinished) workout.
@@ -147,7 +139,7 @@ func (s *WorkoutService) GetActive(ctx context.Context, userID uuid.UUID) (*doma
 	}
 	for _, w := range workouts {
 		if w.FinishedAt == nil {
-			return &w, nil
+			return w, nil
 		}
 	}
 	return nil, domainworkout.ErrWorkoutNotFound
@@ -163,20 +155,12 @@ func (s *WorkoutService) Get(ctx context.Context, id, userID uuid.UUID) (*domain
 func (s *WorkoutService) List(
 	ctx context.Context,
 	userID uuid.UUID,
-	since *time.Time,
+	since time.Time,
 ) ([]*domainworkout.Workout, error) {
 	if userID == uuid.Nil {
 		return nil, domainworkout.ErrInvalidUserID
 	}
-	workouts, err := s.workouts.List(ctx, domainworkout.WorkoutFilter{UserID: &userID, Since: since})
-	if err != nil {
-		return nil, err
-	}
-	out := make([]*domainworkout.Workout, len(workouts))
-	for i := range workouts {
-		out[i] = &workouts[i]
-	}
-	return out, nil
+	return s.workouts.List(ctx, domainworkout.WorkoutFilter{UserID: &userID, Since: since})
 }
 
 // AddExercise appends an exercise to the user's workout.
@@ -188,38 +172,48 @@ func (s *WorkoutService) AddExercise(
 	if _, err := s.ownedWorkout(ctx, cmd.WorkoutID, userID); err != nil {
 		return nil, err
 	}
-	we, err := s.workouts.AddExercise(ctx, cmd.WorkoutID, cmd.ExerciseID)
-	if err != nil {
-		return nil, err
-	}
-	return &we, nil
+	return s.workouts.AddExercise(ctx, cmd.WorkoutID, cmd.ExerciseID)
 }
 
 // LogSet records a set, computes its estimated one-rep max with the Epley
 // formula, and upserts a new best in the user's 1RM progress when the set is
-// a PR. The set insert and the progress upsert share a transaction.
-func (s *WorkoutService) LogSet(ctx context.Context, cmd LogSetCommand, userID uuid.UUID) (SetResult, error) {
+// a PR.
+func (s *WorkoutService) LogSet(
+	ctx context.Context,
+	cmd LogSetCommand,
+	userID uuid.UUID,
+) (*domainworkout.SetResult, error) {
 	workout, err := s.ownedWorkout(ctx, cmd.WorkoutID, userID)
 	if err != nil {
-		return SetResult{}, err
+		return nil, err
 	}
 
 	exerciseID, err := findExerciseID(workout, cmd.WorkoutExerciseID)
 	if err != nil {
-		return SetResult{}, err
+		return nil, err
 	}
 
+	var (
+		rpe         *int
+		restSeconds *int
+	)
+	if cmd.RPE != 0 {
+		rpe = &cmd.RPE
+	}
+	if cmd.RestSeconds != 0 {
+		restSeconds = &cmd.RestSeconds
+	}
 	set, err := domainworkout.NewWorkoutSet(
-		cmd.WorkoutExerciseID, cmd.WeightKg, cmd.Reps, cmd.RPE, cmd.RestSeconds, cmd.IsWarmup,
+		cmd.WorkoutExerciseID, cmd.WeightKg, cmd.Reps, rpe, restSeconds, cmd.IsWarmup,
 	)
 	if err != nil {
-		return SetResult{}, err
+		return nil, err
 	}
 
 	e1rm := estimate1RM(set.WeightKg, set.Reps)
 
 	var (
-		saved domainworkout.WorkoutSet
+		saved *domainworkout.WorkoutSet
 		isPR  bool
 	)
 	err = s.trManager.Do(ctx, func(ctx context.Context) error {
@@ -246,9 +240,9 @@ func (s *WorkoutService) LogSet(ctx context.Context, cmd LogSetCommand, userID u
 		return nil
 	})
 	if err != nil {
-		return SetResult{}, err
+		return nil, err
 	}
-	return SetResult{WorkoutSet: saved, IsPR: isPR, Estimated1RM: e1rm}, nil
+	return &domainworkout.SetResult{WorkoutSet: *saved, IsPR: isPR, Estimated1RM: e1rm}, nil
 }
 
 // Finish completes the user's workout and enqueues its volume
@@ -266,10 +260,10 @@ func (s *WorkoutService) Finish(
 	if err != nil {
 		return nil, err
 	}
-	if err := s.volumeQueue.EnqueueVolumeCalc(ctx, workout); err != nil {
+	if err := s.volumeQueue.EnqueueVolumeCalc(ctx, *workout); err != nil {
 		return nil, fmt.Errorf("enqueue volume calc: %w", err)
 	}
-	return &workout, nil
+	return workout, nil
 }
 
 // ownedWorkout loads a workout and enforces ownership. Non-owners see
@@ -282,7 +276,7 @@ func (s *WorkoutService) ownedWorkout(ctx context.Context, id, userID uuid.UUID)
 	if w.UserID != userID {
 		return nil, domainworkout.ErrWorkoutNotFound
 	}
-	return &w, nil
+	return w, nil
 }
 
 // findActive reports whether the user already has an unfinished workout.

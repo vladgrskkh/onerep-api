@@ -31,15 +31,15 @@ func (s *ServiceTestSuite) TestGet1RM_Success() {
 	exerciseID := uuid.Must(uuid.NewV7())
 	from := time.Date(2026, 7, 1, 0, 0, 0, 0, time.UTC)
 	to := time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC)
-	expected := []domainprogress.Progress1RM{
+	expected := []*domainprogress.Progress1RM{
 		{ExerciseID: exerciseID, UserID: userID, Date: from, Estimated1RM: 120},
 	}
-	s.repo.EXPECT().Get1RM(mock.Anything, exerciseID, userID, &from, &to).Return(expected, nil)
+	s.repo.EXPECT().Get1RM(mock.Anything, exerciseID, userID, from, to).Return(expected, nil)
 
-	got, err := s.svc.Get1RM(context.Background(), userID, exerciseID, &from, &to)
+	got, err := s.svc.Get1RM(context.Background(), userID, exerciseID, from, to)
 	s.Require().NoError(err)
 	s.Require().Len(got, 1)
-	s.Equal(expected[0], *got[0])
+	s.Equal(expected[0], got[0])
 }
 
 func (s *ServiceTestSuite) TestGet1RM_NilUserID() {
@@ -47,8 +47,8 @@ func (s *ServiceTestSuite) TestGet1RM_NilUserID() {
 		context.Background(),
 		uuid.Nil,
 		uuid.Must(uuid.NewV7()),
-		nil,
-		nil,
+		time.Time{},
+		time.Time{},
 	)
 	s.Require().ErrorIs(err, domainprogress.ErrInvalidUserID)
 	s.repo.AssertNotCalled(s.T(), "Get1RM", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything)
@@ -59,8 +59,8 @@ func (s *ServiceTestSuite) TestGet1RM_NilExerciseID() {
 		context.Background(),
 		uuid.Must(uuid.NewV7()),
 		uuid.Nil,
-		nil,
-		nil,
+		time.Time{},
+		time.Time{},
 	)
 	s.Require().ErrorIs(err, domainprogress.ErrInvalidExerciseID)
 	s.repo.AssertNotCalled(s.T(), "Get1RM", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything)
@@ -69,19 +69,19 @@ func (s *ServiceTestSuite) TestGet1RM_NilExerciseID() {
 func (s *ServiceTestSuite) TestGetVolume_Success() {
 	userID := uuid.Must(uuid.NewV7())
 	from := time.Date(2026, 7, 1, 0, 0, 0, 0, time.UTC)
-	expected := []domainprogress.ProgressVolume{
+	expected := []*domainprogress.ProgressVolume{
 		{MuscleGroupID: 1, UserID: userID, Date: from, TotalKG: 5000},
 	}
-	s.repo.EXPECT().GetVolume(mock.Anything, userID, &from, (*time.Time)(nil)).Return(expected, nil)
+	s.repo.EXPECT().GetVolume(mock.Anything, userID, from, time.Time{}).Return(expected, nil)
 
-	got, err := s.svc.GetVolume(context.Background(), userID, &from, (*time.Time)(nil))
+	got, err := s.svc.GetVolume(context.Background(), userID, from, time.Time{})
 	s.Require().NoError(err)
 	s.Require().Len(got, 1)
-	s.Equal(expected[0], *got[0])
+	s.Equal(expected[0], got[0])
 }
 
 func (s *ServiceTestSuite) TestGetVolume_NilUserID() {
-	_, err := s.svc.GetVolume(context.Background(), uuid.Nil, nil, nil)
+	_, err := s.svc.GetVolume(context.Background(), uuid.Nil, time.Time{}, time.Time{})
 	s.Require().ErrorIs(err, domainprogress.ErrInvalidUserID)
 	s.repo.AssertNotCalled(s.T(), "GetVolume", mock.Anything, mock.Anything, mock.Anything, mock.Anything)
 }

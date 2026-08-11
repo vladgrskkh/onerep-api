@@ -27,11 +27,12 @@ type UpdateExerciseCommand struct {
 	MuscleGroupIDs *[]int
 }
 
-// ListExercisesCommand carries the query filters for listing exercises.
+// ListExercisesCommand carries the query filters for listing exercises. A
+// zero Since means no time filter.
 type ListExercisesCommand struct {
 	Search      string
 	MuscleGroup string
-	Since       *time.Time
+	Since       time.Time
 }
 
 // Filter converts the command into the domain list filter.

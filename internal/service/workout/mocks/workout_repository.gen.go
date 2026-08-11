@@ -28,22 +28,24 @@ func (_m *MockWorkoutRepository) EXPECT() *MockWorkoutRepository_Expecter {
 }
 
 // AddExercise provides a mock function with given fields: ctx, workoutID, exerciseID
-func (_m *MockWorkoutRepository) AddExercise(ctx context.Context, workoutID uuid.UUID, exerciseID uuid.UUID) (workout.WorkoutExercise, error) {
+func (_m *MockWorkoutRepository) AddExercise(ctx context.Context, workoutID uuid.UUID, exerciseID uuid.UUID) (*workout.WorkoutExercise, error) {
 	ret := _m.Called(ctx, workoutID, exerciseID)
 
 	if len(ret) == 0 {
 		panic("no return value specified for AddExercise")
 	}
 
-	var r0 workout.WorkoutExercise
+	var r0 *workout.WorkoutExercise
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID, uuid.UUID) (workout.WorkoutExercise, error)); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID, uuid.UUID) (*workout.WorkoutExercise, error)); ok {
 		return rf(ctx, workoutID, exerciseID)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID, uuid.UUID) workout.WorkoutExercise); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID, uuid.UUID) *workout.WorkoutExercise); ok {
 		r0 = rf(ctx, workoutID, exerciseID)
 	} else {
-		r0 = ret.Get(0).(workout.WorkoutExercise)
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*workout.WorkoutExercise)
+		}
 	}
 
 	if rf, ok := ret.Get(1).(func(context.Context, uuid.UUID, uuid.UUID) error); ok {
@@ -75,12 +77,12 @@ func (_c *MockWorkoutRepository_AddExercise_Call) Run(run func(ctx context.Conte
 	return _c
 }
 
-func (_c *MockWorkoutRepository_AddExercise_Call) Return(_a0 workout.WorkoutExercise, _a1 error) *MockWorkoutRepository_AddExercise_Call {
+func (_c *MockWorkoutRepository_AddExercise_Call) Return(_a0 *workout.WorkoutExercise, _a1 error) *MockWorkoutRepository_AddExercise_Call {
 	_c.Call.Return(_a0, _a1)
 	return _c
 }
 
-func (_c *MockWorkoutRepository_AddExercise_Call) RunAndReturn(run func(context.Context, uuid.UUID, uuid.UUID) (workout.WorkoutExercise, error)) *MockWorkoutRepository_AddExercise_Call {
+func (_c *MockWorkoutRepository_AddExercise_Call) RunAndReturn(run func(context.Context, uuid.UUID, uuid.UUID) (*workout.WorkoutExercise, error)) *MockWorkoutRepository_AddExercise_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -133,22 +135,24 @@ func (_c *MockWorkoutRepository_BatchInsertExercises_Call) RunAndReturn(run func
 }
 
 // Create provides a mock function with given fields: ctx, w
-func (_m *MockWorkoutRepository) Create(ctx context.Context, w workout.Workout) (workout.Workout, error) {
+func (_m *MockWorkoutRepository) Create(ctx context.Context, w workout.Workout) (*workout.Workout, error) {
 	ret := _m.Called(ctx, w)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Create")
 	}
 
-	var r0 workout.Workout
+	var r0 *workout.Workout
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, workout.Workout) (workout.Workout, error)); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, workout.Workout) (*workout.Workout, error)); ok {
 		return rf(ctx, w)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, workout.Workout) workout.Workout); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, workout.Workout) *workout.Workout); ok {
 		r0 = rf(ctx, w)
 	} else {
-		r0 = ret.Get(0).(workout.Workout)
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*workout.Workout)
+		}
 	}
 
 	if rf, ok := ret.Get(1).(func(context.Context, workout.Workout) error); ok {
@@ -179,33 +183,35 @@ func (_c *MockWorkoutRepository_Create_Call) Run(run func(ctx context.Context, w
 	return _c
 }
 
-func (_c *MockWorkoutRepository_Create_Call) Return(_a0 workout.Workout, _a1 error) *MockWorkoutRepository_Create_Call {
+func (_c *MockWorkoutRepository_Create_Call) Return(_a0 *workout.Workout, _a1 error) *MockWorkoutRepository_Create_Call {
 	_c.Call.Return(_a0, _a1)
 	return _c
 }
 
-func (_c *MockWorkoutRepository_Create_Call) RunAndReturn(run func(context.Context, workout.Workout) (workout.Workout, error)) *MockWorkoutRepository_Create_Call {
+func (_c *MockWorkoutRepository_Create_Call) RunAndReturn(run func(context.Context, workout.Workout) (*workout.Workout, error)) *MockWorkoutRepository_Create_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // FindByID provides a mock function with given fields: ctx, id
-func (_m *MockWorkoutRepository) FindByID(ctx context.Context, id uuid.UUID) (workout.Workout, error) {
+func (_m *MockWorkoutRepository) FindByID(ctx context.Context, id uuid.UUID) (*workout.Workout, error) {
 	ret := _m.Called(ctx, id)
 
 	if len(ret) == 0 {
 		panic("no return value specified for FindByID")
 	}
 
-	var r0 workout.Workout
+	var r0 *workout.Workout
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID) (workout.Workout, error)); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID) (*workout.Workout, error)); ok {
 		return rf(ctx, id)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID) workout.Workout); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID) *workout.Workout); ok {
 		r0 = rf(ctx, id)
 	} else {
-		r0 = ret.Get(0).(workout.Workout)
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*workout.Workout)
+		}
 	}
 
 	if rf, ok := ret.Get(1).(func(context.Context, uuid.UUID) error); ok {
@@ -236,33 +242,35 @@ func (_c *MockWorkoutRepository_FindByID_Call) Run(run func(ctx context.Context,
 	return _c
 }
 
-func (_c *MockWorkoutRepository_FindByID_Call) Return(_a0 workout.Workout, _a1 error) *MockWorkoutRepository_FindByID_Call {
+func (_c *MockWorkoutRepository_FindByID_Call) Return(_a0 *workout.Workout, _a1 error) *MockWorkoutRepository_FindByID_Call {
 	_c.Call.Return(_a0, _a1)
 	return _c
 }
 
-func (_c *MockWorkoutRepository_FindByID_Call) RunAndReturn(run func(context.Context, uuid.UUID) (workout.Workout, error)) *MockWorkoutRepository_FindByID_Call {
+func (_c *MockWorkoutRepository_FindByID_Call) RunAndReturn(run func(context.Context, uuid.UUID) (*workout.Workout, error)) *MockWorkoutRepository_FindByID_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // Finish provides a mock function with given fields: ctx, id, finishedAt
-func (_m *MockWorkoutRepository) Finish(ctx context.Context, id uuid.UUID, finishedAt time.Time) (workout.Workout, error) {
+func (_m *MockWorkoutRepository) Finish(ctx context.Context, id uuid.UUID, finishedAt time.Time) (*workout.Workout, error) {
 	ret := _m.Called(ctx, id, finishedAt)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Finish")
 	}
 
-	var r0 workout.Workout
+	var r0 *workout.Workout
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID, time.Time) (workout.Workout, error)); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID, time.Time) (*workout.Workout, error)); ok {
 		return rf(ctx, id, finishedAt)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID, time.Time) workout.Workout); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID, time.Time) *workout.Workout); ok {
 		r0 = rf(ctx, id, finishedAt)
 	} else {
-		r0 = ret.Get(0).(workout.Workout)
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*workout.Workout)
+		}
 	}
 
 	if rf, ok := ret.Get(1).(func(context.Context, uuid.UUID, time.Time) error); ok {
@@ -294,34 +302,34 @@ func (_c *MockWorkoutRepository_Finish_Call) Run(run func(ctx context.Context, i
 	return _c
 }
 
-func (_c *MockWorkoutRepository_Finish_Call) Return(_a0 workout.Workout, _a1 error) *MockWorkoutRepository_Finish_Call {
+func (_c *MockWorkoutRepository_Finish_Call) Return(_a0 *workout.Workout, _a1 error) *MockWorkoutRepository_Finish_Call {
 	_c.Call.Return(_a0, _a1)
 	return _c
 }
 
-func (_c *MockWorkoutRepository_Finish_Call) RunAndReturn(run func(context.Context, uuid.UUID, time.Time) (workout.Workout, error)) *MockWorkoutRepository_Finish_Call {
+func (_c *MockWorkoutRepository_Finish_Call) RunAndReturn(run func(context.Context, uuid.UUID, time.Time) (*workout.Workout, error)) *MockWorkoutRepository_Finish_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // List provides a mock function with given fields: ctx, filter
-func (_m *MockWorkoutRepository) List(ctx context.Context, filter workout.WorkoutFilter) ([]workout.Workout, error) {
+func (_m *MockWorkoutRepository) List(ctx context.Context, filter workout.WorkoutFilter) ([]*workout.Workout, error) {
 	ret := _m.Called(ctx, filter)
 
 	if len(ret) == 0 {
 		panic("no return value specified for List")
 	}
 
-	var r0 []workout.Workout
+	var r0 []*workout.Workout
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, workout.WorkoutFilter) ([]workout.Workout, error)); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, workout.WorkoutFilter) ([]*workout.Workout, error)); ok {
 		return rf(ctx, filter)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, workout.WorkoutFilter) []workout.Workout); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, workout.WorkoutFilter) []*workout.Workout); ok {
 		r0 = rf(ctx, filter)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]workout.Workout)
+			r0 = ret.Get(0).([]*workout.Workout)
 		}
 	}
 
@@ -353,33 +361,35 @@ func (_c *MockWorkoutRepository_List_Call) Run(run func(ctx context.Context, fil
 	return _c
 }
 
-func (_c *MockWorkoutRepository_List_Call) Return(_a0 []workout.Workout, _a1 error) *MockWorkoutRepository_List_Call {
+func (_c *MockWorkoutRepository_List_Call) Return(_a0 []*workout.Workout, _a1 error) *MockWorkoutRepository_List_Call {
 	_c.Call.Return(_a0, _a1)
 	return _c
 }
 
-func (_c *MockWorkoutRepository_List_Call) RunAndReturn(run func(context.Context, workout.WorkoutFilter) ([]workout.Workout, error)) *MockWorkoutRepository_List_Call {
+func (_c *MockWorkoutRepository_List_Call) RunAndReturn(run func(context.Context, workout.WorkoutFilter) ([]*workout.Workout, error)) *MockWorkoutRepository_List_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // LogSet provides a mock function with given fields: ctx, workoutExerciseID, set
-func (_m *MockWorkoutRepository) LogSet(ctx context.Context, workoutExerciseID uuid.UUID, set workout.WorkoutSet) (workout.WorkoutSet, error) {
+func (_m *MockWorkoutRepository) LogSet(ctx context.Context, workoutExerciseID uuid.UUID, set workout.WorkoutSet) (*workout.WorkoutSet, error) {
 	ret := _m.Called(ctx, workoutExerciseID, set)
 
 	if len(ret) == 0 {
 		panic("no return value specified for LogSet")
 	}
 
-	var r0 workout.WorkoutSet
+	var r0 *workout.WorkoutSet
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID, workout.WorkoutSet) (workout.WorkoutSet, error)); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID, workout.WorkoutSet) (*workout.WorkoutSet, error)); ok {
 		return rf(ctx, workoutExerciseID, set)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID, workout.WorkoutSet) workout.WorkoutSet); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID, workout.WorkoutSet) *workout.WorkoutSet); ok {
 		r0 = rf(ctx, workoutExerciseID, set)
 	} else {
-		r0 = ret.Get(0).(workout.WorkoutSet)
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*workout.WorkoutSet)
+		}
 	}
 
 	if rf, ok := ret.Get(1).(func(context.Context, uuid.UUID, workout.WorkoutSet) error); ok {
@@ -411,12 +421,12 @@ func (_c *MockWorkoutRepository_LogSet_Call) Run(run func(ctx context.Context, w
 	return _c
 }
 
-func (_c *MockWorkoutRepository_LogSet_Call) Return(_a0 workout.WorkoutSet, _a1 error) *MockWorkoutRepository_LogSet_Call {
+func (_c *MockWorkoutRepository_LogSet_Call) Return(_a0 *workout.WorkoutSet, _a1 error) *MockWorkoutRepository_LogSet_Call {
 	_c.Call.Return(_a0, _a1)
 	return _c
 }
 
-func (_c *MockWorkoutRepository_LogSet_Call) RunAndReturn(run func(context.Context, uuid.UUID, workout.WorkoutSet) (workout.WorkoutSet, error)) *MockWorkoutRepository_LogSet_Call {
+func (_c *MockWorkoutRepository_LogSet_Call) RunAndReturn(run func(context.Context, uuid.UUID, workout.WorkoutSet) (*workout.WorkoutSet, error)) *MockWorkoutRepository_LogSet_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -469,22 +479,24 @@ func (_c *MockWorkoutRepository_SoftDelete_Call) RunAndReturn(run func(context.C
 }
 
 // Update provides a mock function with given fields: ctx, w
-func (_m *MockWorkoutRepository) Update(ctx context.Context, w workout.Workout) (workout.Workout, error) {
+func (_m *MockWorkoutRepository) Update(ctx context.Context, w workout.Workout) (*workout.Workout, error) {
 	ret := _m.Called(ctx, w)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Update")
 	}
 
-	var r0 workout.Workout
+	var r0 *workout.Workout
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, workout.Workout) (workout.Workout, error)); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, workout.Workout) (*workout.Workout, error)); ok {
 		return rf(ctx, w)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, workout.Workout) workout.Workout); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, workout.Workout) *workout.Workout); ok {
 		r0 = rf(ctx, w)
 	} else {
-		r0 = ret.Get(0).(workout.Workout)
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*workout.Workout)
+		}
 	}
 
 	if rf, ok := ret.Get(1).(func(context.Context, workout.Workout) error); ok {
@@ -515,12 +527,12 @@ func (_c *MockWorkoutRepository_Update_Call) Run(run func(ctx context.Context, w
 	return _c
 }
 
-func (_c *MockWorkoutRepository_Update_Call) Return(_a0 workout.Workout, _a1 error) *MockWorkoutRepository_Update_Call {
+func (_c *MockWorkoutRepository_Update_Call) Return(_a0 *workout.Workout, _a1 error) *MockWorkoutRepository_Update_Call {
 	_c.Call.Return(_a0, _a1)
 	return _c
 }
 
-func (_c *MockWorkoutRepository_Update_Call) RunAndReturn(run func(context.Context, workout.Workout) (workout.Workout, error)) *MockWorkoutRepository_Update_Call {
+func (_c *MockWorkoutRepository_Update_Call) RunAndReturn(run func(context.Context, workout.Workout) (*workout.Workout, error)) *MockWorkoutRepository_Update_Call {
 	_c.Call.Return(run)
 	return _c
 }

@@ -10,8 +10,8 @@ import (
 )
 
 type ProgressRepository interface {
-	Get1RM(ctx context.Context, exerciseID, userID uuid.UUID, from, to *time.Time) ([]domainprogress.Progress1RM, error)
-	GetVolume(ctx context.Context, userID uuid.UUID, from, to *time.Time) ([]domainprogress.ProgressVolume, error)
+	Get1RM(ctx context.Context, exerciseID, userID uuid.UUID, from, to time.Time) ([]*domainprogress.Progress1RM, error)
+	GetVolume(ctx context.Context, userID uuid.UUID, from, to time.Time) ([]*domainprogress.ProgressVolume, error)
 	GetBest1RM(ctx context.Context, exerciseID, userID uuid.UUID) (float64, error)
 	Upsert1RM(ctx context.Context, p domainprogress.Progress1RM) error
 }
@@ -30,7 +30,7 @@ func NewProgressService(progress ProgressRepository) *ProgressService {
 func (s *ProgressService) Get1RM(
 	ctx context.Context,
 	userID, exerciseID uuid.UUID,
-	from, to *time.Time,
+	from, to time.Time,
 ) ([]*domainprogress.Progress1RM, error) {
 	if userID == uuid.Nil {
 		return nil, domainprogress.ErrInvalidUserID
@@ -38,15 +38,7 @@ func (s *ProgressService) Get1RM(
 	if exerciseID == uuid.Nil {
 		return nil, domainprogress.ErrInvalidExerciseID
 	}
-	progress, err := s.progress.Get1RM(ctx, exerciseID, userID, from, to)
-	if err != nil {
-		return nil, err
-	}
-	out := make([]*domainprogress.Progress1RM, len(progress))
-	for i := range progress {
-		out[i] = &progress[i]
-	}
-	return out, nil
+	return s.progress.Get1RM(ctx, exerciseID, userID, from, to)
 }
 
 // GetVolume returns the user's total volume per muscle group, optionally
@@ -54,18 +46,10 @@ func (s *ProgressService) Get1RM(
 func (s *ProgressService) GetVolume(
 	ctx context.Context,
 	userID uuid.UUID,
-	from, to *time.Time,
+	from, to time.Time,
 ) ([]*domainprogress.ProgressVolume, error) {
 	if userID == uuid.Nil {
 		return nil, domainprogress.ErrInvalidUserID
 	}
-	volumes, err := s.progress.GetVolume(ctx, userID, from, to)
-	if err != nil {
-		return nil, err
-	}
-	out := make([]*domainprogress.ProgressVolume, len(volumes))
-	for i := range volumes {
-		out[i] = &volumes[i]
-	}
-	return out, nil
+	return s.progress.GetVolume(ctx, userID, from, to)
 }

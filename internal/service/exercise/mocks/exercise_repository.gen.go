@@ -73,22 +73,24 @@ func (_c *MockExerciseRepository_BatchInsertMuscleGroups_Call) RunAndReturn(run 
 }
 
 // Create provides a mock function with given fields: ctx, ex
-func (_m *MockExerciseRepository) Create(ctx context.Context, ex exercise.Exercise) (exercise.Exercise, error) {
+func (_m *MockExerciseRepository) Create(ctx context.Context, ex exercise.Exercise) (*exercise.Exercise, error) {
 	ret := _m.Called(ctx, ex)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Create")
 	}
 
-	var r0 exercise.Exercise
+	var r0 *exercise.Exercise
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, exercise.Exercise) (exercise.Exercise, error)); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, exercise.Exercise) (*exercise.Exercise, error)); ok {
 		return rf(ctx, ex)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, exercise.Exercise) exercise.Exercise); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, exercise.Exercise) *exercise.Exercise); ok {
 		r0 = rf(ctx, ex)
 	} else {
-		r0 = ret.Get(0).(exercise.Exercise)
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*exercise.Exercise)
+		}
 	}
 
 	if rf, ok := ret.Get(1).(func(context.Context, exercise.Exercise) error); ok {
@@ -119,33 +121,35 @@ func (_c *MockExerciseRepository_Create_Call) Run(run func(ctx context.Context, 
 	return _c
 }
 
-func (_c *MockExerciseRepository_Create_Call) Return(_a0 exercise.Exercise, _a1 error) *MockExerciseRepository_Create_Call {
+func (_c *MockExerciseRepository_Create_Call) Return(_a0 *exercise.Exercise, _a1 error) *MockExerciseRepository_Create_Call {
 	_c.Call.Return(_a0, _a1)
 	return _c
 }
 
-func (_c *MockExerciseRepository_Create_Call) RunAndReturn(run func(context.Context, exercise.Exercise) (exercise.Exercise, error)) *MockExerciseRepository_Create_Call {
+func (_c *MockExerciseRepository_Create_Call) RunAndReturn(run func(context.Context, exercise.Exercise) (*exercise.Exercise, error)) *MockExerciseRepository_Create_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // FindByID provides a mock function with given fields: ctx, id
-func (_m *MockExerciseRepository) FindByID(ctx context.Context, id uuid.UUID) (exercise.Exercise, error) {
+func (_m *MockExerciseRepository) FindByID(ctx context.Context, id uuid.UUID) (*exercise.Exercise, error) {
 	ret := _m.Called(ctx, id)
 
 	if len(ret) == 0 {
 		panic("no return value specified for FindByID")
 	}
 
-	var r0 exercise.Exercise
+	var r0 *exercise.Exercise
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID) (exercise.Exercise, error)); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID) (*exercise.Exercise, error)); ok {
 		return rf(ctx, id)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID) exercise.Exercise); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID) *exercise.Exercise); ok {
 		r0 = rf(ctx, id)
 	} else {
-		r0 = ret.Get(0).(exercise.Exercise)
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*exercise.Exercise)
+		}
 	}
 
 	if rf, ok := ret.Get(1).(func(context.Context, uuid.UUID) error); ok {
@@ -176,34 +180,34 @@ func (_c *MockExerciseRepository_FindByID_Call) Run(run func(ctx context.Context
 	return _c
 }
 
-func (_c *MockExerciseRepository_FindByID_Call) Return(_a0 exercise.Exercise, _a1 error) *MockExerciseRepository_FindByID_Call {
+func (_c *MockExerciseRepository_FindByID_Call) Return(_a0 *exercise.Exercise, _a1 error) *MockExerciseRepository_FindByID_Call {
 	_c.Call.Return(_a0, _a1)
 	return _c
 }
 
-func (_c *MockExerciseRepository_FindByID_Call) RunAndReturn(run func(context.Context, uuid.UUID) (exercise.Exercise, error)) *MockExerciseRepository_FindByID_Call {
+func (_c *MockExerciseRepository_FindByID_Call) RunAndReturn(run func(context.Context, uuid.UUID) (*exercise.Exercise, error)) *MockExerciseRepository_FindByID_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // List provides a mock function with given fields: ctx, filter
-func (_m *MockExerciseRepository) List(ctx context.Context, filter exercise.ExerciseFilter) ([]exercise.Exercise, error) {
+func (_m *MockExerciseRepository) List(ctx context.Context, filter exercise.ExerciseFilter) ([]*exercise.Exercise, error) {
 	ret := _m.Called(ctx, filter)
 
 	if len(ret) == 0 {
 		panic("no return value specified for List")
 	}
 
-	var r0 []exercise.Exercise
+	var r0 []*exercise.Exercise
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, exercise.ExerciseFilter) ([]exercise.Exercise, error)); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, exercise.ExerciseFilter) ([]*exercise.Exercise, error)); ok {
 		return rf(ctx, filter)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, exercise.ExerciseFilter) []exercise.Exercise); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, exercise.ExerciseFilter) []*exercise.Exercise); ok {
 		r0 = rf(ctx, filter)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]exercise.Exercise)
+			r0 = ret.Get(0).([]*exercise.Exercise)
 		}
 	}
 
@@ -235,12 +239,12 @@ func (_c *MockExerciseRepository_List_Call) Run(run func(ctx context.Context, fi
 	return _c
 }
 
-func (_c *MockExerciseRepository_List_Call) Return(_a0 []exercise.Exercise, _a1 error) *MockExerciseRepository_List_Call {
+func (_c *MockExerciseRepository_List_Call) Return(_a0 []*exercise.Exercise, _a1 error) *MockExerciseRepository_List_Call {
 	_c.Call.Return(_a0, _a1)
 	return _c
 }
 
-func (_c *MockExerciseRepository_List_Call) RunAndReturn(run func(context.Context, exercise.ExerciseFilter) ([]exercise.Exercise, error)) *MockExerciseRepository_List_Call {
+func (_c *MockExerciseRepository_List_Call) RunAndReturn(run func(context.Context, exercise.ExerciseFilter) ([]*exercise.Exercise, error)) *MockExerciseRepository_List_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -389,22 +393,24 @@ func (_c *MockExerciseRepository_SoftDelete_Call) RunAndReturn(run func(context.
 }
 
 // Update provides a mock function with given fields: ctx, ex
-func (_m *MockExerciseRepository) Update(ctx context.Context, ex exercise.Exercise) (exercise.Exercise, error) {
+func (_m *MockExerciseRepository) Update(ctx context.Context, ex exercise.Exercise) (*exercise.Exercise, error) {
 	ret := _m.Called(ctx, ex)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Update")
 	}
 
-	var r0 exercise.Exercise
+	var r0 *exercise.Exercise
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, exercise.Exercise) (exercise.Exercise, error)); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, exercise.Exercise) (*exercise.Exercise, error)); ok {
 		return rf(ctx, ex)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, exercise.Exercise) exercise.Exercise); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, exercise.Exercise) *exercise.Exercise); ok {
 		r0 = rf(ctx, ex)
 	} else {
-		r0 = ret.Get(0).(exercise.Exercise)
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*exercise.Exercise)
+		}
 	}
 
 	if rf, ok := ret.Get(1).(func(context.Context, exercise.Exercise) error); ok {
@@ -435,12 +441,12 @@ func (_c *MockExerciseRepository_Update_Call) Run(run func(ctx context.Context, 
 	return _c
 }
 
-func (_c *MockExerciseRepository_Update_Call) Return(_a0 exercise.Exercise, _a1 error) *MockExerciseRepository_Update_Call {
+func (_c *MockExerciseRepository_Update_Call) Return(_a0 *exercise.Exercise, _a1 error) *MockExerciseRepository_Update_Call {
 	_c.Call.Return(_a0, _a1)
 	return _c
 }
 
-func (_c *MockExerciseRepository_Update_Call) RunAndReturn(run func(context.Context, exercise.Exercise) (exercise.Exercise, error)) *MockExerciseRepository_Update_Call {
+func (_c *MockExerciseRepository_Update_Call) RunAndReturn(run func(context.Context, exercise.Exercise) (*exercise.Exercise, error)) *MockExerciseRepository_Update_Call {
 	_c.Call.Return(run)
 	return _c
 }

@@ -22,13 +22,13 @@ type WorkoutService interface {
 	Start(ctx context.Context, cmd serviceworkout.StartWorkoutCommand) (*domainworkout.Workout, error)
 	GetActive(ctx context.Context, userID uuid.UUID) (*domainworkout.Workout, error)
 	Get(ctx context.Context, id, userID uuid.UUID) (*domainworkout.Workout, error)
-	List(ctx context.Context, userID uuid.UUID, since *time.Time) ([]*domainworkout.Workout, error)
+	List(ctx context.Context, userID uuid.UUID, since time.Time) ([]*domainworkout.Workout, error)
 	AddExercise(
 		ctx context.Context,
 		cmd serviceworkout.AddExerciseCommand,
 		userID uuid.UUID,
 	) (*domainworkout.WorkoutExercise, error)
-	LogSet(ctx context.Context, cmd serviceworkout.LogSetCommand, userID uuid.UUID) (serviceworkout.SetResult, error)
+	LogSet(ctx context.Context, cmd serviceworkout.LogSetCommand, userID uuid.UUID) (*domainworkout.SetResult, error)
 	Finish(
 		ctx context.Context,
 		cmd serviceworkout.FinishWorkoutCommand,
@@ -104,14 +104,10 @@ func (h *WorkoutHandler) Start(w http.ResponseWriter, r *http.Request) {
 func (h *WorkoutHandler) List(w http.ResponseWriter, r *http.Request) {
 	userID := handler.UserIDFromContext(r.Context())
 
-	var since *time.Time
-	sinceVal, present, parseErr := handler.ParseRFC3339QueryParam(r, "since")
+	since, _, parseErr := handler.ParseRFC3339QueryParam(r, "since")
 	if parseErr != nil {
 		handler.WriteError(w, h.logger, http.StatusBadRequest, invalidSinceDetail())
 		return
-	}
-	if present {
-		since = &sinceVal
 	}
 
 	workouts, err := h.svc.List(r.Context(), userID, since)

@@ -23,23 +23,23 @@ func (_m *MockMuscleGroupRepository) EXPECT() *MockMuscleGroupRepository_Expecte
 }
 
 // List provides a mock function with given fields: ctx
-func (_m *MockMuscleGroupRepository) List(ctx context.Context) ([]exercise.MuscleGroup, error) {
+func (_m *MockMuscleGroupRepository) List(ctx context.Context) ([]*exercise.MuscleGroup, error) {
 	ret := _m.Called(ctx)
 
 	if len(ret) == 0 {
 		panic("no return value specified for List")
 	}
 
-	var r0 []exercise.MuscleGroup
+	var r0 []*exercise.MuscleGroup
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context) ([]exercise.MuscleGroup, error)); ok {
+	if rf, ok := ret.Get(0).(func(context.Context) ([]*exercise.MuscleGroup, error)); ok {
 		return rf(ctx)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context) []exercise.MuscleGroup); ok {
+	if rf, ok := ret.Get(0).(func(context.Context) []*exercise.MuscleGroup); ok {
 		r0 = rf(ctx)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]exercise.MuscleGroup)
+			r0 = ret.Get(0).([]*exercise.MuscleGroup)
 		}
 	}
 
@@ -70,12 +70,12 @@ func (_c *MockMuscleGroupRepository_List_Call) Run(run func(ctx context.Context)
 	return _c
 }
 
-func (_c *MockMuscleGroupRepository_List_Call) Return(_a0 []exercise.MuscleGroup, _a1 error) *MockMuscleGroupRepository_List_Call {
+func (_c *MockMuscleGroupRepository_List_Call) Return(_a0 []*exercise.MuscleGroup, _a1 error) *MockMuscleGroupRepository_List_Call {
 	_c.Call.Return(_a0, _a1)
 	return _c
 }
 
-func (_c *MockMuscleGroupRepository_List_Call) RunAndReturn(run func(context.Context) ([]exercise.MuscleGroup, error)) *MockMuscleGroupRepository_List_Call {
+func (_c *MockMuscleGroupRepository_List_Call) RunAndReturn(run func(context.Context) ([]*exercise.MuscleGroup, error)) *MockMuscleGroupRepository_List_Call {
 	_c.Call.Return(run)
 	return _c
 }

@@ -44,35 +44,35 @@ func (s *ServiceTestSuite) TestList_PassesFilters() {
 	filter := domainexercise.ExerciseFilter{
 		Search:      "squat",
 		MuscleGroup: "legs",
-		Since:       &since,
+		Since:       since,
 	}
-	expected := []domainexercise.Exercise{{ID: uuid.Must(uuid.NewV7()), Name: "Squat"}}
+	expected := []*domainexercise.Exercise{{ID: uuid.Must(uuid.NewV7()), Name: "Squat"}}
 	s.exerciseRepo.EXPECT().List(mock.Anything, filter).Return(expected, nil)
 
 	got, err := s.svc.List(context.Background(), serviceexercise.ListExercisesCommand{
 		Search:      "squat",
 		MuscleGroup: "legs",
-		Since:       &since,
+		Since:       since,
 	})
 	s.Require().NoError(err)
 	s.Require().Len(got, 1)
-	s.Equal(expected[0], *got[0])
+	s.Equal(expected[0], got[0])
 }
 
 func (s *ServiceTestSuite) TestGet_Success() {
 	exerciseID := uuid.Must(uuid.NewV7())
-	expected := domainexercise.Exercise{ID: exerciseID, Name: "Bench Press"}
+	expected := &domainexercise.Exercise{ID: exerciseID, Name: "Bench Press"}
 	s.exerciseRepo.EXPECT().FindByID(mock.Anything, exerciseID).Return(expected, nil)
 
 	got, err := s.svc.Get(context.Background(), exerciseID)
 	s.Require().NoError(err)
-	s.Equal(expected, *got)
+	s.Equal(expected, got)
 }
 
 func (s *ServiceTestSuite) TestGet_NotFound() {
 	exerciseID := uuid.Must(uuid.NewV7())
 	s.exerciseRepo.EXPECT().FindByID(mock.Anything, exerciseID).
-		Return(domainexercise.Exercise{}, domainexercise.ErrExerciseNotFound)
+		Return(nil, domainexercise.ErrExerciseNotFound)
 
 	_, err := s.svc.Get(context.Background(), exerciseID)
 	s.Require().ErrorIs(err, domainexercise.ErrExerciseNotFound)
@@ -84,13 +84,13 @@ func (s *ServiceTestSuite) TestCreate_Success() {
 	groups := []domainexercise.ExerciseMuscleGroup{{MuscleGroupID: 1}, {MuscleGroupID: 2}}
 
 	s.muscleGroupRepo.EXPECT().List(mock.Anything).
-		Return([]domainexercise.MuscleGroup{{ID: 1, Name: "Chest"}, {ID: 2, Name: "Back"}}, nil)
+		Return([]*domainexercise.MuscleGroup{{ID: 1, Name: "Chest"}, {ID: 2, Name: "Back"}}, nil)
 	s.expectTx()
 	s.exerciseRepo.EXPECT().
 		Create(mock.Anything, mock.MatchedBy(func(ex domainexercise.Exercise) bool {
 			return ex.Name == "Bench Press" && ex.CreatedByUserID != nil && *ex.CreatedByUserID == userID
 		})).
-		Return(domainexercise.Exercise{ID: exerciseID, Name: "Bench Press"}, nil)
+		Return(&domainexercise.Exercise{ID: exerciseID, Name: "Bench Press"}, nil)
 	s.exerciseRepo.EXPECT().BatchInsertMuscleGroups(mock.Anything, exerciseID, groups).Return(nil)
 
 	created, err := s.svc.Create(context.Background(), serviceexercise.CreateExerciseCommand{
@@ -135,7 +135,7 @@ func (s *ServiceTestSuite) TestCreate_InvalidMuscleGroupID() {
 func (s *ServiceTestSuite) TestCreate_MuscleGroupNotFound() {
 	userID := uuid.Must(uuid.NewV7())
 	s.muscleGroupRepo.EXPECT().List(mock.Anything).
-		Return([]domainexercise.MuscleGroup{{ID: 1, Name: "Chest"}}, nil)
+		Return([]*domainexercise.MuscleGroup{{ID: 1, Name: "Chest"}}, nil)
 
 	_, err := s.svc.Create(context.Background(), serviceexercise.CreateExerciseCommand{
 		Name:           "Bench Press",
@@ -152,20 +152,20 @@ func (s *ServiceTestSuite) TestUpdate_Success() {
 	newGroups := []domainexercise.ExerciseMuscleGroup{{MuscleGroupID: 3}}
 
 	s.exerciseRepo.EXPECT().FindByID(mock.Anything, exerciseID).
-		Return(domainexercise.Exercise{
+		Return(&domainexercise.Exercise{
 			ID:        exerciseID,
 			Name:      "Bench Press",
 			IsBuiltIn: false,
 			Version:   3,
 		}, nil)
 	s.muscleGroupRepo.EXPECT().List(mock.Anything).
-		Return([]domainexercise.MuscleGroup{{ID: 3, Name: "Shoulders"}}, nil)
+		Return([]*domainexercise.MuscleGroup{{ID: 3, Name: "Shoulders"}}, nil)
 	s.expectTx()
 	s.exerciseRepo.EXPECT().
 		Update(mock.Anything, mock.MatchedBy(func(ex domainexercise.Exercise) bool {
 			return ex.ID == exerciseID && ex.Name == newName
 		})).
-		Return(domainexercise.Exercise{ID: exerciseID, Name: newName, Version: 4}, nil)
+		Return(&domainexercise.Exercise{ID: exerciseID, Name: newName, Version: 4}, nil)
 	s.exerciseRepo.EXPECT().ReplaceMuscleGroups(mock.Anything, exerciseID, newGroups).Return(nil)
 
 	updated, err := s.svc.Update(context.Background(), serviceexercise.UpdateExerciseCommand{
@@ -181,7 +181,7 @@ func (s *ServiceTestSuite) TestUpdate_Success() {
 func (s *ServiceTestSuite) TestUpdate_NotFound() {
 	exerciseID := uuid.Must(uuid.NewV7())
 	s.exerciseRepo.EXPECT().FindByID(mock.Anything, exerciseID).
-		Return(domainexercise.Exercise{}, domainexercise.ErrExerciseNotFound)
+		Return(nil, domainexercise.ErrExerciseNotFound)
 
 	_, err := s.svc.Update(context.Background(), serviceexercise.UpdateExerciseCommand{ID: exerciseID})
 	s.Require().ErrorIs(err, domainexercise.ErrExerciseNotFound)
@@ -191,7 +191,7 @@ func (s *ServiceTestSuite) TestUpdate_NotFound() {
 func (s *ServiceTestSuite) TestUpdate_BuiltInRejected() {
 	exerciseID := uuid.Must(uuid.NewV7())
 	s.exerciseRepo.EXPECT().FindByID(mock.Anything, exerciseID).
-		Return(domainexercise.Exercise{ID: exerciseID, Name: "Squat", IsBuiltIn: true}, nil)
+		Return(&domainexercise.Exercise{ID: exerciseID, Name: "Squat", IsBuiltIn: true}, nil)
 
 	_, err := s.svc.Update(context.Background(), serviceexercise.UpdateExerciseCommand{
 		ID:   exerciseID,
@@ -205,7 +205,7 @@ func (s *ServiceTestSuite) TestUpdate_InvalidName() {
 	exerciseID := uuid.Must(uuid.NewV7())
 	empty := "   "
 	s.exerciseRepo.EXPECT().FindByID(mock.Anything, exerciseID).
-		Return(domainexercise.Exercise{ID: exerciseID, Name: "Squat"}, nil)
+		Return(&domainexercise.Exercise{ID: exerciseID, Name: "Squat"}, nil)
 
 	_, err := s.svc.Update(context.Background(), serviceexercise.UpdateExerciseCommand{
 		ID:   exerciseID,
@@ -218,7 +218,7 @@ func (s *ServiceTestSuite) TestUpdate_InvalidName() {
 func (s *ServiceTestSuite) TestSoftDelete_Success() {
 	exerciseID := uuid.Must(uuid.NewV7())
 	s.exerciseRepo.EXPECT().FindByID(mock.Anything, exerciseID).
-		Return(domainexercise.Exercise{ID: exerciseID, Name: "Squat"}, nil)
+		Return(&domainexercise.Exercise{ID: exerciseID, Name: "Squat"}, nil)
 	s.exerciseRepo.EXPECT().SoftDelete(mock.Anything, exerciseID).Return(nil)
 
 	err := s.svc.SoftDelete(context.Background(), exerciseID)
@@ -228,7 +228,7 @@ func (s *ServiceTestSuite) TestSoftDelete_Success() {
 func (s *ServiceTestSuite) TestSoftDelete_NotFound() {
 	exerciseID := uuid.Must(uuid.NewV7())
 	s.exerciseRepo.EXPECT().FindByID(mock.Anything, exerciseID).
-		Return(domainexercise.Exercise{}, domainexercise.ErrExerciseNotFound)
+		Return(nil, domainexercise.ErrExerciseNotFound)
 
 	err := s.svc.SoftDelete(context.Background(), exerciseID)
 	s.Require().ErrorIs(err, domainexercise.ErrExerciseNotFound)
@@ -238,7 +238,7 @@ func (s *ServiceTestSuite) TestSoftDelete_NotFound() {
 func (s *ServiceTestSuite) TestSoftDelete_BuiltInRejected() {
 	exerciseID := uuid.Must(uuid.NewV7())
 	s.exerciseRepo.EXPECT().FindByID(mock.Anything, exerciseID).
-		Return(domainexercise.Exercise{ID: exerciseID, Name: "Squat", IsBuiltIn: true}, nil)
+		Return(&domainexercise.Exercise{ID: exerciseID, Name: "Squat", IsBuiltIn: true}, nil)
 
 	err := s.svc.SoftDelete(context.Background(), exerciseID)
 	s.Require().ErrorIs(err, domainexercise.ErrCannotEditBuiltIn)

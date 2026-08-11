@@ -101,8 +101,8 @@ func toWorkoutSetResponse(s *domainworkout.WorkoutSet) dto.WorkoutSetResponse {
 	return resp
 }
 
-// toLogSetResponse maps the service set result to the HTTP response.
-func toLogSetResponse(result serviceworkout.SetResult) dto.LogSetResponse {
+// toLogSetResponse maps the domain set result to the HTTP response.
+func toLogSetResponse(result *domainworkout.SetResult) dto.LogSetResponse {
 	return dto.LogSetResponse{
 		WorkoutSetResponse: toWorkoutSetResponse(&result.WorkoutSet),
 		IsPR:               result.IsPR,

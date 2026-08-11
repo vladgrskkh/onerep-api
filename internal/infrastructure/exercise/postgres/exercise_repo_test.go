@@ -62,8 +62,8 @@ func (s *ExerciseRepoTestSuite) newTestExercise(name string) exercise.Exercise {
 	return ex
 }
 
-func (s *ExerciseRepoTestSuite) createTestExercise(ex exercise.Exercise) exercise.Exercise {
-	var created exercise.Exercise
+func (s *ExerciseRepoTestSuite) createTestExercise(ex exercise.Exercise) *exercise.Exercise {
+	var created *exercise.Exercise
 	err := s.trManager.Do(s.ctx, func(ctx context.Context) error {
 		var err error
 		created, err = s.repo.Create(ctx, ex)
@@ -80,8 +80,8 @@ func (s *ExerciseRepoTestSuite) createTestExercise(ex exercise.Exercise) exercis
 	return created
 }
 
-func (s *ExerciseRepoTestSuite) updateTestExercise(ex exercise.Exercise) (exercise.Exercise, error) {
-	var updated exercise.Exercise
+func (s *ExerciseRepoTestSuite) updateTestExercise(ex exercise.Exercise) (*exercise.Exercise, error) {
+	var updated *exercise.Exercise
 	err := s.trManager.Do(s.ctx, func(ctx context.Context) error {
 		var err error
 		updated, err = s.repo.Update(ctx, ex)
@@ -117,7 +117,7 @@ func (s *ExerciseRepoTestSuite) TestCreateAndFindByID() {
 
 func (s *ExerciseRepoTestSuite) TestCreate_HeaderOnly() {
 	ex := s.newTestExercise("HeaderOnly-" + uuid.NewString())
-	var created exercise.Exercise
+	var created *exercise.Exercise
 	err := s.trManager.Do(s.ctx, func(ctx context.Context) error {
 		var err error
 		created, err = s.repo.Create(ctx, ex)
@@ -243,13 +243,13 @@ func (s *ExerciseRepoTestSuite) TestList_SinceFilter() {
 	s.createTestExercise(ex)
 
 	since := time.Now().Add(-3 * time.Hour)
-	listed, err := s.repo.List(s.ctx, exercise.ExerciseFilter{Search: ex.Name, Since: &since})
+	listed, err := s.repo.List(s.ctx, exercise.ExerciseFilter{Search: ex.Name, Since: since})
 	s.Require().NoError(err)
 	s.Require().Len(listed, 1)
 	s.Equal(ex.ID, listed[0].ID)
 
 	since = time.Now().Add(-time.Hour)
-	listed, err = s.repo.List(s.ctx, exercise.ExerciseFilter{Search: ex.Name, Since: &since})
+	listed, err = s.repo.List(s.ctx, exercise.ExerciseFilter{Search: ex.Name, Since: since})
 	s.Require().NoError(err)
 	s.Empty(listed)
 }
@@ -291,7 +291,7 @@ func (s *ExerciseRepoTestSuite) TestUpdate_HeaderKeepsChildren() {
 	ex.Name = "Updated-" + uuid.NewString()
 	ex.Notes = "Updated notes"
 
-	updated, err := s.updateTestExercise(ex)
+	updated, err := s.updateTestExercise(*ex)
 	s.Require().NoError(err)
 	s.Equal(2, updated.Version)
 
@@ -316,10 +316,10 @@ func (s *ExerciseRepoTestSuite) TestUpdate_ReplacesChildren() {
 		{ExerciseID: ex.ID, MuscleGroupID: 3, IsPrimary: true},
 	}
 
-	var updated exercise.Exercise
+	var updated *exercise.Exercise
 	err := s.trManager.Do(s.ctx, func(ctx context.Context) error {
 		var err error
-		updated, err = s.repo.Update(ctx, ex)
+		updated, err = s.repo.Update(ctx, *ex)
 		if err != nil {
 			return err
 		}
@@ -346,11 +346,11 @@ func (s *ExerciseRepoTestSuite) TestUpdate_VersionConflict() {
 	ex := s.createTestExercise(s.newTestExercise("VersionConflict-" + uuid.NewString()))
 
 	ex.Notes = "first update"
-	_, err := s.updateTestExercise(ex)
+	_, err := s.updateTestExercise(*ex)
 	s.Require().NoError(err)
 
 	ex.Version = 1
-	_, err = s.updateTestExercise(ex)
+	_, err = s.updateTestExercise(*ex)
 	s.ErrorIs(err, exercise.ErrExerciseNotFound)
 }
 

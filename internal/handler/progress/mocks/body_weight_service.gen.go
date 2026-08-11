@@ -30,7 +30,7 @@ func (_m *MockBodyWeightService) EXPECT() *MockBodyWeightService_Expecter {
 }
 
 // ListBodyWeight provides a mock function with given fields: ctx, userID, since
-func (_m *MockBodyWeightService) ListBodyWeight(ctx context.Context, userID uuid.UUID, since *time.Time) ([]*bodyweight.BodyWeight, error) {
+func (_m *MockBodyWeightService) ListBodyWeight(ctx context.Context, userID uuid.UUID, since time.Time) ([]*bodyweight.BodyWeight, error) {
 	ret := _m.Called(ctx, userID, since)
 
 	if len(ret) == 0 {
@@ -39,10 +39,10 @@ func (_m *MockBodyWeightService) ListBodyWeight(ctx context.Context, userID uuid
 
 	var r0 []*bodyweight.BodyWeight
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID, *time.Time) ([]*bodyweight.BodyWeight, error)); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID, time.Time) ([]*bodyweight.BodyWeight, error)); ok {
 		return rf(ctx, userID, since)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID, *time.Time) []*bodyweight.BodyWeight); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID, time.Time) []*bodyweight.BodyWeight); ok {
 		r0 = rf(ctx, userID, since)
 	} else {
 		if ret.Get(0) != nil {
@@ -50,7 +50,7 @@ func (_m *MockBodyWeightService) ListBodyWeight(ctx context.Context, userID uuid
 		}
 	}
 
-	if rf, ok := ret.Get(1).(func(context.Context, uuid.UUID, *time.Time) error); ok {
+	if rf, ok := ret.Get(1).(func(context.Context, uuid.UUID, time.Time) error); ok {
 		r1 = rf(ctx, userID, since)
 	} else {
 		r1 = ret.Error(1)
@@ -67,14 +67,14 @@ type MockBodyWeightService_ListBodyWeight_Call struct {
 // ListBodyWeight is a helper method to define mock.On call
 //   - ctx context.Context
 //   - userID uuid.UUID
-//   - since *time.Time
+//   - since time.Time
 func (_e *MockBodyWeightService_Expecter) ListBodyWeight(ctx interface{}, userID interface{}, since interface{}) *MockBodyWeightService_ListBodyWeight_Call {
 	return &MockBodyWeightService_ListBodyWeight_Call{Call: _e.mock.On("ListBodyWeight", ctx, userID, since)}
 }
 
-func (_c *MockBodyWeightService_ListBodyWeight_Call) Run(run func(ctx context.Context, userID uuid.UUID, since *time.Time)) *MockBodyWeightService_ListBodyWeight_Call {
+func (_c *MockBodyWeightService_ListBodyWeight_Call) Run(run func(ctx context.Context, userID uuid.UUID, since time.Time)) *MockBodyWeightService_ListBodyWeight_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context), args[1].(uuid.UUID), args[2].(*time.Time))
+		run(args[0].(context.Context), args[1].(uuid.UUID), args[2].(time.Time))
 	})
 	return _c
 }
@@ -84,7 +84,7 @@ func (_c *MockBodyWeightService_ListBodyWeight_Call) Return(_a0 []*bodyweight.Bo
 	return _c
 }
 
-func (_c *MockBodyWeightService_ListBodyWeight_Call) RunAndReturn(run func(context.Context, uuid.UUID, *time.Time) ([]*bodyweight.BodyWeight, error)) *MockBodyWeightService_ListBodyWeight_Call {
+func (_c *MockBodyWeightService_ListBodyWeight_Call) RunAndReturn(run func(context.Context, uuid.UUID, time.Time) ([]*bodyweight.BodyWeight, error)) *MockBodyWeightService_ListBodyWeight_Call {
 	_c.Call.Return(run)
 	return _c
 }

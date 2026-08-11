@@ -25,22 +25,24 @@ func (_m *MockTemplateRepository) EXPECT() *MockTemplateRepository_Expecter {
 }
 
 // FindByID provides a mock function with given fields: ctx, id
-func (_m *MockTemplateRepository) FindByID(ctx context.Context, id uuid.UUID) (template.Template, error) {
+func (_m *MockTemplateRepository) FindByID(ctx context.Context, id uuid.UUID) (*template.Template, error) {
 	ret := _m.Called(ctx, id)
 
 	if len(ret) == 0 {
 		panic("no return value specified for FindByID")
 	}
 
-	var r0 template.Template
+	var r0 *template.Template
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID) (template.Template, error)); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID) (*template.Template, error)); ok {
 		return rf(ctx, id)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID) template.Template); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID) *template.Template); ok {
 		r0 = rf(ctx, id)
 	} else {
-		r0 = ret.Get(0).(template.Template)
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*template.Template)
+		}
 	}
 
 	if rf, ok := ret.Get(1).(func(context.Context, uuid.UUID) error); ok {
@@ -71,12 +73,12 @@ func (_c *MockTemplateRepository_FindByID_Call) Run(run func(ctx context.Context
 	return _c
 }
 
-func (_c *MockTemplateRepository_FindByID_Call) Return(_a0 template.Template, _a1 error) *MockTemplateRepository_FindByID_Call {
+func (_c *MockTemplateRepository_FindByID_Call) Return(_a0 *template.Template, _a1 error) *MockTemplateRepository_FindByID_Call {
 	_c.Call.Return(_a0, _a1)
 	return _c
 }
 
-func (_c *MockTemplateRepository_FindByID_Call) RunAndReturn(run func(context.Context, uuid.UUID) (template.Template, error)) *MockTemplateRepository_FindByID_Call {
+func (_c *MockTemplateRepository_FindByID_Call) RunAndReturn(run func(context.Context, uuid.UUID) (*template.Template, error)) *MockTemplateRepository_FindByID_Call {
 	_c.Call.Return(run)
 	return _c
 }

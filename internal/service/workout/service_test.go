@@ -50,9 +50,9 @@ func (s *ServiceTestSuite) TestStart_Success() {
 	userID := uuid.Must(uuid.NewV7())
 	s.workoutRepo.EXPECT().
 		List(mock.Anything, mock.MatchedBy(func(f domainworkout.WorkoutFilter) bool {
-			return f.UserID != nil && *f.UserID == userID && f.Since == nil
+			return f.UserID != nil && *f.UserID == userID && f.Since.IsZero()
 		})).
-		Return([]domainworkout.Workout{}, nil)
+		Return([]*domainworkout.Workout{}, nil)
 
 	var createdID uuid.UUID
 	s.expectTx()
@@ -60,9 +60,9 @@ func (s *ServiceTestSuite) TestStart_Success() {
 		Create(mock.Anything, mock.MatchedBy(func(w domainworkout.Workout) bool {
 			return w.UserID == userID && w.TemplateID == nil && w.FinishedAt == nil && w.Version == 1
 		})).
-		RunAndReturn(func(_ context.Context, w domainworkout.Workout) (domainworkout.Workout, error) {
+		RunAndReturn(func(_ context.Context, w domainworkout.Workout) (*domainworkout.Workout, error) {
 			createdID = w.ID
-			return w, nil
+			return &w, nil
 		})
 	s.workoutRepo.EXPECT().BatchInsertExercises(mock.Anything, []domainworkout.WorkoutExercise(nil)).Return(nil)
 
@@ -79,8 +79,8 @@ func (s *ServiceTestSuite) TestStart_FromPublicTemplate() {
 	exerciseID1 := uuid.Must(uuid.NewV7())
 	exerciseID2 := uuid.Must(uuid.NewV7())
 
-	s.workoutRepo.EXPECT().List(mock.Anything, mock.Anything).Return([]domainworkout.Workout{}, nil)
-	s.tmplRepo.EXPECT().FindByID(mock.Anything, templateID).Return(domaintemplate.Template{
+	s.workoutRepo.EXPECT().List(mock.Anything, mock.Anything).Return([]*domainworkout.Workout{}, nil)
+	s.tmplRepo.EXPECT().FindByID(mock.Anything, templateID).Return(&domaintemplate.Template{
 		ID:              templateID,
 		Name:            "Push Day",
 		IsPublic:        true,
@@ -97,9 +97,9 @@ func (s *ServiceTestSuite) TestStart_FromPublicTemplate() {
 		Create(mock.Anything, mock.MatchedBy(func(w domainworkout.Workout) bool {
 			return w.TemplateID != nil && *w.TemplateID == templateID
 		})).
-		RunAndReturn(func(_ context.Context, w domainworkout.Workout) (domainworkout.Workout, error) {
+		RunAndReturn(func(_ context.Context, w domainworkout.Workout) (*domainworkout.Workout, error) {
 			createdID = w.ID
-			return w, nil
+			return &w, nil
 		})
 	s.workoutRepo.EXPECT().
 		BatchInsertExercises(mock.Anything, mock.MatchedBy(func(exercises []domainworkout.WorkoutExercise) bool {
@@ -115,7 +115,7 @@ func (s *ServiceTestSuite) TestStart_FromPublicTemplate() {
 
 	created, err := s.svc.Start(context.Background(), serviceworkout.StartWorkoutCommand{
 		UserID:     userID,
-		TemplateID: &templateID,
+		TemplateID: templateID,
 	})
 	s.Require().NoError(err)
 	s.Equal(createdID, created.ID)
@@ -129,8 +129,8 @@ func (s *ServiceTestSuite) TestStart_FromPrivateOwnedTemplate() {
 	templateID := uuid.Must(uuid.NewV7())
 	exerciseID := uuid.Must(uuid.NewV7())
 
-	s.workoutRepo.EXPECT().List(mock.Anything, mock.Anything).Return([]domainworkout.Workout{}, nil)
-	s.tmplRepo.EXPECT().FindByID(mock.Anything, templateID).Return(domaintemplate.Template{
+	s.workoutRepo.EXPECT().List(mock.Anything, mock.Anything).Return([]*domainworkout.Workout{}, nil)
+	s.tmplRepo.EXPECT().FindByID(mock.Anything, templateID).Return(&domaintemplate.Template{
 		ID:              templateID,
 		Name:            "Push Day",
 		CreatedByUserID: userID,
@@ -141,8 +141,8 @@ func (s *ServiceTestSuite) TestStart_FromPrivateOwnedTemplate() {
 
 	s.expectTx()
 	s.workoutRepo.EXPECT().Create(mock.Anything, mock.Anything).
-		RunAndReturn(func(_ context.Context, w domainworkout.Workout) (domainworkout.Workout, error) {
-			return w, nil
+		RunAndReturn(func(_ context.Context, w domainworkout.Workout) (*domainworkout.Workout, error) {
+			return &w, nil
 		})
 	s.workoutRepo.EXPECT().
 		BatchInsertExercises(mock.Anything, mock.AnythingOfType("[]workout.WorkoutExercise")).
@@ -150,7 +150,7 @@ func (s *ServiceTestSuite) TestStart_FromPrivateOwnedTemplate() {
 
 	created, err := s.svc.Start(context.Background(), serviceworkout.StartWorkoutCommand{
 		UserID:     userID,
-		TemplateID: &templateID,
+		TemplateID: templateID,
 	})
 	s.Require().NoError(err)
 	s.Require().Len(created.Exercises, 1)
@@ -161,8 +161,8 @@ func (s *ServiceTestSuite) TestStart_FromPrivateTemplateByOther() {
 	userID := uuid.Must(uuid.NewV7())
 	templateID := uuid.Must(uuid.NewV7())
 
-	s.workoutRepo.EXPECT().List(mock.Anything, mock.Anything).Return([]domainworkout.Workout{}, nil)
-	s.tmplRepo.EXPECT().FindByID(mock.Anything, templateID).Return(domaintemplate.Template{
+	s.workoutRepo.EXPECT().List(mock.Anything, mock.Anything).Return([]*domainworkout.Workout{}, nil)
+	s.tmplRepo.EXPECT().FindByID(mock.Anything, templateID).Return(&domaintemplate.Template{
 		ID:              templateID,
 		Name:            "Push Day",
 		CreatedByUserID: uuid.Must(uuid.NewV7()),
@@ -170,7 +170,7 @@ func (s *ServiceTestSuite) TestStart_FromPrivateTemplateByOther() {
 
 	_, err := s.svc.Start(context.Background(), serviceworkout.StartWorkoutCommand{
 		UserID:     userID,
-		TemplateID: &templateID,
+		TemplateID: templateID,
 	})
 	s.Require().ErrorIs(err, domaintemplate.ErrTemplateNotFound)
 	s.workoutRepo.AssertNotCalled(s.T(), "Create", mock.Anything, mock.Anything)
@@ -181,13 +181,13 @@ func (s *ServiceTestSuite) TestStart_TemplateNotFound() {
 	userID := uuid.Must(uuid.NewV7())
 	templateID := uuid.Must(uuid.NewV7())
 
-	s.workoutRepo.EXPECT().List(mock.Anything, mock.Anything).Return([]domainworkout.Workout{}, nil)
+	s.workoutRepo.EXPECT().List(mock.Anything, mock.Anything).Return([]*domainworkout.Workout{}, nil)
 	s.tmplRepo.EXPECT().FindByID(mock.Anything, templateID).
-		Return(domaintemplate.Template{}, domaintemplate.ErrTemplateNotFound)
+		Return(nil, domaintemplate.ErrTemplateNotFound)
 
 	_, err := s.svc.Start(context.Background(), serviceworkout.StartWorkoutCommand{
 		UserID:     userID,
-		TemplateID: &templateID,
+		TemplateID: templateID,
 	})
 	s.Require().ErrorIs(err, domaintemplate.ErrTemplateNotFound)
 	s.workoutRepo.AssertNotCalled(s.T(), "Create", mock.Anything, mock.Anything)
@@ -196,7 +196,7 @@ func (s *ServiceTestSuite) TestStart_TemplateNotFound() {
 func (s *ServiceTestSuite) TestStart_ActiveWorkoutExists() {
 	userID := uuid.Must(uuid.NewV7())
 	finished := time.Now().Add(-time.Hour)
-	s.workoutRepo.EXPECT().List(mock.Anything, mock.Anything).Return([]domainworkout.Workout{
+	s.workoutRepo.EXPECT().List(mock.Anything, mock.Anything).Return([]*domainworkout.Workout{
 		{ID: uuid.Must(uuid.NewV7()), UserID: userID, FinishedAt: &finished},
 		{ID: uuid.Must(uuid.NewV7()), UserID: userID},
 	}, nil)
@@ -228,7 +228,7 @@ func (s *ServiceTestSuite) TestGetActive_Success() {
 	userID := uuid.Must(uuid.NewV7())
 	activeID := uuid.Must(uuid.NewV7())
 	finished := time.Now().Add(-time.Hour)
-	s.workoutRepo.EXPECT().List(mock.Anything, mock.Anything).Return([]domainworkout.Workout{
+	s.workoutRepo.EXPECT().List(mock.Anything, mock.Anything).Return([]*domainworkout.Workout{
 		{ID: uuid.Must(uuid.NewV7()), UserID: userID, FinishedAt: &finished},
 		{ID: activeID, UserID: userID},
 	}, nil)
@@ -240,7 +240,7 @@ func (s *ServiceTestSuite) TestGetActive_Success() {
 
 func (s *ServiceTestSuite) TestGetActive_None() {
 	userID := uuid.Must(uuid.NewV7())
-	s.workoutRepo.EXPECT().List(mock.Anything, mock.Anything).Return([]domainworkout.Workout{}, nil)
+	s.workoutRepo.EXPECT().List(mock.Anything, mock.Anything).Return([]*domainworkout.Workout{}, nil)
 
 	_, err := s.svc.GetActive(context.Background(), userID)
 	s.Require().ErrorIs(err, domainworkout.ErrWorkoutNotFound)
@@ -249,18 +249,18 @@ func (s *ServiceTestSuite) TestGetActive_None() {
 func (s *ServiceTestSuite) TestGet_Success() {
 	workoutID := uuid.Must(uuid.NewV7())
 	userID := uuid.Must(uuid.NewV7())
-	expected := domainworkout.Workout{ID: workoutID, UserID: userID}
+	expected := &domainworkout.Workout{ID: workoutID, UserID: userID}
 	s.workoutRepo.EXPECT().FindByID(mock.Anything, workoutID).Return(expected, nil)
 
 	got, err := s.svc.Get(context.Background(), workoutID, userID)
 	s.Require().NoError(err)
-	s.Equal(expected, *got)
+	s.Equal(expected, got)
 }
 
 func (s *ServiceTestSuite) TestGet_NotOwner() {
 	workoutID := uuid.Must(uuid.NewV7())
 	s.workoutRepo.EXPECT().FindByID(mock.Anything, workoutID).
-		Return(domainworkout.Workout{ID: workoutID, UserID: uuid.Must(uuid.NewV7())}, nil)
+		Return(&domainworkout.Workout{ID: workoutID, UserID: uuid.Must(uuid.NewV7())}, nil)
 
 	_, err := s.svc.Get(context.Background(), workoutID, uuid.Must(uuid.NewV7()))
 	s.Require().ErrorIs(err, domainworkout.ErrWorkoutNotFound)
@@ -269,7 +269,7 @@ func (s *ServiceTestSuite) TestGet_NotOwner() {
 func (s *ServiceTestSuite) TestGet_NotFound() {
 	workoutID := uuid.Must(uuid.NewV7())
 	s.workoutRepo.EXPECT().FindByID(mock.Anything, workoutID).
-		Return(domainworkout.Workout{}, domainworkout.ErrWorkoutNotFound)
+		Return(nil, domainworkout.ErrWorkoutNotFound)
 
 	_, err := s.svc.Get(context.Background(), workoutID, uuid.Must(uuid.NewV7()))
 	s.Require().ErrorIs(err, domainworkout.ErrWorkoutNotFound)
@@ -278,18 +278,18 @@ func (s *ServiceTestSuite) TestGet_NotFound() {
 func (s *ServiceTestSuite) TestList_Success() {
 	userID := uuid.Must(uuid.NewV7())
 	since := time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC)
-	expected := []domainworkout.Workout{{ID: uuid.Must(uuid.NewV7()), UserID: userID}}
-	s.workoutRepo.EXPECT().List(mock.Anything, domainworkout.WorkoutFilter{UserID: &userID, Since: &since}).
+	expected := []*domainworkout.Workout{{ID: uuid.Must(uuid.NewV7()), UserID: userID}}
+	s.workoutRepo.EXPECT().List(mock.Anything, domainworkout.WorkoutFilter{UserID: &userID, Since: since}).
 		Return(expected, nil)
 
-	got, err := s.svc.List(context.Background(), userID, &since)
+	got, err := s.svc.List(context.Background(), userID, since)
 	s.Require().NoError(err)
 	s.Require().Len(got, 1)
-	s.Equal(expected[0], *got[0])
+	s.Equal(expected[0], got[0])
 }
 
 func (s *ServiceTestSuite) TestList_NilUserRejected() {
-	_, err := s.svc.List(context.Background(), uuid.Nil, nil)
+	_, err := s.svc.List(context.Background(), uuid.Nil, time.Time{})
 	s.Require().ErrorIs(err, domainworkout.ErrInvalidUserID)
 	s.workoutRepo.AssertNotCalled(s.T(), "List", mock.Anything, mock.Anything)
 }
@@ -298,14 +298,14 @@ func (s *ServiceTestSuite) TestAddExercise_Success() {
 	workoutID := uuid.Must(uuid.NewV7())
 	exerciseID := uuid.Must(uuid.NewV7())
 	userID := uuid.Must(uuid.NewV7())
-	expected := domainworkout.WorkoutExercise{
+	expected := &domainworkout.WorkoutExercise{
 		ID:         uuid.Must(uuid.NewV7()),
 		WorkoutID:  workoutID,
 		ExerciseID: exerciseID,
 		SortOrder:  1,
 	}
 	s.workoutRepo.EXPECT().FindByID(mock.Anything, workoutID).
-		Return(domainworkout.Workout{ID: workoutID, UserID: userID}, nil)
+		Return(&domainworkout.Workout{ID: workoutID, UserID: userID}, nil)
 	s.workoutRepo.EXPECT().AddExercise(mock.Anything, workoutID, exerciseID).Return(expected, nil)
 
 	got, err := s.svc.AddExercise(context.Background(), serviceworkout.AddExerciseCommand{
@@ -313,13 +313,13 @@ func (s *ServiceTestSuite) TestAddExercise_Success() {
 		ExerciseID: exerciseID,
 	}, userID)
 	s.Require().NoError(err)
-	s.Equal(expected, *got)
+	s.Equal(expected, got)
 }
 
 func (s *ServiceTestSuite) TestAddExercise_NotOwner() {
 	workoutID := uuid.Must(uuid.NewV7())
 	s.workoutRepo.EXPECT().FindByID(mock.Anything, workoutID).
-		Return(domainworkout.Workout{ID: workoutID, UserID: uuid.Must(uuid.NewV7())}, nil)
+		Return(&domainworkout.Workout{ID: workoutID, UserID: uuid.Must(uuid.NewV7())}, nil)
 
 	_, err := s.svc.AddExercise(context.Background(), serviceworkout.AddExerciseCommand{
 		WorkoutID:  workoutID,
@@ -332,7 +332,7 @@ func (s *ServiceTestSuite) TestAddExercise_NotOwner() {
 func (s *ServiceTestSuite) TestAddExercise_NotFound() {
 	workoutID := uuid.Must(uuid.NewV7())
 	s.workoutRepo.EXPECT().FindByID(mock.Anything, workoutID).
-		Return(domainworkout.Workout{}, domainworkout.ErrWorkoutNotFound)
+		Return(nil, domainworkout.ErrWorkoutNotFound)
 
 	_, err := s.svc.AddExercise(context.Background(), serviceworkout.AddExerciseCommand{
 		WorkoutID:  workoutID,
@@ -354,7 +354,7 @@ func (s *ServiceTestSuite) TestLogSet_IsPR() {
 		Reps:              5,
 	}
 
-	s.workoutRepo.EXPECT().FindByID(mock.Anything, workoutID).Return(domainworkout.Workout{
+	s.workoutRepo.EXPECT().FindByID(mock.Anything, workoutID).Return(&domainworkout.Workout{
 		ID:     workoutID,
 		UserID: userID,
 		Exercises: []domainworkout.WorkoutExercise{
@@ -366,7 +366,7 @@ func (s *ServiceTestSuite) TestLogSet_IsPR() {
 		LogSet(mock.Anything, workoutExerciseID, mock.MatchedBy(func(set domainworkout.WorkoutSet) bool {
 			return set.WeightKg == 100 && set.Reps == 5 && set.IsWarmup
 		})).
-		Return(saved, nil)
+		Return(&saved, nil)
 	s.progress.EXPECT().GetBest1RM(mock.Anything, exerciseID, userID).Return(0.0, nil)
 	s.progress.EXPECT().
 		Upsert1RM(mock.Anything, mock.MatchedBy(func(p domainprogress.Progress1RM) bool {
@@ -377,15 +377,13 @@ func (s *ServiceTestSuite) TestLogSet_IsPR() {
 		})).
 		Return(nil)
 
-	rpe := 8
-	restSeconds := 90
 	result, err := s.svc.LogSet(context.Background(), serviceworkout.LogSetCommand{
 		WorkoutID:         workoutID,
 		WorkoutExerciseID: workoutExerciseID,
 		WeightKg:          100,
 		Reps:              5,
-		RPE:               &rpe,
-		RestSeconds:       &restSeconds,
+		RPE:               8,
+		RestSeconds:       90,
 		IsWarmup:          true,
 	}, userID)
 	s.Require().NoError(err)
@@ -400,7 +398,7 @@ func (s *ServiceTestSuite) TestLogSet_NotPR() {
 	workoutExerciseID := uuid.Must(uuid.NewV7())
 	exerciseID := uuid.Must(uuid.NewV7())
 
-	s.workoutRepo.EXPECT().FindByID(mock.Anything, workoutID).Return(domainworkout.Workout{
+	s.workoutRepo.EXPECT().FindByID(mock.Anything, workoutID).Return(&domainworkout.Workout{
 		ID:     workoutID,
 		UserID: userID,
 		Exercises: []domainworkout.WorkoutExercise{
@@ -409,7 +407,7 @@ func (s *ServiceTestSuite) TestLogSet_NotPR() {
 	}, nil)
 	s.expectTx()
 	s.workoutRepo.EXPECT().LogSet(mock.Anything, workoutExerciseID, mock.Anything).
-		Return(domainworkout.WorkoutSet{SetNumber: 1, WeightKg: 60, Reps: 10}, nil)
+		Return(&domainworkout.WorkoutSet{SetNumber: 1, WeightKg: 60, Reps: 10}, nil)
 	s.progress.EXPECT().GetBest1RM(mock.Anything, exerciseID, userID).Return(200.0, nil)
 
 	result, err := s.svc.LogSet(context.Background(), serviceworkout.LogSetCommand{
@@ -430,7 +428,7 @@ func (s *ServiceTestSuite) TestLogSet_RoundingExactness() {
 	workoutExerciseID := uuid.Must(uuid.NewV7())
 	exerciseID := uuid.Must(uuid.NewV7())
 
-	s.workoutRepo.EXPECT().FindByID(mock.Anything, workoutID).Return(domainworkout.Workout{
+	s.workoutRepo.EXPECT().FindByID(mock.Anything, workoutID).Return(&domainworkout.Workout{
 		ID:     workoutID,
 		UserID: userID,
 		Exercises: []domainworkout.WorkoutExercise{
@@ -439,7 +437,7 @@ func (s *ServiceTestSuite) TestLogSet_RoundingExactness() {
 	}, nil)
 	s.expectTx()
 	s.workoutRepo.EXPECT().LogSet(mock.Anything, workoutExerciseID, mock.Anything).
-		Return(domainworkout.WorkoutSet{SetNumber: 1, WeightKg: 82.5, Reps: 8}, nil)
+		Return(&domainworkout.WorkoutSet{SetNumber: 1, WeightKg: 82.5, Reps: 8}, nil)
 	s.progress.EXPECT().GetBest1RM(mock.Anything, exerciseID, userID).Return(0.0, nil)
 	s.progress.EXPECT().
 		Upsert1RM(mock.Anything, mock.MatchedBy(func(p domainprogress.Progress1RM) bool {
@@ -461,7 +459,7 @@ func (s *ServiceTestSuite) TestLogSet_RoundingExactness() {
 func (s *ServiceTestSuite) TestLogSet_NotOwner() {
 	workoutID := uuid.Must(uuid.NewV7())
 	s.workoutRepo.EXPECT().FindByID(mock.Anything, workoutID).
-		Return(domainworkout.Workout{ID: workoutID, UserID: uuid.Must(uuid.NewV7())}, nil)
+		Return(&domainworkout.Workout{ID: workoutID, UserID: uuid.Must(uuid.NewV7())}, nil)
 
 	_, err := s.svc.LogSet(context.Background(), serviceworkout.LogSetCommand{
 		WorkoutID:         workoutID,
@@ -476,7 +474,7 @@ func (s *ServiceTestSuite) TestLogSet_NotOwner() {
 
 func (s *ServiceTestSuite) TestLogSet_WorkoutNotFound() {
 	s.workoutRepo.EXPECT().FindByID(mock.Anything, mock.Anything).
-		Return(domainworkout.Workout{}, domainworkout.ErrWorkoutNotFound)
+		Return(nil, domainworkout.ErrWorkoutNotFound)
 
 	_, err := s.svc.LogSet(context.Background(), serviceworkout.LogSetCommand{
 		WorkoutID:         uuid.Must(uuid.NewV7()),
@@ -490,7 +488,7 @@ func (s *ServiceTestSuite) TestLogSet_WorkoutNotFound() {
 func (s *ServiceTestSuite) TestLogSet_WorkoutExerciseNotFound() {
 	userID := uuid.Must(uuid.NewV7())
 	workoutID := uuid.Must(uuid.NewV7())
-	s.workoutRepo.EXPECT().FindByID(mock.Anything, workoutID).Return(domainworkout.Workout{
+	s.workoutRepo.EXPECT().FindByID(mock.Anything, workoutID).Return(&domainworkout.Workout{
 		ID:        workoutID,
 		UserID:    userID,
 		Exercises: []domainworkout.WorkoutExercise{},
@@ -511,7 +509,7 @@ func (s *ServiceTestSuite) TestLogSet_InvalidValues() {
 	workoutID := uuid.Must(uuid.NewV7())
 	workoutExerciseID := uuid.Must(uuid.NewV7())
 	exerciseID := uuid.Must(uuid.NewV7())
-	s.workoutRepo.EXPECT().FindByID(mock.Anything, workoutID).Return(domainworkout.Workout{
+	s.workoutRepo.EXPECT().FindByID(mock.Anything, workoutID).Return(&domainworkout.Workout{
 		ID:     workoutID,
 		UserID: userID,
 		Exercises: []domainworkout.WorkoutExercise{
@@ -519,8 +517,6 @@ func (s *ServiceTestSuite) TestLogSet_InvalidValues() {
 		},
 	}, nil)
 
-	rpe := 11
-	negativeRest := -1
 	cases := []struct {
 		name string
 		cmd  serviceworkout.LogSetCommand
@@ -538,12 +534,12 @@ func (s *ServiceTestSuite) TestLogSet_InvalidValues() {
 		},
 		{
 			name: "rpe out of range",
-			cmd:  serviceworkout.LogSetCommand{WeightKg: 100, Reps: 5, RPE: &rpe},
+			cmd:  serviceworkout.LogSetCommand{WeightKg: 100, Reps: 5, RPE: 11},
 			want: domainworkout.ErrInvalidRPE,
 		},
 		{
 			name: "negative rest seconds",
-			cmd:  serviceworkout.LogSetCommand{WeightKg: 100, Reps: 5, RestSeconds: &negativeRest},
+			cmd:  serviceworkout.LogSetCommand{WeightKg: 100, Reps: 5, RestSeconds: -1},
 			want: domainworkout.ErrInvalidRestSeconds,
 		},
 	}
@@ -565,7 +561,7 @@ func (s *ServiceTestSuite) TestLogSet_UpsertError() {
 	workoutExerciseID := uuid.Must(uuid.NewV7())
 	exerciseID := uuid.Must(uuid.NewV7())
 
-	s.workoutRepo.EXPECT().FindByID(mock.Anything, workoutID).Return(domainworkout.Workout{
+	s.workoutRepo.EXPECT().FindByID(mock.Anything, workoutID).Return(&domainworkout.Workout{
 		ID:     workoutID,
 		UserID: userID,
 		Exercises: []domainworkout.WorkoutExercise{
@@ -574,7 +570,7 @@ func (s *ServiceTestSuite) TestLogSet_UpsertError() {
 	}, nil)
 	s.expectTx()
 	s.workoutRepo.EXPECT().LogSet(mock.Anything, workoutExerciseID, mock.Anything).
-		Return(domainworkout.WorkoutSet{SetNumber: 1, WeightKg: 100, Reps: 5}, nil)
+		Return(&domainworkout.WorkoutSet{SetNumber: 1, WeightKg: 100, Reps: 5}, nil)
 	s.progress.EXPECT().GetBest1RM(mock.Anything, exerciseID, userID).Return(0.0, nil)
 	s.progress.EXPECT().Upsert1RM(mock.Anything, mock.Anything).Return(errors.New("progress db down"))
 
@@ -593,9 +589,9 @@ func (s *ServiceTestSuite) TestFinish_Success() {
 	finished := domainworkout.Workout{ID: workoutID, UserID: userID}
 
 	s.workoutRepo.EXPECT().FindByID(mock.Anything, workoutID).
-		Return(domainworkout.Workout{ID: workoutID, UserID: userID}, nil)
+		Return(&domainworkout.Workout{ID: workoutID, UserID: userID}, nil)
 	s.workoutRepo.EXPECT().Finish(mock.Anything, workoutID, mock.AnythingOfType("time.Time")).
-		Return(finished, nil)
+		Return(&finished, nil)
 	s.queue.EXPECT().EnqueueVolumeCalc(mock.Anything, finished).Return(nil)
 
 	got, err := s.svc.Finish(context.Background(), serviceworkout.FinishWorkoutCommand{WorkoutID: workoutID}, userID)
@@ -606,7 +602,7 @@ func (s *ServiceTestSuite) TestFinish_Success() {
 func (s *ServiceTestSuite) TestFinish_NotOwner() {
 	workoutID := uuid.Must(uuid.NewV7())
 	s.workoutRepo.EXPECT().FindByID(mock.Anything, workoutID).
-		Return(domainworkout.Workout{ID: workoutID, UserID: uuid.Must(uuid.NewV7())}, nil)
+		Return(&domainworkout.Workout{ID: workoutID, UserID: uuid.Must(uuid.NewV7())}, nil)
 
 	_, err := s.svc.Finish(
 		context.Background(),
@@ -621,7 +617,7 @@ func (s *ServiceTestSuite) TestFinish_NotOwner() {
 func (s *ServiceTestSuite) TestFinish_NotFound() {
 	workoutID := uuid.Must(uuid.NewV7())
 	s.workoutRepo.EXPECT().FindByID(mock.Anything, workoutID).
-		Return(domainworkout.Workout{}, domainworkout.ErrWorkoutNotFound)
+		Return(nil, domainworkout.ErrWorkoutNotFound)
 
 	_, err := s.svc.Finish(
 		context.Background(),
@@ -638,9 +634,9 @@ func (s *ServiceTestSuite) TestFinish_EnqueueError() {
 	finished := domainworkout.Workout{ID: workoutID, UserID: userID}
 
 	s.workoutRepo.EXPECT().FindByID(mock.Anything, workoutID).
-		Return(domainworkout.Workout{ID: workoutID, UserID: userID}, nil)
+		Return(&domainworkout.Workout{ID: workoutID, UserID: userID}, nil)
 	s.workoutRepo.EXPECT().Finish(mock.Anything, workoutID, mock.AnythingOfType("time.Time")).
-		Return(finished, nil)
+		Return(&finished, nil)
 	s.queue.EXPECT().EnqueueVolumeCalc(mock.Anything, finished).Return(errors.New("redis down"))
 
 	_, err := s.svc.Finish(context.Background(), serviceworkout.FinishWorkoutCommand{WorkoutID: workoutID}, userID)

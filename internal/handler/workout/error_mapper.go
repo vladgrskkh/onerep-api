@@ -19,26 +19,35 @@ const (
 	errMsgInvalidSince  = "invalid since parameter"
 	errUserInvalidSince = "The since parameter must be an RFC 3339 timestamp"
 
-	errCodeWorkoutNotFound         = "WORKOUT_NOT_FOUND"
-	errUserWorkoutNotFound         = "Workout not found"
+	errCodeWorkoutNotFound = "WORKOUT_NOT_FOUND"
+	errUserWorkoutNotFound = "Workout not found"
+
 	errCodeWorkoutExerciseNotFound = "WORKOUT_EXERCISE_NOT_FOUND"
 	errUserWorkoutExerciseNotFound = "Workout exercise not found"
-	errCodeActiveWorkout           = "ACTIVE_WORKOUT_EXISTS"
-	errUserActiveWorkout           = "You already have an active workout"
-	errCodeTemplateNotFound        = "TEMPLATE_NOT_FOUND"
-	errUserTemplateNotFound        = "Template not found"
-	errCodeInvalidUserID           = "INVALID_USER_ID"
-	errUserInvalidUserID           = "You must be logged in to manage workouts"
-	errCodeInvalidExerciseID       = "INVALID_EXERCISE_ID"
-	errUserInvalidExerciseID       = "The exercise ID is invalid"
-	errCodeInvalidWeight           = "INVALID_WEIGHT"
-	errUserInvalidWeight           = "Weight must be greater than zero"
-	errCodeInvalidReps             = "INVALID_REPS"
-	errUserInvalidReps             = "Reps must be greater than zero"
-	errCodeInvalidRPE              = "INVALID_RPE"
-	errUserInvalidRPE              = "RPE must be between 1 and 10"
-	errCodeInvalidRestSeconds      = "INVALID_REST_SECONDS"
-	errUserInvalidRestSeconds      = "Rest seconds must not be negative"
+
+	errCodeActiveWorkout = "ACTIVE_WORKOUT_EXISTS"
+	errUserActiveWorkout = "You already have an active workout"
+
+	errCodeTemplateNotFound = "TEMPLATE_NOT_FOUND"
+	errUserTemplateNotFound = "Template not found"
+
+	errCodeInvalidUserID = "INVALID_USER_ID"
+	errUserInvalidUserID = "You must be logged in to manage workouts"
+
+	errCodeInvalidExerciseID = "INVALID_EXERCISE_ID"
+	errUserInvalidExerciseID = "The exercise ID is invalid"
+
+	errCodeInvalidWeight = "INVALID_WEIGHT"
+	errUserInvalidWeight = "Weight must be greater than zero"
+
+	errCodeInvalidReps = "INVALID_REPS"
+	errUserInvalidReps = "Reps must be greater than zero"
+
+	errCodeInvalidRPE = "INVALID_RPE"
+	errUserInvalidRPE = "RPE must be between 1 and 10"
+
+	errCodeInvalidRestSeconds = "INVALID_REST_SECONDS"
+	errUserInvalidRestSeconds = "Rest seconds must not be negative"
 )
 
 func invalidRequestBodyDetail() handler.ErrorDetail {

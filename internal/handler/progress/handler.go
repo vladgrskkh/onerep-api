@@ -22,15 +22,15 @@ type ProgressService interface {
 	Get1RM(
 		ctx context.Context,
 		userID, exerciseID uuid.UUID,
-		from, to *time.Time,
+		from, to time.Time,
 	) ([]*domainprogress.Progress1RM, error)
-	GetVolume(ctx context.Context, userID uuid.UUID, from, to *time.Time) ([]*domainprogress.ProgressVolume, error)
+	GetVolume(ctx context.Context, userID uuid.UUID, from, to time.Time) ([]*domainprogress.ProgressVolume, error)
 }
 
 // BodyWeightService is the body weight contract consumed by the handler.
 type BodyWeightService interface {
 	LogBodyWeight(ctx context.Context, cmd servicebodyweight.LogBodyWeightCommand) (*domainbodyweight.BodyWeight, error)
-	ListBodyWeight(ctx context.Context, userID uuid.UUID, since *time.Time) ([]*domainbodyweight.BodyWeight, error)
+	ListBodyWeight(ctx context.Context, userID uuid.UUID, since time.Time) ([]*domainbodyweight.BodyWeight, error)
 }
 
 type ProgressHandler struct {
@@ -74,25 +74,17 @@ func (h *ProgressHandler) Get1RM(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	fromVal, fromPresent, parseErr := handler.ParseRFC3339QueryParam(r, "from")
+	from, _, parseErr := handler.ParseRFC3339QueryParam(r, "from")
 	if parseErr != nil {
 		handler.WriteError(w, h.logger, http.StatusBadRequest, invalidDateRangeDetail())
 		return
 	}
-	var from *time.Time
-	if fromPresent {
-		from = &fromVal
-	}
-	toVal, toPresent, parseErr := handler.ParseRFC3339QueryParam(r, "to")
+	to, _, parseErr := handler.ParseRFC3339QueryParam(r, "to")
 	if parseErr != nil {
 		handler.WriteError(w, h.logger, http.StatusBadRequest, invalidDateRangeDetail())
 		return
 	}
-	var to *time.Time
-	if toPresent {
-		to = &toVal
-	}
-	if from != nil && to != nil && from.After(*to) {
+	if !from.IsZero() && !to.IsZero() && from.After(to) {
 		handler.WriteError(w, h.logger, http.StatusBadRequest, invalidDateRangeDetail())
 		return
 	}
@@ -129,25 +121,17 @@ func (h *ProgressHandler) Get1RM(w http.ResponseWriter, r *http.Request) {
 // @Security BearerAuth
 // @Router /progress/volume [get]
 func (h *ProgressHandler) GetVolume(w http.ResponseWriter, r *http.Request) {
-	fromVal, fromPresent, parseErr := handler.ParseRFC3339QueryParam(r, "from")
+	from, _, parseErr := handler.ParseRFC3339QueryParam(r, "from")
 	if parseErr != nil {
 		handler.WriteError(w, h.logger, http.StatusBadRequest, invalidDateRangeDetail())
 		return
 	}
-	var from *time.Time
-	if fromPresent {
-		from = &fromVal
-	}
-	toVal, toPresent, parseErr := handler.ParseRFC3339QueryParam(r, "to")
+	to, _, parseErr := handler.ParseRFC3339QueryParam(r, "to")
 	if parseErr != nil {
 		handler.WriteError(w, h.logger, http.StatusBadRequest, invalidDateRangeDetail())
 		return
 	}
-	var to *time.Time
-	if toPresent {
-		to = &toVal
-	}
-	if from != nil && to != nil && from.After(*to) {
+	if !from.IsZero() && !to.IsZero() && from.After(to) {
 		handler.WriteError(w, h.logger, http.StatusBadRequest, invalidDateRangeDetail())
 		return
 	}
@@ -181,14 +165,10 @@ func (h *ProgressHandler) GetVolume(w http.ResponseWriter, r *http.Request) {
 // @Security BearerAuth
 // @Router /progress/body-weight [get]
 func (h *ProgressHandler) GetBodyWeight(w http.ResponseWriter, r *http.Request) {
-	sinceVal, present, parseErr := handler.ParseRFC3339QueryParam(r, "since")
+	since, _, parseErr := handler.ParseRFC3339QueryParam(r, "since")
 	if parseErr != nil {
 		handler.WriteError(w, h.logger, http.StatusBadRequest, invalidSinceDetail())
 		return
-	}
-	var since *time.Time
-	if present {
-		since = &sinceVal
 	}
 
 	userID := handler.UserIDFromContext(r.Context())

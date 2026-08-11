@@ -40,6 +40,15 @@ type WorkoutSet struct {
 	IsWarmup          bool
 }
 
+// SetResult reports a logged set together with its PR status and the
+// estimated one-rep max it achieved.
+type SetResult struct {
+	WorkoutSet
+
+	IsPR         bool
+	Estimated1RM float64
+}
+
 func NewWorkout(userID uuid.UUID, templateID *uuid.UUID) (Workout, error) {
 	if userID == uuid.Nil {
 		return Workout{}, ErrInvalidUserID

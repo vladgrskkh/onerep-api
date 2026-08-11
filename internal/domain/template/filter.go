@@ -9,5 +9,5 @@ import (
 type TemplateFilter struct {
 	UserID   *uuid.UUID
 	IsPublic *bool
-	Since    *time.Time
+	Since    time.Time
 }

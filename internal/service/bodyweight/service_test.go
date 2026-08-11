@@ -35,14 +35,14 @@ func (s *ServiceTestSuite) TestLogBodyWeight_Success() {
 				bw.WeightKg == 80 &&
 				bw.MeasuredAt.Equal(measuredAt)
 		})).
-		RunAndReturn(func(_ context.Context, bw domainbodyweight.BodyWeight) (domainbodyweight.BodyWeight, error) {
-			return bw, nil
+		RunAndReturn(func(_ context.Context, bw domainbodyweight.BodyWeight) (*domainbodyweight.BodyWeight, error) {
+			return &bw, nil
 		})
 
 	created, err := s.svc.LogBodyWeight(context.Background(), servicebodyweight.LogBodyWeightCommand{
 		UserID:     userID,
 		WeightKg:   80,
-		MeasuredAt: &measuredAt,
+		MeasuredAt: measuredAt,
 	})
 	s.Require().NoError(err)
 	s.Equal(userID, created.UserID)
@@ -59,7 +59,7 @@ func (s *ServiceTestSuite) TestLogBodyWeight_DefaultsMeasuredAt() {
 			measuredAt = bw.MeasuredAt
 			return bw.UserID == userID && bw.WeightKg == 80
 		})).
-		Return(domainbodyweight.BodyWeight{}, nil)
+		Return(&domainbodyweight.BodyWeight{}, nil)
 
 	_, err := s.svc.LogBodyWeight(context.Background(), servicebodyweight.LogBodyWeightCommand{
 		UserID:   userID,
@@ -90,17 +90,17 @@ func (s *ServiceTestSuite) TestLogBodyWeight_NilUserID() {
 func (s *ServiceTestSuite) TestListBodyWeight_Success() {
 	userID := uuid.Must(uuid.NewV7())
 	since := time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC)
-	expected := []domainbodyweight.BodyWeight{{UserID: userID, WeightKg: 80, MeasuredAt: since}}
-	s.repo.EXPECT().List(mock.Anything, userID, &since).Return(expected, nil)
+	expected := []*domainbodyweight.BodyWeight{{UserID: userID, WeightKg: 80, MeasuredAt: since}}
+	s.repo.EXPECT().List(mock.Anything, userID, since).Return(expected, nil)
 
-	got, err := s.svc.ListBodyWeight(context.Background(), userID, &since)
+	got, err := s.svc.ListBodyWeight(context.Background(), userID, since)
 	s.Require().NoError(err)
 	s.Require().Len(got, 1)
-	s.Equal(expected[0], *got[0])
+	s.Equal(expected[0], got[0])
 }
 
 func (s *ServiceTestSuite) TestListBodyWeight_NilUserID() {
-	_, err := s.svc.ListBodyWeight(context.Background(), uuid.Nil, nil)
+	_, err := s.svc.ListBodyWeight(context.Background(), uuid.Nil, time.Time{})
 	s.Require().ErrorIs(err, domainbodyweight.ErrInvalidUserID)
 	s.repo.AssertNotCalled(s.T(), "List", mock.Anything, mock.Anything, mock.Anything)
 }

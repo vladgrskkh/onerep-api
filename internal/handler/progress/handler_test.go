@@ -6,7 +6,6 @@ import (
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
-	"strings"
 	"testing"
 	"time"
 
@@ -16,10 +15,10 @@ import (
 
 	domainbodyweight "github.com/vladgrskkh/onerep-api/internal/domain/bodyweight"
 	domainprogress "github.com/vladgrskkh/onerep-api/internal/domain/progress"
-	"github.com/vladgrskkh/onerep-api/internal/handler"
 	progresshandler "github.com/vladgrskkh/onerep-api/internal/handler/progress"
 	"github.com/vladgrskkh/onerep-api/internal/handler/progress/dto"
 	progressmocks "github.com/vladgrskkh/onerep-api/internal/handler/progress/mocks"
+	"github.com/vladgrskkh/onerep-api/internal/handler/testutil"
 	servicebodyweight "github.com/vladgrskkh/onerep-api/internal/service/bodyweight"
 )
 
@@ -32,7 +31,6 @@ type HandlerTestSuite struct {
 	handler       *progresshandler.ProgressHandler
 	progressSvc   *progressmocks.MockProgressService
 	bodyWeightSvc *progressmocks.MockBodyWeightService
-	mux           *http.ServeMux
 	userID        uuid.UUID
 }
 
@@ -40,53 +38,55 @@ func (s *HandlerTestSuite) SetupTest() {
 	s.userID = uuid.Must(uuid.NewV7())
 	s.progressSvc = progressmocks.NewMockProgressService(s.T())
 	s.bodyWeightSvc = progressmocks.NewMockBodyWeightService(s.T())
-	logger := slog.New(slog.DiscardHandler)
-	s.handler = progresshandler.NewProgressHandler(s.progressSvc, s.bodyWeightSvc, logger)
-
-	s.mux = http.NewServeMux()
-	s.mux.HandleFunc("GET /v1/progress/1rm", s.handler.Get1RM)
-	s.mux.HandleFunc("GET /v1/progress/volume", s.handler.GetVolume)
-	s.mux.HandleFunc("GET /v1/progress/body-weight", s.handler.GetBodyWeight)
-	s.mux.HandleFunc("POST /v1/progress/body-weight", s.handler.LogBodyWeight)
+	s.handler = progresshandler.NewProgressHandler(s.progressSvc, s.bodyWeightSvc, slog.New(slog.DiscardHandler))
 }
 
-// serve performs a request without an authenticated user context.
-func (s *HandlerTestSuite) serve(method, path string, body string) *httptest.ResponseRecorder {
-	req := httptest.NewRequest(method, path, strings.NewReader(body))
+func (s *HandlerTestSuite) get1RM(target string, userID uuid.UUID) *httptest.ResponseRecorder {
+	req := testutil.NewRequest(http.MethodGet, target, "")
+	req = testutil.AsUser(req, userID)
 	w := httptest.NewRecorder()
-	s.mux.ServeHTTP(w, req)
+	s.handler.Get1RM(w, req)
 	return w
 }
 
-// serveAs performs a request authenticated as the given user.
-func (s *HandlerTestSuite) serveAs(method, path string, body string, userID uuid.UUID) *httptest.ResponseRecorder {
-	req := httptest.NewRequest(method, path, strings.NewReader(body))
-	req = req.WithContext(handler.WithUserID(req.Context(), userID))
+func (s *HandlerTestSuite) getVolume(target string, userID uuid.UUID) *httptest.ResponseRecorder {
+	req := testutil.NewRequest(http.MethodGet, target, "")
+	req = testutil.AsUser(req, userID)
 	w := httptest.NewRecorder()
-	s.mux.ServeHTTP(w, req)
+	s.handler.GetVolume(w, req)
 	return w
 }
 
-func (s *HandlerTestSuite) decodeError(w *httptest.ResponseRecorder) handler.ErrorResponse {
-	var resp handler.ErrorResponse
-	s.Require().NoError(json.Unmarshal(w.Body.Bytes(), &resp))
-	return resp
+func (s *HandlerTestSuite) getBodyWeight(target string, userID uuid.UUID) *httptest.ResponseRecorder {
+	req := testutil.NewRequest(http.MethodGet, target, "")
+	req = testutil.AsUser(req, userID)
+	w := httptest.NewRecorder()
+	s.handler.GetBodyWeight(w, req)
+	return w
+}
+
+func (s *HandlerTestSuite) logBodyWeight(body string, userID uuid.UUID) *httptest.ResponseRecorder {
+	req := testutil.NewRequest(http.MethodPost, "/v1/progress/body-weight", body)
+	if userID != uuid.Nil {
+		req = testutil.AsUser(req, userID)
+	}
+	w := httptest.NewRecorder()
+	s.handler.LogBodyWeight(w, req)
+	return w
 }
 
 func (s *HandlerTestSuite) TestGet1RM_Success() {
 	exerciseID := uuid.Must(uuid.NewV7())
 	from := time.Date(2026, 7, 1, 0, 0, 0, 0, time.UTC)
 	to := time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC)
-	s.progressSvc.EXPECT().Get1RM(mock.Anything, s.userID, exerciseID, &from, &to).
+	s.progressSvc.EXPECT().Get1RM(mock.Anything, s.userID, exerciseID, from, to).
 		Return([]*domainprogress.Progress1RM{
 			{ExerciseID: exerciseID, UserID: s.userID, Date: from, Estimated1RM: 120},
 		}, nil)
 
-	w := s.serveAs(
-		http.MethodGet,
+	w := s.get1RM(
 		"/v1/progress/1rm?exercise_id="+exerciseID.String()+
 			"&from=2026-07-01T00%3A00%3A00Z&to=2026-08-01T00%3A00%3A00Z",
-		"",
 		s.userID,
 	)
 
@@ -101,24 +101,19 @@ func (s *HandlerTestSuite) TestGet1RM_Success() {
 func (s *HandlerTestSuite) TestGet1RM_NoDateRange() {
 	exerciseID := uuid.Must(uuid.NewV7())
 	s.progressSvc.EXPECT().
-		Get1RM(mock.Anything, s.userID, exerciseID, (*time.Time)(nil), (*time.Time)(nil)).
+		Get1RM(mock.Anything, s.userID, exerciseID, time.Time{}, time.Time{}).
 		Return([]*domainprogress.Progress1RM{}, nil)
 
-	w := s.serveAs(
-		http.MethodGet,
-		"/v1/progress/1rm?exercise_id="+exerciseID.String(),
-		"",
-		s.userID,
-	)
+	w := s.get1RM("/v1/progress/1rm?exercise_id="+exerciseID.String(), s.userID)
 
 	s.Equal(http.StatusOK, w.Code)
 }
 
 func (s *HandlerTestSuite) TestGet1RM_InvalidExerciseID() {
-	w := s.serve(http.MethodGet, "/v1/progress/1rm?exercise_id=not-a-uuid", "")
+	w := s.get1RM("/v1/progress/1rm?exercise_id=not-a-uuid", s.userID)
 
 	s.Equal(http.StatusBadRequest, w.Code)
-	resp := s.decodeError(w)
+	resp := testutil.DecodeError(s.T(), w)
 	s.Equal("INVALID_EXERCISE_ID", string(resp.Error.Code))
 	s.progressSvc.AssertNotCalled(
 		s.T(),
@@ -133,14 +128,10 @@ func (s *HandlerTestSuite) TestGet1RM_InvalidExerciseID() {
 
 func (s *HandlerTestSuite) TestGet1RM_InvalidFrom() {
 	exerciseID := uuid.Must(uuid.NewV7())
-	w := s.serve(
-		http.MethodGet,
-		"/v1/progress/1rm?exercise_id="+exerciseID.String()+"&from=not-a-timestamp",
-		"",
-	)
+	w := s.get1RM("/v1/progress/1rm?exercise_id="+exerciseID.String()+"&from=not-a-timestamp", s.userID)
 
 	s.Equal(http.StatusBadRequest, w.Code)
-	resp := s.decodeError(w)
+	resp := testutil.DecodeError(s.T(), w)
 	s.Equal("INVALID_DATE_RANGE", string(resp.Error.Code))
 	s.progressSvc.AssertNotCalled(
 		s.T(),
@@ -155,14 +146,10 @@ func (s *HandlerTestSuite) TestGet1RM_InvalidFrom() {
 
 func (s *HandlerTestSuite) TestGet1RM_InvalidTo() {
 	exerciseID := uuid.Must(uuid.NewV7())
-	w := s.serve(
-		http.MethodGet,
-		"/v1/progress/1rm?exercise_id="+exerciseID.String()+"&to=not-a-timestamp",
-		"",
-	)
+	w := s.get1RM("/v1/progress/1rm?exercise_id="+exerciseID.String()+"&to=not-a-timestamp", s.userID)
 
 	s.Equal(http.StatusBadRequest, w.Code)
-	resp := s.decodeError(w)
+	resp := testutil.DecodeError(s.T(), w)
 	s.Equal("INVALID_DATE_RANGE", string(resp.Error.Code))
 	s.progressSvc.AssertNotCalled(
 		s.T(),
@@ -177,15 +164,14 @@ func (s *HandlerTestSuite) TestGet1RM_InvalidTo() {
 
 func (s *HandlerTestSuite) TestGet1RM_InvertedRange() {
 	exerciseID := uuid.Must(uuid.NewV7())
-	w := s.serve(
-		http.MethodGet,
+	w := s.get1RM(
 		"/v1/progress/1rm?exercise_id="+exerciseID.String()+
 			"&from=2026-01-01T00%3A00%3A00Z&to=2025-01-01T00%3A00%3A00Z",
-		"",
+		s.userID,
 	)
 
 	s.Equal(http.StatusBadRequest, w.Code)
-	resp := s.decodeError(w)
+	resp := testutil.DecodeError(s.T(), w)
 	s.Equal("INVALID_DATE_RANGE", string(resp.Error.Code))
 	s.progressSvc.AssertNotCalled(
 		s.T(),
@@ -201,52 +187,37 @@ func (s *HandlerTestSuite) TestGet1RM_InvertedRange() {
 func (s *HandlerTestSuite) TestGet1RM_ServiceError() {
 	exerciseID := uuid.Must(uuid.NewV7())
 	s.progressSvc.EXPECT().
-		Get1RM(mock.Anything, s.userID, exerciseID, (*time.Time)(nil), (*time.Time)(nil)).
+		Get1RM(mock.Anything, s.userID, exerciseID, time.Time{}, time.Time{}).
 		Return(nil, domainprogress.ErrInvalidExerciseID)
 
-	w := s.serveAs(
-		http.MethodGet,
-		"/v1/progress/1rm?exercise_id="+exerciseID.String(),
-		"",
-		s.userID,
-	)
+	w := s.get1RM("/v1/progress/1rm?exercise_id="+exerciseID.String(), s.userID)
 
 	s.Equal(http.StatusBadRequest, w.Code)
-	resp := s.decodeError(w)
+	resp := testutil.DecodeError(s.T(), w)
 	s.Equal("INVALID_EXERCISE_ID", string(resp.Error.Code))
 }
 
 func (s *HandlerTestSuite) TestGet1RM_InternalError() {
 	exerciseID := uuid.Must(uuid.NewV7())
 	s.progressSvc.EXPECT().
-		Get1RM(mock.Anything, s.userID, exerciseID, (*time.Time)(nil), (*time.Time)(nil)).
+		Get1RM(mock.Anything, s.userID, exerciseID, time.Time{}, time.Time{}).
 		Return(nil, errRepo)
 
-	w := s.serveAs(
-		http.MethodGet,
-		"/v1/progress/1rm?exercise_id="+exerciseID.String(),
-		"",
-		s.userID,
-	)
+	w := s.get1RM("/v1/progress/1rm?exercise_id="+exerciseID.String(), s.userID)
 
 	s.Equal(http.StatusInternalServerError, w.Code)
-	resp := s.decodeError(w)
+	resp := testutil.DecodeError(s.T(), w)
 	s.Equal("INTERNAL_ERROR", string(resp.Error.Code))
 }
 
 func (s *HandlerTestSuite) TestGetVolume_Success() {
 	from := time.Date(2026, 7, 1, 0, 0, 0, 0, time.UTC)
-	s.progressSvc.EXPECT().GetVolume(mock.Anything, s.userID, &from, (*time.Time)(nil)).
+	s.progressSvc.EXPECT().GetVolume(mock.Anything, s.userID, from, time.Time{}).
 		Return([]*domainprogress.ProgressVolume{
 			{MuscleGroupID: 1, UserID: s.userID, Date: from, TotalKG: 5000},
 		}, nil)
 
-	w := s.serveAs(
-		http.MethodGet,
-		"/v1/progress/volume?from=2026-07-01T00%3A00%3A00Z",
-		"",
-		s.userID,
-	)
+	w := s.getVolume("/v1/progress/volume?from=2026-07-01T00%3A00%3A00Z", s.userID)
 
 	s.Equal(http.StatusOK, w.Code)
 	var resp []dto.VolumeResponse
@@ -258,10 +229,10 @@ func (s *HandlerTestSuite) TestGetVolume_Success() {
 }
 
 func (s *HandlerTestSuite) TestGetVolume_InvalidTo() {
-	w := s.serve(http.MethodGet, "/v1/progress/volume?to=not-a-timestamp", "")
+	w := s.getVolume("/v1/progress/volume?to=not-a-timestamp", s.userID)
 
 	s.Equal(http.StatusBadRequest, w.Code)
-	resp := s.decodeError(w)
+	resp := testutil.DecodeError(s.T(), w)
 	s.Equal("INVALID_DATE_RANGE", string(resp.Error.Code))
 	s.progressSvc.AssertNotCalled(
 		s.T(),
@@ -274,14 +245,13 @@ func (s *HandlerTestSuite) TestGetVolume_InvalidTo() {
 }
 
 func (s *HandlerTestSuite) TestGetVolume_InvertedRange() {
-	w := s.serve(
-		http.MethodGet,
+	w := s.getVolume(
 		"/v1/progress/volume?from=2026-01-01T00%3A00%3A00Z&to=2025-01-01T00%3A00%3A00Z",
-		"",
+		s.userID,
 	)
 
 	s.Equal(http.StatusBadRequest, w.Code)
-	resp := s.decodeError(w)
+	resp := testutil.DecodeError(s.T(), w)
 	s.Equal("INVALID_DATE_RANGE", string(resp.Error.Code))
 	s.progressSvc.AssertNotCalled(
 		s.T(),
@@ -296,17 +266,12 @@ func (s *HandlerTestSuite) TestGetVolume_InvertedRange() {
 func (s *HandlerTestSuite) TestGetBodyWeight_Success() {
 	since := time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC)
 	bwID := uuid.Must(uuid.NewV7())
-	s.bodyWeightSvc.EXPECT().ListBodyWeight(mock.Anything, s.userID, &since).
+	s.bodyWeightSvc.EXPECT().ListBodyWeight(mock.Anything, s.userID, since).
 		Return([]*domainbodyweight.BodyWeight{
 			{ID: bwID, UserID: s.userID, WeightKg: 80, MeasuredAt: since, CreatedAt: since},
 		}, nil)
 
-	w := s.serveAs(
-		http.MethodGet,
-		"/v1/progress/body-weight?since=2026-08-01T00%3A00%3A00Z",
-		"",
-		s.userID,
-	)
+	w := s.getBodyWeight("/v1/progress/body-weight?since=2026-08-01T00%3A00%3A00Z", s.userID)
 
 	s.Equal(http.StatusOK, w.Code)
 	var resp []dto.BodyWeightResponse
@@ -318,10 +283,10 @@ func (s *HandlerTestSuite) TestGetBodyWeight_Success() {
 }
 
 func (s *HandlerTestSuite) TestGetBodyWeight_InvalidSince() {
-	w := s.serve(http.MethodGet, "/v1/progress/body-weight?since=not-a-timestamp", "")
+	w := s.getBodyWeight("/v1/progress/body-weight?since=not-a-timestamp", s.userID)
 
 	s.Equal(http.StatusBadRequest, w.Code)
-	resp := s.decodeError(w)
+	resp := testutil.DecodeError(s.T(), w)
 	s.Equal("INVALID_SINCE", string(resp.Error.Code))
 	s.bodyWeightSvc.AssertNotCalled(
 		s.T(),
@@ -345,15 +310,10 @@ func (s *HandlerTestSuite) TestLogBodyWeight_Success() {
 	s.bodyWeightSvc.EXPECT().LogBodyWeight(mock.Anything, servicebodyweight.LogBodyWeightCommand{
 		UserID:     s.userID,
 		WeightKg:   80,
-		MeasuredAt: &measuredAt,
+		MeasuredAt: measuredAt,
 	}).Return(created, nil)
 
-	w := s.serveAs(
-		http.MethodPost,
-		"/v1/progress/body-weight",
-		`{"weight_kg":80,"measured_at":"2026-08-01T10:00:00Z"}`,
-		s.userID,
-	)
+	w := s.logBodyWeight(`{"weight_kg":80,"measured_at":"2026-08-01T10:00:00Z"}`, s.userID)
 
 	s.Equal(http.StatusCreated, w.Code)
 	var resp dto.BodyWeightResponse
@@ -366,20 +326,20 @@ func (s *HandlerTestSuite) TestLogBodyWeight_Success() {
 func (s *HandlerTestSuite) TestLogBodyWeight_NoMeasuredAt() {
 	s.bodyWeightSvc.EXPECT().
 		LogBodyWeight(mock.Anything, mock.MatchedBy(func(cmd servicebodyweight.LogBodyWeightCommand) bool {
-			return cmd.UserID == s.userID && cmd.WeightKg == 80 && cmd.MeasuredAt == nil
+			return cmd.UserID == s.userID && cmd.WeightKg == 80 && cmd.MeasuredAt.IsZero()
 		})).
 		Return(&domainbodyweight.BodyWeight{ID: uuid.Must(uuid.NewV7())}, nil)
 
-	w := s.serveAs(http.MethodPost, "/v1/progress/body-weight", `{"weight_kg":80}`, s.userID)
+	w := s.logBodyWeight(`{"weight_kg":80}`, s.userID)
 
 	s.Equal(http.StatusCreated, w.Code)
 }
 
 func (s *HandlerTestSuite) TestLogBodyWeight_ValidationError() {
-	w := s.serve(http.MethodPost, "/v1/progress/body-weight", `{}`)
+	w := s.logBodyWeight(`{}`, s.userID)
 
 	s.Equal(http.StatusBadRequest, w.Code)
-	resp := s.decodeError(w)
+	resp := testutil.DecodeError(s.T(), w)
 	s.Equal("VALIDATION_ERROR", string(resp.Error.Code))
 	s.Require().Len(resp.Error.Details, 1)
 	s.Equal("weight_kg", resp.Error.Details[0].Field)
@@ -387,10 +347,10 @@ func (s *HandlerTestSuite) TestLogBodyWeight_ValidationError() {
 }
 
 func (s *HandlerTestSuite) TestLogBodyWeight_InvalidJSON() {
-	w := s.serve(http.MethodPost, "/v1/progress/body-weight", `{"weight_kg":`)
+	w := s.logBodyWeight(`{"weight_kg":`, s.userID)
 
 	s.Equal(http.StatusBadRequest, w.Code)
-	resp := s.decodeError(w)
+	resp := testutil.DecodeError(s.T(), w)
 	s.Equal("INVALID_REQUEST_BODY", string(resp.Error.Code))
 	s.bodyWeightSvc.AssertNotCalled(s.T(), "LogBodyWeight", mock.Anything, mock.Anything)
 }

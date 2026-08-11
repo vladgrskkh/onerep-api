@@ -30,7 +30,7 @@ func NewTemplateRepo(pool *pgxpool.Pool) *TemplateRepo {
 func (r *TemplateRepo) List(
 	ctx context.Context,
 	filter domaintemplate.TemplateFilter,
-) ([]domaintemplate.Template, error) {
+) ([]*domaintemplate.Template, error) {
 	query, args := buildTemplateListQuery(filter)
 	rows, err := r.getter.DefaultTrOrDB(ctx, r.db).Query(ctx, query, args)
 	if err != nil {
@@ -38,9 +38,9 @@ func (r *TemplateRepo) List(
 	}
 	defer rows.Close()
 
-	var templates []domaintemplate.Template
+	var templates []*domaintemplate.Template
 	for rows.Next() {
-		var t domaintemplate.Template
+		t := &domaintemplate.Template{}
 		if scanErr := rows.Scan(
 			&t.ID,
 			&t.Name,
@@ -73,16 +73,16 @@ func buildTemplateListQuery(filter domaintemplate.TemplateFilter) (string, pgx.N
 		query.WriteString(` AND is_public = @is_public`)
 		args["is_public"] = *filter.IsPublic
 	}
-	if filter.Since != nil {
+	if !filter.Since.IsZero() {
 		query.WriteString(` AND updated_at > @since`)
-		args["since"] = *filter.Since
+		args["since"] = filter.Since
 	}
 	query.WriteString(` ORDER BY updated_at DESC`)
 
 	return query.String(), args
 }
 
-func (r *TemplateRepo) FindByID(ctx context.Context, id uuid.UUID) (domaintemplate.Template, error) {
+func (r *TemplateRepo) FindByID(ctx context.Context, id uuid.UUID) (*domaintemplate.Template, error) {
 	conn := r.getter.DefaultTrOrDB(ctx, r.db)
 	rows, err := conn.Query(ctx, `
 		SELECT t.id, t.name, t.description, t.is_public, t.created_by_user_id,
@@ -96,16 +96,19 @@ func (r *TemplateRepo) FindByID(ctx context.Context, id uuid.UUID) (domaintempla
 		ORDER BY te.sort_order, m.sort_order
 	`, pgx.NamedArgs{"id": id})
 	if err != nil {
-		return domaintemplate.Template{}, err
+		return nil, err
 	}
 	defer rows.Close()
 
 	var (
-		t             domaintemplate.Template
+		t             *domaintemplate.Template
 		exercisesSeen = make(map[uuid.UUID]struct{})
 		mediaSeen     = make(map[uuid.UUID]struct{})
 	)
 	for rows.Next() {
+		if t == nil {
+			t = &domaintemplate.Template{}
+		}
 		var (
 			teExerciseID  *uuid.UUID
 			teSortOrder   *int
@@ -121,7 +124,7 @@ func (r *TemplateRepo) FindByID(ctx context.Context, id uuid.UUID) (domaintempla
 			&teExerciseID, &teSortOrder, &tePlannedSets,
 			&mID, &mMediaType, &mSortOrder, &mS3Key,
 		); scanErr != nil {
-			return domaintemplate.Template{}, scanErr
+			return nil, scanErr
 		}
 		if teExerciseID != nil {
 			if _, seen := exercisesSeen[*teExerciseID]; !seen {
@@ -148,15 +151,15 @@ func (r *TemplateRepo) FindByID(ctx context.Context, id uuid.UUID) (domaintempla
 		}
 	}
 	if rowsErr := rows.Err(); rowsErr != nil {
-		return domaintemplate.Template{}, rowsErr
+		return nil, rowsErr
 	}
-	if t.ID == uuid.Nil {
-		return domaintemplate.Template{}, domaintemplate.ErrTemplateNotFound
+	if t == nil {
+		return nil, domaintemplate.ErrTemplateNotFound
 	}
 	return t, nil
 }
 
-func (r *TemplateRepo) Create(ctx context.Context, t domaintemplate.Template) (domaintemplate.Template, error) {
+func (r *TemplateRepo) Create(ctx context.Context, t domaintemplate.Template) (*domaintemplate.Template, error) {
 	conn := r.getter.DefaultTrOrDB(ctx, r.db)
 	if _, err := conn.Exec(ctx, `
 		INSERT INTO gym.templates (id, name, description, is_public, created_by_user_id, created_at, updated_at, version)
@@ -171,9 +174,9 @@ func (r *TemplateRepo) Create(ctx context.Context, t domaintemplate.Template) (d
 		"updated_at":         t.UpdatedAt,
 		"version":            t.Version,
 	}); err != nil {
-		return domaintemplate.Template{}, err
+		return nil, err
 	}
-	return t, nil
+	return &t, nil
 }
 
 func (r *TemplateRepo) InsertExercise(ctx context.Context, te domaintemplate.TemplateExercise) error {
@@ -277,7 +280,7 @@ func (r *TemplateRepo) ReplaceMedia(
 	return r.BatchInsertMedia(ctx, media)
 }
 
-func (r *TemplateRepo) Update(ctx context.Context, t domaintemplate.Template) (domaintemplate.Template, error) {
+func (r *TemplateRepo) Update(ctx context.Context, t domaintemplate.Template) (*domaintemplate.Template, error) {
 	conn := r.getter.DefaultTrOrDB(ctx, r.db)
 
 	t.Version++
@@ -296,12 +299,12 @@ func (r *TemplateRepo) Update(ctx context.Context, t domaintemplate.Template) (d
 		"expected_version": t.Version - 1,
 	})
 	if err != nil {
-		return domaintemplate.Template{}, err
+		return nil, err
 	}
 	if tag.RowsAffected() == 0 {
-		return domaintemplate.Template{}, domaintemplate.ErrTemplateNotFound
+		return nil, domaintemplate.ErrTemplateNotFound
 	}
-	return t, nil
+	return &t, nil
 }
 
 func (r *TemplateRepo) SoftDelete(ctx context.Context, id uuid.UUID) error {
