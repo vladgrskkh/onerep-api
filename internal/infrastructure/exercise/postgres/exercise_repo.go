@@ -12,33 +12,10 @@ import (
 	trmpgx "github.com/avito-tech/go-transaction-manager/drivers/pgxv5/v2"
 
 	domainexercise "github.com/vladgrskkh/onerep-api/internal/domain/exercise"
+	"github.com/vladgrskkh/onerep-api/internal/infrastructure/postgresutil"
 )
 
 const argExerciseID = "exercise_id"
-
-// nullIfZeroUUID converts the nil-UUID empty sentinel into a SQL NULL.
-func nullIfZeroUUID(id uuid.UUID) any {
-	if id == uuid.Nil {
-		return nil
-	}
-	return id
-}
-
-// valueOrNilUUID converts a scanned SQL NULL into the nil-UUID sentinel.
-func valueOrNilUUID(p *uuid.UUID) uuid.UUID {
-	if p == nil {
-		return uuid.Nil
-	}
-	return *p
-}
-
-// valueOrNilTime converts a scanned SQL NULL into the zero-time sentinel.
-func valueOrNilTime(p *time.Time) time.Time {
-	if p == nil {
-		return time.Time{}
-	}
-	return *p
-}
 
 type ExerciseRepo struct {
 	db     trmpgx.Tr
@@ -77,7 +54,7 @@ func (r *ExerciseRepo) List(
 		); scanErr != nil {
 			return nil, scanErr
 		}
-		ex.CreatedByUserID = valueOrNilUUID(createdBy)
+		ex.CreatedByUserID = postgresutil.ValueOrNilUUID(createdBy)
 		exercises = append(exercises, ex)
 	}
 	return exercises, rows.Err()
@@ -159,8 +136,8 @@ func (r *ExerciseRepo) FindByID(ctx context.Context, id uuid.UUID) (*domainexerc
 		); scanErr != nil {
 			return nil, scanErr
 		}
-		ex.CreatedByUserID = valueOrNilUUID(createdBy)
-		ex.DeletedAt = valueOrNilTime(deletedAt)
+		ex.CreatedByUserID = postgresutil.ValueOrNilUUID(createdBy)
+		ex.DeletedAt = postgresutil.ValueOrNilTime(deletedAt)
 		if mID != nil {
 			if _, seen := mediaSeen[*mID]; !seen {
 				ex.Media = append(ex.Media, domainexercise.ExerciseMedia{
@@ -204,7 +181,7 @@ func (r *ExerciseRepo) Create(ctx context.Context, ex domainexercise.Exercise) (
 		"description":        ex.Description,
 		"notes":              ex.Notes,
 		"is_built_in":        ex.IsBuiltIn,
-		"created_by_user_id": nullIfZeroUUID(ex.CreatedByUserID),
+		"created_by_user_id": postgresutil.NullIfZeroUUID(ex.CreatedByUserID),
 		"created_at":         ex.CreatedAt,
 		"updated_at":         ex.UpdatedAt,
 		"version":            ex.Version,

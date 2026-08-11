@@ -12,20 +12,13 @@ import (
 	trmpgx "github.com/avito-tech/go-transaction-manager/drivers/pgxv5/v2"
 
 	domaintemplate "github.com/vladgrskkh/onerep-api/internal/domain/template"
+	"github.com/vladgrskkh/onerep-api/internal/infrastructure/postgresutil"
 )
 
 const (
 	argTemplateID = "template_id"
 	argSortOrder  = "sort_order"
 )
-
-// valueOrNilTime converts a scanned SQL NULL into the zero-time sentinel.
-func valueOrNilTime(p *time.Time) time.Time {
-	if p == nil {
-		return time.Time{}
-	}
-	return *p
-}
 
 type TemplateRepo struct {
 	db     trmpgx.Tr
@@ -136,7 +129,7 @@ func (r *TemplateRepo) FindByID(ctx context.Context, id uuid.UUID) (*domaintempl
 		); scanErr != nil {
 			return nil, scanErr
 		}
-		t.DeletedAt = valueOrNilTime(deletedAt)
+		t.DeletedAt = postgresutil.ValueOrNilTime(deletedAt)
 		if teExerciseID != nil {
 			if _, seen := exercisesSeen[*teExerciseID]; !seen {
 				t.Exercises = append(t.Exercises, domaintemplate.TemplateExercise{

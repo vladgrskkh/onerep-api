@@ -12,60 +12,13 @@ import (
 	trmpgx "github.com/avito-tech/go-transaction-manager/drivers/pgxv5/v2"
 
 	domainworkout "github.com/vladgrskkh/onerep-api/internal/domain/workout"
+	"github.com/vladgrskkh/onerep-api/internal/infrastructure/postgresutil"
 )
 
 const (
 	argFinishedAt = "finished_at"
 	argNotes      = "notes"
 )
-
-// nullIfZeroUUID converts the nil-UUID empty sentinel into a SQL NULL.
-func nullIfZeroUUID(id uuid.UUID) any {
-	if id == uuid.Nil {
-		return nil
-	}
-	return id
-}
-
-// nullIfZeroTime converts the zero-time empty sentinel into a SQL NULL.
-func nullIfZeroTime(t time.Time) any {
-	if t.IsZero() {
-		return nil
-	}
-	return t
-}
-
-// nullIfZeroInt converts the zero int empty sentinel into a SQL NULL.
-func nullIfZeroInt(n int) any {
-	if n == 0 {
-		return nil
-	}
-	return n
-}
-
-// valueOrNilUUID converts a scanned SQL NULL into the nil-UUID sentinel.
-func valueOrNilUUID(p *uuid.UUID) uuid.UUID {
-	if p == nil {
-		return uuid.Nil
-	}
-	return *p
-}
-
-// valueOrNilTime converts a scanned SQL NULL into the zero-time sentinel.
-func valueOrNilTime(p *time.Time) time.Time {
-	if p == nil {
-		return time.Time{}
-	}
-	return *p
-}
-
-// valueOrNilInt converts a scanned SQL NULL into the zero int sentinel.
-func valueOrNilInt(p *int) int {
-	if p == nil {
-		return 0
-	}
-	return *p
-}
 
 type WorkoutRepo struct {
 	db     trmpgx.Tr
@@ -107,8 +60,8 @@ func (r *WorkoutRepo) List(
 		); scanErr != nil {
 			return nil, scanErr
 		}
-		w.TemplateID = valueOrNilUUID(templateID)
-		w.FinishedAt = valueOrNilTime(finishedAt)
+		w.TemplateID = postgresutil.ValueOrNilUUID(templateID)
+		w.FinishedAt = postgresutil.ValueOrNilTime(finishedAt)
 		workouts = append(workouts, w)
 	}
 	return workouts, rows.Err()
@@ -184,9 +137,9 @@ func (r *WorkoutRepo) FindByID(ctx context.Context, id uuid.UUID) (*domainworkou
 		); scanErr != nil {
 			return nil, scanErr
 		}
-		w.TemplateID = valueOrNilUUID(templateID)
-		w.FinishedAt = valueOrNilTime(finishedAt)
-		w.DeletedAt = valueOrNilTime(deletedAt)
+		w.TemplateID = postgresutil.ValueOrNilUUID(templateID)
+		w.FinishedAt = postgresutil.ValueOrNilTime(finishedAt)
+		w.DeletedAt = postgresutil.ValueOrNilTime(deletedAt)
 		if weID != nil {
 			if _, seen := exerciseIdx[*weID]; !seen {
 				idx := len(w.Exercises)
@@ -208,8 +161,8 @@ func (r *WorkoutRepo) FindByID(ctx context.Context, id uuid.UUID) (*domainworkou
 					SetNumber:         *wsSetNumber,
 					WeightKg:          *wsWeightKg,
 					Reps:              *wsReps,
-					RPE:               valueOrNilInt(wsRPE),
-					RestSeconds:       valueOrNilInt(wsRestSeconds),
+					RPE:               postgresutil.ValueOrNilInt(wsRPE),
+					RestSeconds:       postgresutil.ValueOrNilInt(wsRestSeconds),
 					IsWarmup:          *wsIsWarmup,
 				})
 			}
@@ -232,9 +185,9 @@ func (r *WorkoutRepo) Create(ctx context.Context, w domainworkout.Workout) (*dom
 	`, pgx.NamedArgs{
 		"id":          w.ID,
 		"user_id":     w.UserID,
-		"template_id": nullIfZeroUUID(w.TemplateID),
+		"template_id": postgresutil.NullIfZeroUUID(w.TemplateID),
 		"started_at":  w.StartedAt,
-		argFinishedAt: nullIfZeroTime(w.FinishedAt),
+		argFinishedAt: postgresutil.NullIfZeroTime(w.FinishedAt),
 		argNotes:      w.Notes,
 		"created_at":  w.CreatedAt,
 		"updated_at":  w.UpdatedAt,
@@ -289,8 +242,8 @@ func (r *WorkoutRepo) LogSet(
 		"workout_exercise_id": set.WorkoutExerciseID,
 		"weight_kg":           set.WeightKg,
 		"reps":                set.Reps,
-		"rpe":                 nullIfZeroInt(set.RPE),
-		"rest_seconds":        nullIfZeroInt(set.RestSeconds),
+		"rpe":                 postgresutil.NullIfZeroInt(set.RPE),
+		"rest_seconds":        postgresutil.NullIfZeroInt(set.RestSeconds),
 		"is_warmup":           set.IsWarmup,
 	}).Scan(&set.SetNumber)
 	if err != nil {
@@ -339,8 +292,8 @@ func (r *WorkoutRepo) BatchInsertSets(ctx context.Context, sets []domainworkout.
 			"set_number":          set.SetNumber,
 			"weight_kg":           set.WeightKg,
 			"reps":                set.Reps,
-			"rpe":                 nullIfZeroInt(set.RPE),
-			"rest_seconds":        nullIfZeroInt(set.RestSeconds),
+			"rpe":                 postgresutil.NullIfZeroInt(set.RPE),
+			"rest_seconds":        postgresutil.NullIfZeroInt(set.RestSeconds),
 			"is_warmup":           set.IsWarmup,
 		})
 	}
@@ -358,7 +311,7 @@ func (r *WorkoutRepo) Update(ctx context.Context, w domainworkout.Workout) (*dom
 		WHERE id = @id AND version = @expected_version
 	`, pgx.NamedArgs{
 		argNotes:           w.Notes,
-		argFinishedAt:      nullIfZeroTime(w.FinishedAt),
+		argFinishedAt:      postgresutil.NullIfZeroTime(w.FinishedAt),
 		"updated_at":       w.UpdatedAt,
 		"version":          w.Version,
 		"id":               w.ID,
