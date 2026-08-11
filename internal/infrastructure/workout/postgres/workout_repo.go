@@ -12,6 +12,7 @@ import (
 	trmpgx "github.com/avito-tech/go-transaction-manager/drivers/pgxv5/v2"
 
 	domainworkout "github.com/vladgrskkh/onerep-api/internal/domain/workout"
+	"github.com/vladgrskkh/onerep-api/internal/infrastructure/postgresutil"
 )
 
 const (
@@ -31,7 +32,7 @@ func NewWorkoutRepo(pool *pgxpool.Pool) *WorkoutRepo {
 func (r *WorkoutRepo) List(
 	ctx context.Context,
 	filter domainworkout.WorkoutFilter,
-) ([]domainworkout.Workout, error) {
+) ([]*domainworkout.Workout, error) {
 	query, args := buildWorkoutListQuery(filter)
 	rows, err := r.getter.DefaultTrOrDB(ctx, r.db).Query(ctx, query, args)
 	if err != nil {
@@ -39,15 +40,19 @@ func (r *WorkoutRepo) List(
 	}
 	defer rows.Close()
 
-	var workouts []domainworkout.Workout
+	var workouts []*domainworkout.Workout
 	for rows.Next() {
-		var w domainworkout.Workout
+		w := &domainworkout.Workout{}
+		var (
+			templateID *uuid.UUID
+			finishedAt *time.Time
+		)
 		if scanErr := rows.Scan(
 			&w.ID,
 			&w.UserID,
-			&w.TemplateID,
+			&templateID,
 			&w.StartedAt,
-			&w.FinishedAt,
+			&finishedAt,
 			&w.Notes,
 			&w.CreatedAt,
 			&w.UpdatedAt,
@@ -55,6 +60,8 @@ func (r *WorkoutRepo) List(
 		); scanErr != nil {
 			return nil, scanErr
 		}
+		w.TemplateID = postgresutil.ValueOrNilUUID(templateID)
+		w.FinishedAt = postgresutil.ValueOrNilTime(finishedAt)
 		workouts = append(workouts, w)
 	}
 	return workouts, rows.Err()
@@ -67,20 +74,20 @@ func buildWorkoutListQuery(filter domainworkout.WorkoutFilter) (string, pgx.Name
 	)
 	args := pgx.NamedArgs{}
 
-	if filter.UserID != nil {
+	if filter.UserID != uuid.Nil {
 		query.WriteString(` AND user_id = @user_id`)
-		args["user_id"] = *filter.UserID
+		args["user_id"] = filter.UserID
 	}
-	if filter.Since != nil {
+	if !filter.Since.IsZero() {
 		query.WriteString(` AND updated_at > @since`)
-		args["since"] = *filter.Since
+		args["since"] = filter.Since
 	}
 	query.WriteString(` ORDER BY started_at DESC`)
 
 	return query.String(), args
 }
 
-func (r *WorkoutRepo) FindByID(ctx context.Context, id uuid.UUID) (domainworkout.Workout, error) {
+func (r *WorkoutRepo) FindByID(ctx context.Context, id uuid.UUID) (*domainworkout.Workout, error) {
 	conn := r.getter.DefaultTrOrDB(ctx, r.db)
 	rows, err := conn.Query(ctx, `
 		SELECT w.id, w.user_id, w.template_id, w.started_at, w.finished_at, w.notes,
@@ -94,16 +101,22 @@ func (r *WorkoutRepo) FindByID(ctx context.Context, id uuid.UUID) (domainworkout
 		ORDER BY we.sort_order, ws.set_number
 	`, pgx.NamedArgs{"id": id})
 	if err != nil {
-		return domainworkout.Workout{}, err
+		return nil, err
 	}
 	defer rows.Close()
 
 	var (
-		w           domainworkout.Workout
+		w           *domainworkout.Workout
 		exerciseIdx = make(map[uuid.UUID]int)
 	)
 	for rows.Next() {
+		if w == nil {
+			w = &domainworkout.Workout{}
+		}
 		var (
+			templateID    *uuid.UUID
+			finishedAt    *time.Time
+			deletedAt     *time.Time
 			weID          *uuid.UUID
 			weExerciseID  *uuid.UUID
 			weSortOrder   *int
@@ -117,13 +130,16 @@ func (r *WorkoutRepo) FindByID(ctx context.Context, id uuid.UUID) (domainworkout
 			wsIsWarmup    *bool
 		)
 		if scanErr := rows.Scan(
-			&w.ID, &w.UserID, &w.TemplateID, &w.StartedAt, &w.FinishedAt, &w.Notes,
-			&w.CreatedAt, &w.UpdatedAt, &w.DeletedAt, &w.Version,
+			&w.ID, &w.UserID, &templateID, &w.StartedAt, &finishedAt, &w.Notes,
+			&w.CreatedAt, &w.UpdatedAt, &deletedAt, &w.Version,
 			&weID, &weExerciseID, &weSortOrder, &weNotes,
 			&wsID, &wsSetNumber, &wsWeightKg, &wsReps, &wsRPE, &wsRestSeconds, &wsIsWarmup,
 		); scanErr != nil {
-			return domainworkout.Workout{}, scanErr
+			return nil, scanErr
 		}
+		w.TemplateID = postgresutil.ValueOrNilUUID(templateID)
+		w.FinishedAt = postgresutil.ValueOrNilTime(finishedAt)
+		w.DeletedAt = postgresutil.ValueOrNilTime(deletedAt)
 		if weID != nil {
 			if _, seen := exerciseIdx[*weID]; !seen {
 				idx := len(w.Exercises)
@@ -145,23 +161,23 @@ func (r *WorkoutRepo) FindByID(ctx context.Context, id uuid.UUID) (domainworkout
 					SetNumber:         *wsSetNumber,
 					WeightKg:          *wsWeightKg,
 					Reps:              *wsReps,
-					RPE:               wsRPE,
-					RestSeconds:       wsRestSeconds,
+					RPE:               postgresutil.ValueOrNilInt(wsRPE),
+					RestSeconds:       postgresutil.ValueOrNilInt(wsRestSeconds),
 					IsWarmup:          *wsIsWarmup,
 				})
 			}
 		}
 	}
 	if rowsErr := rows.Err(); rowsErr != nil {
-		return domainworkout.Workout{}, rowsErr
+		return nil, rowsErr
 	}
-	if w.ID == uuid.Nil {
-		return domainworkout.Workout{}, domainworkout.ErrWorkoutNotFound
+	if w == nil {
+		return nil, domainworkout.ErrWorkoutNotFound
 	}
 	return w, nil
 }
 
-func (r *WorkoutRepo) Create(ctx context.Context, w domainworkout.Workout) (domainworkout.Workout, error) {
+func (r *WorkoutRepo) Create(ctx context.Context, w domainworkout.Workout) (*domainworkout.Workout, error) {
 	conn := r.getter.DefaultTrOrDB(ctx, r.db)
 	if _, err := conn.Exec(ctx, `
 		INSERT INTO gym.workouts (id, user_id, template_id, started_at, finished_at, notes, created_at, updated_at, version)
@@ -169,26 +185,26 @@ func (r *WorkoutRepo) Create(ctx context.Context, w domainworkout.Workout) (doma
 	`, pgx.NamedArgs{
 		"id":          w.ID,
 		"user_id":     w.UserID,
-		"template_id": w.TemplateID,
+		"template_id": postgresutil.NullIfZeroUUID(w.TemplateID),
 		"started_at":  w.StartedAt,
-		argFinishedAt: w.FinishedAt,
+		argFinishedAt: postgresutil.NullIfZeroTime(w.FinishedAt),
 		argNotes:      w.Notes,
 		"created_at":  w.CreatedAt,
 		"updated_at":  w.UpdatedAt,
 		"version":     w.Version,
 	}); err != nil {
-		return domainworkout.Workout{}, err
+		return nil, err
 	}
-	return w, nil
+	return &w, nil
 }
 
 func (r *WorkoutRepo) AddExercise(
 	ctx context.Context,
 	workoutID, exerciseID uuid.UUID,
-) (domainworkout.WorkoutExercise, error) {
+) (*domainworkout.WorkoutExercise, error) {
 	we, err := domainworkout.NewWorkoutExercise(workoutID, exerciseID)
 	if err != nil {
-		return domainworkout.WorkoutExercise{}, err
+		return nil, err
 	}
 
 	conn := r.getter.DefaultTrOrDB(ctx, r.db)
@@ -203,16 +219,16 @@ func (r *WorkoutRepo) AddExercise(
 		"exercise_id": we.ExerciseID,
 	}).Scan(&we.SortOrder)
 	if err != nil {
-		return domainworkout.WorkoutExercise{}, err
+		return nil, err
 	}
-	return we, nil
+	return &we, nil
 }
 
 func (r *WorkoutRepo) LogSet(
 	ctx context.Context,
 	workoutExerciseID uuid.UUID,
 	set domainworkout.WorkoutSet,
-) (domainworkout.WorkoutSet, error) {
+) (*domainworkout.WorkoutSet, error) {
 	set.WorkoutExerciseID = workoutExerciseID
 	conn := r.getter.DefaultTrOrDB(ctx, r.db)
 	err := conn.QueryRow(ctx, `
@@ -226,14 +242,14 @@ func (r *WorkoutRepo) LogSet(
 		"workout_exercise_id": set.WorkoutExerciseID,
 		"weight_kg":           set.WeightKg,
 		"reps":                set.Reps,
-		"rpe":                 set.RPE,
-		"rest_seconds":        set.RestSeconds,
+		"rpe":                 postgresutil.NullIfZeroInt(set.RPE),
+		"rest_seconds":        postgresutil.NullIfZeroInt(set.RestSeconds),
 		"is_warmup":           set.IsWarmup,
 	}).Scan(&set.SetNumber)
 	if err != nil {
-		return domainworkout.WorkoutSet{}, err
+		return nil, err
 	}
-	return set, nil
+	return &set, nil
 }
 
 func (r *WorkoutRepo) BatchInsertExercises(
@@ -276,15 +292,15 @@ func (r *WorkoutRepo) BatchInsertSets(ctx context.Context, sets []domainworkout.
 			"set_number":          set.SetNumber,
 			"weight_kg":           set.WeightKg,
 			"reps":                set.Reps,
-			"rpe":                 set.RPE,
-			"rest_seconds":        set.RestSeconds,
+			"rpe":                 postgresutil.NullIfZeroInt(set.RPE),
+			"rest_seconds":        postgresutil.NullIfZeroInt(set.RestSeconds),
 			"is_warmup":           set.IsWarmup,
 		})
 	}
 	return conn.SendBatch(ctx, batch).Close()
 }
 
-func (r *WorkoutRepo) Update(ctx context.Context, w domainworkout.Workout) (domainworkout.Workout, error) {
+func (r *WorkoutRepo) Update(ctx context.Context, w domainworkout.Workout) (*domainworkout.Workout, error) {
 	conn := r.getter.DefaultTrOrDB(ctx, r.db)
 
 	w.Version++
@@ -295,19 +311,19 @@ func (r *WorkoutRepo) Update(ctx context.Context, w domainworkout.Workout) (doma
 		WHERE id = @id AND version = @expected_version
 	`, pgx.NamedArgs{
 		argNotes:           w.Notes,
-		argFinishedAt:      w.FinishedAt,
+		argFinishedAt:      postgresutil.NullIfZeroTime(w.FinishedAt),
 		"updated_at":       w.UpdatedAt,
 		"version":          w.Version,
 		"id":               w.ID,
 		"expected_version": w.Version - 1,
 	})
 	if err != nil {
-		return domainworkout.Workout{}, err
+		return nil, err
 	}
 	if tag.RowsAffected() == 0 {
-		return domainworkout.Workout{}, domainworkout.ErrWorkoutNotFound
+		return nil, domainworkout.ErrWorkoutNotFound
 	}
-	return w, nil
+	return &w, nil
 }
 
 func (r *WorkoutRepo) SoftDelete(ctx context.Context, id uuid.UUID) error {
@@ -319,17 +335,17 @@ func (r *WorkoutRepo) SoftDelete(ctx context.Context, id uuid.UUID) error {
 	return err
 }
 
-func (r *WorkoutRepo) Finish(ctx context.Context, id uuid.UUID, finishedAt time.Time) (domainworkout.Workout, error) {
+func (r *WorkoutRepo) Finish(ctx context.Context, id uuid.UUID, finishedAt time.Time) (*domainworkout.Workout, error) {
 	conn := r.getter.DefaultTrOrDB(ctx, r.db)
 	tag, err := conn.Exec(ctx, `
 		UPDATE gym.workouts SET finished_at = @finished_at, updated_at = now(), version = version + 1
 		WHERE id = @id AND deleted_at IS NULL
 	`, pgx.NamedArgs{argFinishedAt: finishedAt, "id": id})
 	if err != nil {
-		return domainworkout.Workout{}, err
+		return nil, err
 	}
 	if tag.RowsAffected() == 0 {
-		return domainworkout.Workout{}, domainworkout.ErrWorkoutNotFound
+		return nil, domainworkout.ErrWorkoutNotFound
 	}
 	return r.FindByID(ctx, id)
 }

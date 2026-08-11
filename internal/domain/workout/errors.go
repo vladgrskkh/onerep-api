@@ -4,6 +4,7 @@ import "errors"
 
 var (
 	ErrWorkoutNotFound          = errors.New("workout not found")
+	ErrWorkoutExerciseNotFound  = errors.New("workout exercise not found")
 	ErrActiveWorkout            = errors.New("user already has an active workout")
 	ErrInvalidUserID            = errors.New("user id must not be nil")
 	ErrInvalidWorkoutID         = errors.New("workout id must not be nil")

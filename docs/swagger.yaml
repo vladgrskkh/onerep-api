@@ -1,0 +1,1165 @@
+basePath: /v1
+definitions:
+  dto.AddExerciseRequest:
+    properties:
+      exercise_id:
+        type: string
+    required:
+    - exercise_id
+    type: object
+  dto.BodyWeightResponse:
+    properties:
+      created_at:
+        type: string
+      id:
+        type: string
+      measured_at:
+        type: string
+      weight_kg:
+        type: number
+    type: object
+  dto.ExerciseCreateRequest:
+    properties:
+      description:
+        type: string
+      muscle_group_ids:
+        items:
+          type: integer
+        type: array
+      name:
+        maxLength: 100
+        type: string
+      notes:
+        type: string
+    required:
+    - name
+    type: object
+  dto.ExerciseMediaResponse:
+    properties:
+      id:
+        type: string
+      media_type:
+        type: string
+      s3_key:
+        type: string
+      sort_order:
+        type: integer
+    type: object
+  dto.ExerciseResponse:
+    properties:
+      created_at:
+        type: string
+      created_by_user_id:
+        type: string
+      description:
+        type: string
+      id:
+        type: string
+      is_built_in:
+        type: boolean
+      media:
+        items:
+          $ref: '#/definitions/dto.ExerciseMediaResponse'
+        type: array
+      muscle_groups:
+        items:
+          $ref: '#/definitions/dto.MuscleGroupResponse'
+        type: array
+      name:
+        type: string
+      notes:
+        type: string
+      updated_at:
+        type: string
+      version:
+        type: integer
+    type: object
+  dto.ExerciseUpdateRequest:
+    properties:
+      description:
+        type: string
+      muscle_group_ids:
+        items:
+          type: integer
+        type: array
+      name:
+        maxLength: 100
+        type: string
+      notes:
+        type: string
+    type: object
+  dto.LogBodyWeightRequest:
+    properties:
+      measured_at:
+        type: string
+      weight_kg:
+        type: number
+    required:
+    - weight_kg
+    type: object
+  dto.LogSetRequest:
+    properties:
+      is_warmup:
+        type: boolean
+      reps:
+        type: integer
+      rest_seconds:
+        minimum: 0
+        type: integer
+      rpe:
+        maximum: 10
+        minimum: 1
+        type: integer
+      weight_kg:
+        type: number
+    required:
+    - reps
+    - weight_kg
+    type: object
+  dto.LogSetResponse:
+    properties:
+      estimated_1rm:
+        type: number
+      id:
+        type: string
+      is_pr:
+        type: boolean
+      is_warmup:
+        type: boolean
+      reps:
+        type: integer
+      rest_seconds:
+        type: integer
+      rpe:
+        type: integer
+      set_number:
+        type: integer
+      weight_kg:
+        type: number
+    type: object
+  dto.MuscleGroupResponse:
+    properties:
+      id:
+        type: integer
+      is_primary:
+        type: boolean
+    type: object
+  dto.OneRMResponse:
+    properties:
+      date:
+        type: string
+      estimated_1rm:
+        type: number
+    type: object
+  dto.StartWorkoutRequest:
+    properties:
+      template_id:
+        type: string
+    type: object
+  dto.TemplateCreateRequest:
+    properties:
+      description:
+        type: string
+      exercises:
+        items:
+          $ref: '#/definitions/dto.TemplateExerciseItem'
+        type: array
+      name:
+        maxLength: 100
+        type: string
+    required:
+    - name
+    type: object
+  dto.TemplateExerciseItem:
+    properties:
+      exercise_id:
+        type: string
+      planned_sets:
+        type: integer
+    required:
+    - exercise_id
+    type: object
+  dto.TemplateExerciseResponse:
+    properties:
+      exercise_id:
+        type: string
+      planned_sets:
+        type: integer
+      sort_order:
+        type: integer
+    type: object
+  dto.TemplateMediaResponse:
+    properties:
+      id:
+        type: string
+      media_type:
+        type: string
+      s3_key:
+        type: string
+      sort_order:
+        type: integer
+    type: object
+  dto.TemplateResponse:
+    properties:
+      created_at:
+        type: string
+      created_by_user_id:
+        type: string
+      description:
+        type: string
+      exercises:
+        items:
+          $ref: '#/definitions/dto.TemplateExerciseResponse'
+        type: array
+      id:
+        type: string
+      is_public:
+        type: boolean
+      media:
+        items:
+          $ref: '#/definitions/dto.TemplateMediaResponse'
+        type: array
+      name:
+        type: string
+      updated_at:
+        type: string
+      version:
+        type: integer
+    type: object
+  dto.TemplateUpdateRequest:
+    properties:
+      description:
+        type: string
+      exercises:
+        items:
+          $ref: '#/definitions/dto.TemplateExerciseItem'
+        type: array
+      name:
+        maxLength: 100
+        type: string
+    type: object
+  dto.VolumeResponse:
+    properties:
+      date:
+        type: string
+      muscle_group_id:
+        type: integer
+      total_kg:
+        type: number
+    type: object
+  dto.WorkoutExerciseResponse:
+    properties:
+      exercise_id:
+        type: string
+      id:
+        type: string
+      notes:
+        type: string
+      sets:
+        items:
+          $ref: '#/definitions/dto.WorkoutSetResponse'
+        type: array
+      sort_order:
+        type: integer
+    type: object
+  dto.WorkoutResponse:
+    properties:
+      created_at:
+        type: string
+      exercises:
+        items:
+          $ref: '#/definitions/dto.WorkoutExerciseResponse'
+        type: array
+      finished_at:
+        type: string
+      id:
+        type: string
+      notes:
+        type: string
+      started_at:
+        type: string
+      template_id:
+        type: string
+      updated_at:
+        type: string
+      user_id:
+        type: string
+    type: object
+  dto.WorkoutSetResponse:
+    properties:
+      id:
+        type: string
+      is_warmup:
+        type: boolean
+      reps:
+        type: integer
+      rest_seconds:
+        type: integer
+      rpe:
+        type: integer
+      set_number:
+        type: integer
+      weight_kg:
+        type: number
+    type: object
+  handler.ErrorDetail:
+    properties:
+      code:
+        type: string
+      details:
+        items:
+          $ref: '#/definitions/handler.ValidationDetail'
+        type: array
+      message:
+        type: string
+      user_message:
+        type: string
+    type: object
+  handler.ErrorResponse:
+    properties:
+      error:
+        $ref: '#/definitions/handler.ErrorDetail'
+    type: object
+  handler.ValidationDetail:
+    properties:
+      field:
+        type: string
+      param:
+        type: string
+      tag:
+        type: string
+    type: object
+host: localhost:8081
+info:
+  contact: {}
+  description: Core gym domain service for OneRep — exercises, templates, workouts,
+    progress
+  title: OneRep Gym API
+  version: "1.0"
+paths:
+  /exercises:
+    get:
+      consumes:
+      - application/json
+      description: List exercises, optionally filtered by search, muscle group, and
+        last-updated time
+      parameters:
+      - description: Search by name
+        in: query
+        name: search
+        type: string
+      - description: Filter by muscle group name
+        in: query
+        name: muscle_group
+        type: string
+      - description: Only exercises updated after this RFC 3339 timestamp
+        in: query
+        name: since
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/dto.ExerciseResponse'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: List exercises
+      tags:
+      - exercises
+    post:
+      consumes:
+      - application/json
+      description: Create a custom exercise for the authenticated user
+      parameters:
+      - description: Exercise data
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/dto.ExerciseCreateRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/dto.ExerciseResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Create an exercise
+      tags:
+      - exercises
+  /exercises/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Soft-delete an existing exercise
+      parameters:
+      - description: Exercise ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Delete an exercise
+      tags:
+      - exercises
+    get:
+      consumes:
+      - application/json
+      description: Get an exercise by ID, including its media and muscle groups
+      parameters:
+      - description: Exercise ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.ExerciseResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get an exercise
+      tags:
+      - exercises
+    patch:
+      consumes:
+      - application/json
+      description: Patch an existing exercise; null fields are left unchanged
+      parameters:
+      - description: Exercise ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Fields to update
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/dto.ExerciseUpdateRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.ExerciseResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Update an exercise
+      tags:
+      - exercises
+  /progress/1rm:
+    get:
+      consumes:
+      - application/json
+      description: Get the authenticated user's estimated one-rep max history for
+        an exercise, optionally filtered by date range
+      parameters:
+      - description: Exercise ID
+        in: query
+        name: exercise_id
+        required: true
+        type: string
+      - description: Start of the date range (RFC 3339)
+        in: query
+        name: from
+        type: string
+      - description: End of the date range (RFC 3339)
+        in: query
+        name: to
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/dto.OneRMResponse'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get 1RM progress
+      tags:
+      - progress
+  /progress/body-weight:
+    get:
+      consumes:
+      - application/json
+      description: List the authenticated user's body weight entries, optionally filtered
+        by last-updated time
+      parameters:
+      - description: Only entries updated after this RFC 3339 timestamp
+        in: query
+        name: since
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/dto.BodyWeightResponse'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: List body weight entries
+      tags:
+      - progress
+    post:
+      consumes:
+      - application/json
+      description: Record a body weight entry for the authenticated user; measured_at
+        defaults to now
+      parameters:
+      - description: Body weight data
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/dto.LogBodyWeightRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/dto.BodyWeightResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Log a body weight
+      tags:
+      - progress
+  /progress/volume:
+    get:
+      consumes:
+      - application/json
+      description: Get the authenticated user's total volume per muscle group, optionally
+        filtered by date range
+      parameters:
+      - description: Start of the date range (RFC 3339)
+        in: query
+        name: from
+        type: string
+      - description: End of the date range (RFC 3339)
+        in: query
+        name: to
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/dto.VolumeResponse'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get volume progress
+      tags:
+      - progress
+  /templates:
+    get:
+      consumes:
+      - application/json
+      description: List the authenticated user's templates, optionally filtered by
+        last-updated time
+      parameters:
+      - description: Only templates updated after this RFC 3339 timestamp
+        in: query
+        name: since
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/dto.TemplateResponse'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: List templates
+      tags:
+      - templates
+    post:
+      consumes:
+      - application/json
+      description: Create a custom template with a list of exercises and planned sets
+      parameters:
+      - description: Template data
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/dto.TemplateCreateRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/dto.TemplateResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Create a template
+      tags:
+      - templates
+  /templates/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Soft-delete an owned template
+      parameters:
+      - description: Template ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Delete a template
+      tags:
+      - templates
+    get:
+      consumes:
+      - application/json
+      description: Get a template by ID, including its exercises and media
+      parameters:
+      - description: Template ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.TemplateResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get a template
+      tags:
+      - templates
+    patch:
+      consumes:
+      - application/json
+      description: Patch an existing template; null fields are left unchanged
+      parameters:
+      - description: Template ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Fields to update
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/dto.TemplateUpdateRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.TemplateResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Update a template
+      tags:
+      - templates
+  /templates/{id}/fork:
+    post:
+      consumes:
+      - application/json
+      description: Copy a public template, or an own private template, including its
+        exercises and media, as the authenticated user's own
+      parameters:
+      - description: Template ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/dto.TemplateResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Fork a template
+      tags:
+      - templates
+  /templates/{id}/publish:
+    post:
+      consumes:
+      - application/json
+      description: Make an owned template publicly visible to other users
+      parameters:
+      - description: Template ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.TemplateResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Publish a template
+      tags:
+      - templates
+  /workouts:
+    get:
+      consumes:
+      - application/json
+      description: List the authenticated user's workouts, optionally filtered by
+        last-updated time
+      parameters:
+      - description: Only workouts updated after this RFC 3339 timestamp
+        in: query
+        name: since
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/dto.WorkoutResponse'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: List workouts
+      tags:
+      - workouts
+    post:
+      consumes:
+      - application/json
+      description: Start a workout for the authenticated user, optionally from a template;
+        an empty body starts without a template
+      parameters:
+      - description: Template ID, optional
+        in: body
+        name: request
+        schema:
+          $ref: '#/definitions/dto.StartWorkoutRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/dto.WorkoutResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Start a workout
+      tags:
+      - workouts
+  /workouts/{id}:
+    get:
+      consumes:
+      - application/json
+      description: Get a workout by ID, including its exercises and sets
+      parameters:
+      - description: Workout ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.WorkoutResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get a workout
+      tags:
+      - workouts
+  /workouts/{id}/exercises:
+    post:
+      consumes:
+      - application/json
+      description: Append an exercise to the authenticated user's workout
+      parameters:
+      - description: Workout ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Exercise to add
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/dto.AddExerciseRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/dto.WorkoutExerciseResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Add an exercise to a workout
+      tags:
+      - workouts
+  /workouts/{id}/exercises/{exId}/sets:
+    post:
+      consumes:
+      - application/json
+      description: Log a set against a workout exercise; returns the estimated one-rep
+        max (Epley formula) and whether it is a new personal record
+      parameters:
+      - description: Workout ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Workout exercise ID
+        in: path
+        name: exId
+        required: true
+        type: string
+      - description: Set data
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/dto.LogSetRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/dto.LogSetResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Log a set
+      tags:
+      - workouts
+  /workouts/{id}/finish:
+    patch:
+      consumes:
+      - application/json
+      description: Mark the authenticated user's workout as completed and enqueue
+        its volume recalculation
+      parameters:
+      - description: Workout ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.WorkoutResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Finish a workout
+      tags:
+      - workouts
+securityDefinitions:
+  BearerAuth:
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"

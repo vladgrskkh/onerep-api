@@ -1,4 +1,82 @@
 with-expecter: true
-mockname: "Mock{{.InterfaceName}}"
-outpkg: "mocks"
-filename: "{{.InterfaceName | snakecase}}.gen.go"
+packages:
+  github.com/vladgrskkh/onerep-api/internal/service/exercise:
+    config:
+      dir: internal/service/exercise/mocks
+      mockname: "Mock{{.InterfaceName}}"
+      outpkg: "mocks"
+      filename: "{{.InterfaceName | snakecase}}.gen.go"
+    interfaces:
+      ExerciseRepository:
+      MuscleGroupRepository:
+      TransactionManager:
+  github.com/vladgrskkh/onerep-api/internal/handler/exercise:
+    config:
+      dir: internal/handler/exercise/mocks
+      mockname: "Mock{{.InterfaceName}}"
+      outpkg: "mocks"
+      filename: "{{.InterfaceName | snakecase}}.gen.go"
+    interfaces:
+      ExerciseService:
+  github.com/vladgrskkh/onerep-api/internal/service/template:
+    config:
+      dir: internal/service/template/mocks
+      mockname: "Mock{{.InterfaceName}}"
+      outpkg: "mocks"
+      filename: "{{.InterfaceName | snakecase}}.gen.go"
+    interfaces:
+      TemplateRepository:
+      TransactionManager:
+  github.com/vladgrskkh/onerep-api/internal/handler/template:
+    config:
+      dir: internal/handler/template/mocks
+      mockname: "Mock{{.InterfaceName}}"
+      outpkg: "mocks"
+      filename: "{{.InterfaceName | snakecase}}.gen.go"
+    interfaces:
+      TemplateService:
+  github.com/vladgrskkh/onerep-api/internal/service/workout:
+    config:
+      dir: internal/service/workout/mocks
+      mockname: "Mock{{.InterfaceName}}"
+      outpkg: "mocks"
+      filename: "{{.InterfaceName | snakecase}}.gen.go"
+    interfaces:
+      WorkoutRepository:
+      TemplateRepository:
+      ProgressRepository:
+      VolumeQueue:
+      TransactionManager:
+  github.com/vladgrskkh/onerep-api/internal/handler/workout:
+    config:
+      dir: internal/handler/workout/mocks
+      mockname: "Mock{{.InterfaceName}}"
+      outpkg: "mocks"
+      filename: "{{.InterfaceName | snakecase}}.gen.go"
+    interfaces:
+      WorkoutService:
+  github.com/vladgrskkh/onerep-api/internal/service/progress:
+    config:
+      dir: internal/service/progress/mocks
+      mockname: "Mock{{.InterfaceName}}"
+      outpkg: "mocks"
+      filename: "{{.InterfaceName | snakecase}}.gen.go"
+    interfaces:
+      ProgressRepository:
+  github.com/vladgrskkh/onerep-api/internal/service/bodyweight:
+    config:
+      dir: internal/service/bodyweight/mocks
+      mockname: "Mock{{.InterfaceName}}"
+      outpkg: "mocks"
+      filename: "{{.InterfaceName | snakecase}}.gen.go"
+    interfaces:
+      BodyWeightRepository:
+  github.com/vladgrskkh/onerep-api/internal/handler/progress:
+    config:
+      dir: internal/handler/progress/mocks
+      mockname: "Mock{{.InterfaceName}}"
+      outpkg: "mocks"
+      filename: "{{.InterfaceName | snakecase}}.gen.go"
+    interfaces:
+      ProgressService:
+      BodyWeightService:

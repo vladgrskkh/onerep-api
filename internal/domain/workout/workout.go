@@ -9,13 +9,13 @@ import (
 type Workout struct {
 	ID         uuid.UUID
 	UserID     uuid.UUID
-	TemplateID *uuid.UUID
+	TemplateID uuid.UUID
 	StartedAt  time.Time
-	FinishedAt *time.Time
+	FinishedAt time.Time
 	Notes      string
 	CreatedAt  time.Time
 	UpdatedAt  time.Time
-	DeletedAt  *time.Time
+	DeletedAt  time.Time
 	Version    int
 	Exercises  []WorkoutExercise
 }
@@ -35,12 +35,21 @@ type WorkoutSet struct {
 	SetNumber         int
 	WeightKg          float64
 	Reps              int
-	RPE               *int
-	RestSeconds       *int
+	RPE               int
+	RestSeconds       int
 	IsWarmup          bool
 }
 
-func NewWorkout(userID uuid.UUID, templateID *uuid.UUID) (Workout, error) {
+// SetResult reports a logged set together with its PR status and the
+// estimated one-rep max it achieved.
+type SetResult struct {
+	WorkoutSet
+
+	IsPR         bool
+	Estimated1RM float64
+}
+
+func NewWorkout(userID, templateID uuid.UUID) (Workout, error) {
 	if userID == uuid.Nil {
 		return Workout{}, ErrInvalidUserID
 	}
@@ -74,8 +83,8 @@ func NewWorkoutSet(
 	workoutExerciseID uuid.UUID,
 	weightKg float64,
 	reps int,
-	rpe *int,
-	restSeconds *int,
+	rpe int,
+	restSeconds int,
 	isWarmup bool,
 ) (WorkoutSet, error) {
 	if workoutExerciseID == uuid.Nil {
@@ -87,10 +96,10 @@ func NewWorkoutSet(
 	if reps <= 0 {
 		return WorkoutSet{}, ErrInvalidReps
 	}
-	if rpe != nil && (*rpe < 1 || *rpe > 10) {
+	if rpe != 0 && (rpe < 1 || rpe > 10) {
 		return WorkoutSet{}, ErrInvalidRPE
 	}
-	if restSeconds != nil && *restSeconds < 0 {
+	if restSeconds < 0 {
 		return WorkoutSet{}, ErrInvalidRestSeconds
 	}
 	return WorkoutSet{

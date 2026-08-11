@@ -31,21 +31,21 @@ func NewProgressRepo(pool *pgxpool.Pool) *ProgressRepo {
 func (r *ProgressRepo) Get1RM(
 	ctx context.Context,
 	exerciseID, userID uuid.UUID,
-	from, to *time.Time,
-) ([]domainprogress.Progress1RM, error) {
+	from, to time.Time,
+) ([]*domainprogress.Progress1RM, error) {
 	var query strings.Builder
 	query.WriteString(
 		`SELECT exercise_id, user_id, date, estimated_1rm FROM gym.progress_1rm WHERE exercise_id = @exercise_id AND user_id = @user_id`,
 	)
 	args := pgx.NamedArgs{argExerciseID: exerciseID, argUserID: userID}
 
-	if from != nil {
+	if !from.IsZero() {
 		query.WriteString(` AND date >= @from`)
-		args["from"] = *from
+		args["from"] = from
 	}
-	if to != nil {
+	if !to.IsZero() {
 		query.WriteString(` AND date <= @to`)
-		args["to"] = *to
+		args["to"] = to
 	}
 	query.WriteString(` ORDER BY date ASC`)
 
@@ -55,9 +55,9 @@ func (r *ProgressRepo) Get1RM(
 	}
 	defer rows.Close()
 
-	var progress []domainprogress.Progress1RM
+	var progress []*domainprogress.Progress1RM
 	for rows.Next() {
-		var p domainprogress.Progress1RM
+		p := &domainprogress.Progress1RM{}
 		if scanErr := rows.Scan(&p.ExerciseID, &p.UserID, &p.Date, &p.Estimated1RM); scanErr != nil {
 			return nil, scanErr
 		}
@@ -69,21 +69,21 @@ func (r *ProgressRepo) Get1RM(
 func (r *ProgressRepo) GetVolume(
 	ctx context.Context,
 	userID uuid.UUID,
-	from, to *time.Time,
-) ([]domainprogress.ProgressVolume, error) {
+	from, to time.Time,
+) ([]*domainprogress.ProgressVolume, error) {
 	var query strings.Builder
 	query.WriteString(
 		`SELECT muscle_group_id, user_id, date, total_kg FROM gym.progress_volume WHERE user_id = @user_id`,
 	)
 	args := pgx.NamedArgs{argUserID: userID}
 
-	if from != nil {
+	if !from.IsZero() {
 		query.WriteString(` AND date >= @from`)
-		args["from"] = *from
+		args["from"] = from
 	}
-	if to != nil {
+	if !to.IsZero() {
 		query.WriteString(` AND date <= @to`)
-		args["to"] = *to
+		args["to"] = to
 	}
 	query.WriteString(` ORDER BY date ASC`)
 
@@ -93,9 +93,9 @@ func (r *ProgressRepo) GetVolume(
 	}
 	defer rows.Close()
 
-	var volumes []domainprogress.ProgressVolume
+	var volumes []*domainprogress.ProgressVolume
 	for rows.Next() {
-		var v domainprogress.ProgressVolume
+		v := &domainprogress.ProgressVolume{}
 		if scanErr := rows.Scan(&v.MuscleGroupID, &v.UserID, &v.Date, &v.TotalKG); scanErr != nil {
 			return nil, scanErr
 		}

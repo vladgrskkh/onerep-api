@@ -78,8 +78,8 @@ func (s *TemplateRepoTestSuite) newTestTemplate(name string) domaintemplate.Temp
 	return t
 }
 
-func (s *TemplateRepoTestSuite) createTestTemplate(t domaintemplate.Template) domaintemplate.Template {
-	var created domaintemplate.Template
+func (s *TemplateRepoTestSuite) createTestTemplate(t domaintemplate.Template) *domaintemplate.Template {
+	var created *domaintemplate.Template
 	err := s.trManager.Do(s.ctx, func(ctx context.Context) error {
 		var err error
 		created, err = s.repo.Create(ctx, t)
@@ -96,8 +96,8 @@ func (s *TemplateRepoTestSuite) createTestTemplate(t domaintemplate.Template) do
 	return created
 }
 
-func (s *TemplateRepoTestSuite) updateTestTemplate(t domaintemplate.Template) (domaintemplate.Template, error) {
-	var updated domaintemplate.Template
+func (s *TemplateRepoTestSuite) updateTestTemplate(t domaintemplate.Template) (*domaintemplate.Template, error) {
+	var updated *domaintemplate.Template
 	err := s.trManager.Do(s.ctx, func(ctx context.Context) error {
 		var err error
 		updated, err = s.repo.Update(ctx, t)
@@ -131,7 +131,7 @@ func (s *TemplateRepoTestSuite) TestCreateAndFindByID() {
 
 func (s *TemplateRepoTestSuite) TestCreate_HeaderOnly() {
 	t := s.newTestTemplate("HeaderOnly-" + uuid.NewString())
-	var created domaintemplate.Template
+	var created *domaintemplate.Template
 	err := s.trManager.Do(s.ctx, func(ctx context.Context) error {
 		var err error
 		created, err = s.repo.Create(ctx, t)
@@ -151,7 +151,7 @@ func (s *TemplateRepoTestSuite) TestBatchInsertExercises_AndMedia() {
 	t := s.newTestTemplate("BatchInsert-" + uuid.NewString())
 	t.Exercises = nil
 	t.Media = nil
-	var created domaintemplate.Template
+	var created *domaintemplate.Template
 	err := s.trManager.Do(s.ctx, func(ctx context.Context) error {
 		var err error
 		created, err = s.repo.Create(ctx, t)
@@ -238,7 +238,7 @@ func (s *TemplateRepoTestSuite) TestList_UserIDFilter() {
 	t2.CreatedByUserID = uuid.New()
 	s.createTestTemplate(t2)
 
-	listed, err := s.repo.List(s.ctx, domaintemplate.TemplateFilter{UserID: &userID})
+	listed, err := s.repo.List(s.ctx, domaintemplate.TemplateFilter{UserID: userID})
 	s.Require().NoError(err)
 	s.Require().Len(listed, 1)
 	s.Equal(t1.ID, listed[0].ID)
@@ -258,13 +258,13 @@ func (s *TemplateRepoTestSuite) TestList_IsPublicFilter() {
 	s.createTestTemplate(t2)
 
 	isPublic := true
-	listed, err := s.repo.List(s.ctx, domaintemplate.TemplateFilter{UserID: &userID1, IsPublic: &isPublic})
+	listed, err := s.repo.List(s.ctx, domaintemplate.TemplateFilter{UserID: userID1, IsPublic: &isPublic})
 	s.Require().NoError(err)
 	s.Require().Len(listed, 1)
 	s.Equal(t1.ID, listed[0].ID)
 
 	isPublic = false
-	listed, err = s.repo.List(s.ctx, domaintemplate.TemplateFilter{UserID: &userID2, IsPublic: &isPublic})
+	listed, err = s.repo.List(s.ctx, domaintemplate.TemplateFilter{UserID: userID2, IsPublic: &isPublic})
 	s.Require().NoError(err)
 	s.Require().Len(listed, 1)
 	s.Equal(t2.ID, listed[0].ID)
@@ -279,13 +279,13 @@ func (s *TemplateRepoTestSuite) TestList_SinceFilter() {
 	s.createTestTemplate(t)
 
 	since := time.Now().Add(-3 * time.Hour)
-	listed, err := s.repo.List(s.ctx, domaintemplate.TemplateFilter{UserID: &userID, Since: &since})
+	listed, err := s.repo.List(s.ctx, domaintemplate.TemplateFilter{UserID: userID, Since: since})
 	s.Require().NoError(err)
 	s.Require().Len(listed, 1)
 	s.Equal(t.ID, listed[0].ID)
 
 	since = time.Now().Add(-time.Hour)
-	listed, err = s.repo.List(s.ctx, domaintemplate.TemplateFilter{UserID: &userID, Since: &since})
+	listed, err = s.repo.List(s.ctx, domaintemplate.TemplateFilter{UserID: userID, Since: since})
 	s.Require().NoError(err)
 	s.Empty(listed)
 }
@@ -312,7 +312,7 @@ func (s *TemplateRepoTestSuite) TestUpdate_HeaderKeepsChildren() {
 	t.Name = "Updated-" + uuid.NewString()
 	t.IsPublic = true
 
-	updated, err := s.updateTestTemplate(t)
+	updated, err := s.updateTestTemplate(*t)
 	s.Require().NoError(err)
 	s.Equal(2, updated.Version)
 
@@ -338,10 +338,10 @@ func (s *TemplateRepoTestSuite) TestUpdate_ReplacesChildren() {
 		{ID: uuid.Must(uuid.NewV7()), TemplateID: t.ID, MediaType: domaintemplate.MediaTypePhoto, SortOrder: 0, S3Key: "templates/replacement.jpg"},
 	}
 
-	var updated domaintemplate.Template
+	var updated *domaintemplate.Template
 	err := s.trManager.Do(s.ctx, func(ctx context.Context) error {
 		var err error
-		updated, err = s.repo.Update(ctx, t)
+		updated, err = s.repo.Update(ctx, *t)
 		if err != nil {
 			return err
 		}
@@ -369,11 +369,11 @@ func (s *TemplateRepoTestSuite) TestUpdate_VersionConflict() {
 	t := s.createTestTemplate(s.newTestTemplate("VersionConflict-" + uuid.NewString()))
 
 	t.Name = "first update"
-	_, err := s.updateTestTemplate(t)
+	_, err := s.updateTestTemplate(*t)
 	s.Require().NoError(err)
 
 	t.Version = 1
-	_, err = s.updateTestTemplate(t)
+	_, err = s.updateTestTemplate(*t)
 	s.ErrorIs(err, domaintemplate.ErrTemplateNotFound)
 }
 

@@ -95,7 +95,7 @@ func (s *ProgressRepoTestSuite) TestUpsert1RM_InsertThenUpdate() {
 	s.upsertTest1RM(userID, date, 100)
 	s.upsertTest1RM(userID, date, 120)
 
-	rows, err := s.repo.Get1RM(s.ctx, s.exerciseID, userID, nil, nil)
+	rows, err := s.repo.Get1RM(s.ctx, s.exerciseID, userID, time.Time{}, time.Time{})
 	s.Require().NoError(err)
 	s.Require().Len(rows, 1)
 	s.Equal(date, rows[0].Date)
@@ -115,7 +115,7 @@ func (s *ProgressRepoTestSuite) TestGet1RM_NoRange() {
 	s.upsertTest1RM(userID, d2, 110)
 	s.upsertTest1RM(userID, d3, 120)
 
-	rows, err := s.repo.Get1RM(s.ctx, s.exerciseID, userID, nil, nil)
+	rows, err := s.repo.Get1RM(s.ctx, s.exerciseID, userID, time.Time{}, time.Time{})
 	s.Require().NoError(err)
 	s.Require().Len(rows, 3)
 	s.Equal(d1, rows[0].Date)
@@ -134,23 +134,23 @@ func (s *ProgressRepoTestSuite) TestGet1RM_WithRange() {
 
 	from := time.Date(2026, time.August, 2, 0, 0, 0, 0, time.UTC)
 	to := time.Date(2026, time.August, 8, 0, 0, 0, 0, time.UTC)
-	rows, err := s.repo.Get1RM(s.ctx, s.exerciseID, userID, &from, &to)
+	rows, err := s.repo.Get1RM(s.ctx, s.exerciseID, userID, from, to)
 	s.Require().NoError(err)
 	s.Require().Len(rows, 1)
 	s.Equal(d2, rows[0].Date)
 	s.Equal(110.0, rows[0].Estimated1RM)
 
-	rows, err = s.repo.Get1RM(s.ctx, s.exerciseID, userID, &from, nil)
+	rows, err = s.repo.Get1RM(s.ctx, s.exerciseID, userID, from, time.Time{})
 	s.Require().NoError(err)
 	s.Require().Len(rows, 2)
 
-	rows, err = s.repo.Get1RM(s.ctx, s.exerciseID, userID, nil, &to)
+	rows, err = s.repo.Get1RM(s.ctx, s.exerciseID, userID, time.Time{}, to)
 	s.Require().NoError(err)
 	s.Require().Len(rows, 2)
 }
 
 func (s *ProgressRepoTestSuite) TestGet1RM_Empty() {
-	rows, err := s.repo.Get1RM(s.ctx, s.exerciseID, uuid.New(), nil, nil)
+	rows, err := s.repo.Get1RM(s.ctx, s.exerciseID, uuid.New(), time.Time{}, time.Time{})
 	s.Require().NoError(err)
 	s.Empty(rows)
 }
@@ -191,7 +191,7 @@ func (s *ProgressRepoTestSuite) TestGetVolume_NoRange() {
 	s.insertTestVolume(1, userID, d1, 1000)
 	s.insertTestVolume(2, userID, d2, 2000)
 
-	volumes, err := s.repo.GetVolume(s.ctx, userID, nil, nil)
+	volumes, err := s.repo.GetVolume(s.ctx, userID, time.Time{}, time.Time{})
 	s.Require().NoError(err)
 	s.Require().Len(volumes, 2)
 	s.Equal(d1, volumes[0].Date)
@@ -212,7 +212,7 @@ func (s *ProgressRepoTestSuite) TestGetVolume_WithRange() {
 
 	from := time.Date(2026, time.August, 2, 0, 0, 0, 0, time.UTC)
 	to := time.Date(2026, time.August, 8, 0, 0, 0, 0, time.UTC)
-	volumes, err := s.repo.GetVolume(s.ctx, userID, &from, &to)
+	volumes, err := s.repo.GetVolume(s.ctx, userID, from, to)
 	s.Require().NoError(err)
 	s.Require().Len(volumes, 1)
 	s.Equal(d2, volumes[0].Date)
@@ -220,7 +220,7 @@ func (s *ProgressRepoTestSuite) TestGetVolume_WithRange() {
 }
 
 func (s *ProgressRepoTestSuite) TestGetVolume_Empty() {
-	volumes, err := s.repo.GetVolume(s.ctx, uuid.New(), nil, nil)
+	volumes, err := s.repo.GetVolume(s.ctx, uuid.New(), time.Time{}, time.Time{})
 	s.Require().NoError(err)
 	s.Empty(volumes)
 }

@@ -7,6 +7,6 @@ import (
 )
 
 type WorkoutFilter struct {
-	UserID *uuid.UUID
-	Since  *time.Time
+	UserID uuid.UUID
+	Since  time.Time
 }
