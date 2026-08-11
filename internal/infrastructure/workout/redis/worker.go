@@ -15,6 +15,10 @@ import (
 // re-checking for shutdown.
 const volumeBlockTimeout = 5 * time.Second
 
+// brpopErrorBackoff pauses the loop after a failed BRPop so a Redis outage
+// does not busy-spin.
+const brpopErrorBackoff = time.Second
+
 // VolumeCalculator recomputes and stores the progress volume of a workout.
 type VolumeCalculator interface {
 	Recalculate(ctx context.Context, workoutID, userID uuid.UUID) error
@@ -51,6 +55,7 @@ func (w *Worker) Run(ctx context.Context) {
 				return
 			}
 			w.logger.Error("brpop failed", "error", err)
+			time.Sleep(brpopErrorBackoff)
 			continue
 		}
 		if err := w.handleJob(ctx, result[1]); err != nil {

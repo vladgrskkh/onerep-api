@@ -3,6 +3,7 @@ module github.com/vladgrskkh/onerep-api
 go 1.26
 
 require (
+	github.com/alicebob/miniredis/v2 v2.38.0
 	github.com/avito-tech/go-transaction-manager/drivers/pgxv5/v2 v2.0.4
 	github.com/avito-tech/go-transaction-manager/trm/v2 v2.0.2
 	github.com/go-chi/chi/v5 v5.3.1
@@ -11,6 +12,7 @@ require (
 	github.com/google/uuid v1.6.0
 	github.com/jackc/pgx/v5 v5.10.0
 	github.com/pressly/goose/v3 v3.27.3
+	github.com/redis/go-redis/v9 v9.22.0
 	github.com/stretchr/testify v1.11.1
 	github.com/swaggo/swag/v2 v2.0.0-rc5
 	github.com/vektra/mockery/v2 v2.53.6
@@ -43,7 +45,6 @@ require (
 	github.com/alexkohler/nakedret/v2 v2.0.6 // indirect
 	github.com/alexkohler/prealloc v1.1.0 // indirect
 	github.com/alfatraining/structtag v1.0.0 // indirect
-	github.com/alicebob/miniredis/v2 v2.38.0 // indirect
 	github.com/alingse/asasalint v0.0.11 // indirect
 	github.com/alingse/nilnesserr v0.2.0 // indirect
 	github.com/ashanbrown/forbidigo/v2 v2.3.1 // indirect
@@ -185,7 +186,6 @@ require (
 	github.com/quasilyte/regex/syntax v0.0.0-20210819130434-b3f0c404a727 // indirect
 	github.com/quasilyte/stdinfo v0.0.0-20220114132959-f7386bf02567 // indirect
 	github.com/raeperd/recvcheck v0.2.0 // indirect
-	github.com/redis/go-redis/v9 v9.22.0 // indirect
 	github.com/rivo/uniseg v0.4.7 // indirect
 	github.com/rogpeppe/go-internal v1.14.1 // indirect
 	github.com/rs/zerolog v1.34.0 // indirect

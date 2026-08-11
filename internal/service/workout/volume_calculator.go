@@ -23,6 +23,7 @@ type VolumeCalculator struct {
 	workouts  WorkoutRepository
 	exercises serviceexercise.ExerciseRepository
 	progress  serviceprogress.ProgressRepository
+	trManager TransactionManager
 }
 
 // NewVolumeCalculator creates a calculator reading workouts and exercises and
@@ -31,12 +32,20 @@ func NewVolumeCalculator(
 	workouts WorkoutRepository,
 	exercises serviceexercise.ExerciseRepository,
 	progress serviceprogress.ProgressRepository,
+	trManager TransactionManager,
 ) *VolumeCalculator {
-	return &VolumeCalculator{workouts: workouts, exercises: exercises, progress: progress}
+	return &VolumeCalculator{
+		workouts:  workouts,
+		exercises: exercises,
+		progress:  progress,
+		trManager: trManager,
+	}
 }
 
 // Recalculate loads the workout, aggregates its set volume by muscle group,
-// and upserts one progress volume row per group.
+// and upserts one progress volume row per group. The upserts run in a single
+// transaction so that a mid-loop failure rolls back every group and the
+// stored totals stay consistent.
 func (c *VolumeCalculator) Recalculate(ctx context.Context, workoutID, userID uuid.UUID) error {
 	workout, err := c.workouts.FindByID(ctx, workoutID)
 	if err != nil {
@@ -59,16 +68,18 @@ func (c *VolumeCalculator) Recalculate(ctx context.Context, workoutID, userID uu
 	}
 
 	date := workout.StartedAt.UTC().Truncate(day)
-	for muscleGroupID, total := range totals {
-		p, err := domainprogress.NewProgressVolume(muscleGroupID, userID, date, total)
-		if err != nil {
-			return err
+	return c.trManager.Do(ctx, func(ctx context.Context) error {
+		for muscleGroupID, total := range totals {
+			p, err := domainprogress.NewProgressVolume(muscleGroupID, userID, date, total)
+			if err != nil {
+				return err
+			}
+			if err := c.progress.UpsertVolume(ctx, p); err != nil {
+				return err
+			}
 		}
-		if err := c.progress.UpsertVolume(ctx, p); err != nil {
-			return err
-		}
-	}
-	return nil
+		return nil
+	})
 }
 
 // setVolume returns the total tonnage of the exercise's non-warm-up sets.

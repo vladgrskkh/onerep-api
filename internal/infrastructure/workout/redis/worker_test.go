@@ -23,6 +23,10 @@ import (
 // block timeout elapses.
 const workerStopTimeout = 7 * time.Second
 
+// outageRecoveryWait keeps the server failing long enough for the worker to
+// hit the BRPop error path and start backing off.
+const outageRecoveryWait = 2 * time.Second
+
 type WorkerTestSuite struct {
 	suite.Suite
 
@@ -108,6 +112,23 @@ func (s *WorkerTestSuite) TestRun_StopsImmediatelyWhenCancelled() {
 
 	done := s.runWorker(ctx)
 	s.awaitStop(func() {}, done)
+}
+
+func (s *WorkerTestSuite) TestRun_SurvivesRedisOutage() {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	s.server.SetError("server down")
+	done := s.runWorker(ctx)
+	time.Sleep(outageRecoveryWait)
+	s.server.SetError("")
+
+	workout := domainworkout.Workout{ID: uuid.Must(uuid.NewV7()), UserID: uuid.Must(uuid.NewV7())}
+	s.Require().NoError(s.queue.EnqueueVolumeCalc(ctx, workout))
+	recalculated := s.expectRecalculate(workout, nil)
+
+	s.awaitCall(recalculated)
+	s.awaitStop(cancel, done)
 }
 
 // expectRecalculate wires the calculator to signal on the returned channel
