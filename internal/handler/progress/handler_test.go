@@ -6,7 +6,6 @@ import (
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
-	"strings"
 	"testing"
 	"time"
 
@@ -21,6 +20,7 @@ import (
 	progresshandler "github.com/vladgrskkh/onerep-api/internal/handler/progress"
 	"github.com/vladgrskkh/onerep-api/internal/handler/progress/dto"
 	progressmocks "github.com/vladgrskkh/onerep-api/internal/handler/progress/mocks"
+	"github.com/vladgrskkh/onerep-api/internal/handler/testutil"
 	servicebodyweight "github.com/vladgrskkh/onerep-api/internal/service/bodyweight"
 )
 
@@ -43,44 +43,32 @@ func (s *HandlerTestSuite) SetupTest() {
 	s.bodyWeightSvc = progressmocks.NewMockBodyWeightService(s.T())
 	s.handler = progresshandler.NewProgressHandler(s.progressSvc, s.bodyWeightSvc, slog.New(slog.DiscardHandler))
 
-	router := chi.NewRouter()
-	router.Get("/v1/progress/1rm", s.handler.Get1RM)
-	router.Get("/v1/progress/volume", s.handler.GetVolume)
-	router.Get("/v1/progress/body-weight", s.handler.GetBodyWeight)
-	router.Post("/v1/progress/body-weight", s.handler.LogBodyWeight)
-	s.router = router
-}
-
-func (s *HandlerTestSuite) serve(method, target, body string, userID uuid.UUID) *httptest.ResponseRecorder {
-	req := httptest.NewRequest(method, target, strings.NewReader(body))
-	if userID != uuid.Nil {
-		req = req.WithContext(handler.WithUserID(req.Context(), userID))
-	}
-	w := httptest.NewRecorder()
-	s.router.ServeHTTP(w, req)
-	return w
+	s.router = testutil.NewRouter(
+		testutil.Route{Method: http.MethodGet, Pattern: "/v1/progress/1rm", Handler: s.handler.Get1RM},
+		testutil.Route{Method: http.MethodGet, Pattern: "/v1/progress/volume", Handler: s.handler.GetVolume},
+		testutil.Route{Method: http.MethodGet, Pattern: "/v1/progress/body-weight", Handler: s.handler.GetBodyWeight},
+		testutil.Route{Method: http.MethodPost, Pattern: "/v1/progress/body-weight", Handler: s.handler.LogBodyWeight},
+	)
 }
 
 func (s *HandlerTestSuite) decodeError(w *httptest.ResponseRecorder) handler.ErrorResponse {
-	var resp handler.ErrorResponse
-	s.Require().NoError(json.Unmarshal(w.Body.Bytes(), &resp))
-	return resp
+	return testutil.DecodeError(s.T(), w)
 }
 
 func (s *HandlerTestSuite) get1RM(target string, userID uuid.UUID) *httptest.ResponseRecorder {
-	return s.serve(http.MethodGet, target, "", userID)
+	return testutil.Serve(s.router, http.MethodGet, target, "", userID)
 }
 
 func (s *HandlerTestSuite) getVolume(target string, userID uuid.UUID) *httptest.ResponseRecorder {
-	return s.serve(http.MethodGet, target, "", userID)
+	return testutil.Serve(s.router, http.MethodGet, target, "", userID)
 }
 
 func (s *HandlerTestSuite) getBodyWeight(target string, userID uuid.UUID) *httptest.ResponseRecorder {
-	return s.serve(http.MethodGet, target, "", userID)
+	return testutil.Serve(s.router, http.MethodGet, target, "", userID)
 }
 
 func (s *HandlerTestSuite) logBodyWeight(body string, userID uuid.UUID) *httptest.ResponseRecorder {
-	return s.serve(http.MethodPost, "/v1/progress/body-weight", body, userID)
+	return testutil.Serve(s.router, http.MethodPost, "/v1/progress/body-weight", body, userID)
 }
 
 func (s *HandlerTestSuite) TestGet1RM_Success() {

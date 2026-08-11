@@ -5,7 +5,6 @@ import (
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
-	"strings"
 	"testing"
 	"time"
 
@@ -19,6 +18,7 @@ import (
 	"github.com/vladgrskkh/onerep-api/internal/handler/exercise"
 	"github.com/vladgrskkh/onerep-api/internal/handler/exercise/dto"
 	exercisemocks "github.com/vladgrskkh/onerep-api/internal/handler/exercise/mocks"
+	"github.com/vladgrskkh/onerep-api/internal/handler/testutil"
 	serviceexercise "github.com/vladgrskkh/onerep-api/internal/service/exercise"
 )
 
@@ -36,49 +36,37 @@ func (s *HandlerTestSuite) SetupTest() {
 	s.svc = exercisemocks.NewMockExerciseService(s.T())
 	s.handler = exercise.NewExerciseHandler(s.svc, slog.New(slog.DiscardHandler))
 
-	router := chi.NewRouter()
-	router.Get("/v1/exercises", s.handler.List)
-	router.Get("/v1/exercises/{id}", s.handler.Get)
-	router.Post("/v1/exercises", s.handler.Create)
-	router.Patch("/v1/exercises/{id}", s.handler.Update)
-	router.Delete("/v1/exercises/{id}", s.handler.SoftDelete)
-	s.router = router
-}
-
-func (s *HandlerTestSuite) serve(method, target, body string, userID uuid.UUID) *httptest.ResponseRecorder {
-	req := httptest.NewRequest(method, target, strings.NewReader(body))
-	if userID != uuid.Nil {
-		req = req.WithContext(handler.WithUserID(req.Context(), userID))
-	}
-	w := httptest.NewRecorder()
-	s.router.ServeHTTP(w, req)
-	return w
+	s.router = testutil.NewRouter(
+		testutil.Route{Method: http.MethodGet, Pattern: "/v1/exercises", Handler: s.handler.List},
+		testutil.Route{Method: http.MethodGet, Pattern: "/v1/exercises/{id}", Handler: s.handler.Get},
+		testutil.Route{Method: http.MethodPost, Pattern: "/v1/exercises", Handler: s.handler.Create},
+		testutil.Route{Method: http.MethodPatch, Pattern: "/v1/exercises/{id}", Handler: s.handler.Update},
+		testutil.Route{Method: http.MethodDelete, Pattern: "/v1/exercises/{id}", Handler: s.handler.SoftDelete},
+	)
 }
 
 func (s *HandlerTestSuite) decodeError(w *httptest.ResponseRecorder) handler.ErrorResponse {
-	var resp handler.ErrorResponse
-	s.Require().NoError(json.Unmarshal(w.Body.Bytes(), &resp))
-	return resp
+	return testutil.DecodeError(s.T(), w)
 }
 
 func (s *HandlerTestSuite) listExercises(target string) *httptest.ResponseRecorder {
-	return s.serve(http.MethodGet, target, "", uuid.Nil)
+	return testutil.Serve(s.router, http.MethodGet, target, "", uuid.Nil)
 }
 
 func (s *HandlerTestSuite) getExercise(id string) *httptest.ResponseRecorder {
-	return s.serve(http.MethodGet, "/v1/exercises/"+id, "", uuid.Nil)
+	return testutil.Serve(s.router, http.MethodGet, "/v1/exercises/"+id, "", uuid.Nil)
 }
 
 func (s *HandlerTestSuite) createExercise(body string, userID uuid.UUID) *httptest.ResponseRecorder {
-	return s.serve(http.MethodPost, "/v1/exercises", body, userID)
+	return testutil.Serve(s.router, http.MethodPost, "/v1/exercises", body, userID)
 }
 
 func (s *HandlerTestSuite) updateExercise(id, body string) *httptest.ResponseRecorder {
-	return s.serve(http.MethodPatch, "/v1/exercises/"+id, body, uuid.Nil)
+	return testutil.Serve(s.router, http.MethodPatch, "/v1/exercises/"+id, body, uuid.Nil)
 }
 
 func (s *HandlerTestSuite) softDeleteExercise(id string) *httptest.ResponseRecorder {
-	return s.serve(http.MethodDelete, "/v1/exercises/"+id, "", uuid.Nil)
+	return testutil.Serve(s.router, http.MethodDelete, "/v1/exercises/"+id, "", uuid.Nil)
 }
 
 func (s *HandlerTestSuite) TestList_Success() {
@@ -189,7 +177,7 @@ func (s *HandlerTestSuite) TestCreate_Success() {
 		Name:            "Bench Press",
 		Description:     "Chest press",
 		IsBuiltIn:       false,
-		CreatedByUserID: &userID,
+		CreatedByUserID: userID,
 		MuscleGroups:    []domainexercise.ExerciseMuscleGroup{{ExerciseID: exerciseID, MuscleGroupID: 1}},
 	}
 	s.svc.EXPECT().Create(mock.Anything, serviceexercise.CreateExerciseCommand{

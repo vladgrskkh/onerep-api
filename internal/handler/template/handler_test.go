@@ -5,7 +5,6 @@ import (
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
-	"strings"
 	"testing"
 	"time"
 
@@ -19,6 +18,7 @@ import (
 	"github.com/vladgrskkh/onerep-api/internal/handler/template"
 	"github.com/vladgrskkh/onerep-api/internal/handler/template/dto"
 	templatemocks "github.com/vladgrskkh/onerep-api/internal/handler/template/mocks"
+	"github.com/vladgrskkh/onerep-api/internal/handler/testutil"
 	servicetemplate "github.com/vladgrskkh/onerep-api/internal/service/template"
 )
 
@@ -36,59 +36,47 @@ func (s *HandlerTestSuite) SetupTest() {
 	s.svc = templatemocks.NewMockTemplateService(s.T())
 	s.handler = template.NewTemplateHandler(s.svc, slog.New(slog.DiscardHandler))
 
-	router := chi.NewRouter()
-	router.Get("/v1/templates", s.handler.List)
-	router.Get("/v1/templates/{id}", s.handler.Get)
-	router.Post("/v1/templates", s.handler.Create)
-	router.Patch("/v1/templates/{id}", s.handler.Update)
-	router.Post("/v1/templates/{id}/publish", s.handler.Publish)
-	router.Post("/v1/templates/{id}/fork", s.handler.Fork)
-	router.Delete("/v1/templates/{id}", s.handler.SoftDelete)
-	s.router = router
-}
-
-func (s *HandlerTestSuite) serve(method, target, body string, userID uuid.UUID) *httptest.ResponseRecorder {
-	req := httptest.NewRequest(method, target, strings.NewReader(body))
-	if userID != uuid.Nil {
-		req = req.WithContext(handler.WithUserID(req.Context(), userID))
-	}
-	w := httptest.NewRecorder()
-	s.router.ServeHTTP(w, req)
-	return w
+	s.router = testutil.NewRouter(
+		testutil.Route{Method: http.MethodGet, Pattern: "/v1/templates", Handler: s.handler.List},
+		testutil.Route{Method: http.MethodGet, Pattern: "/v1/templates/{id}", Handler: s.handler.Get},
+		testutil.Route{Method: http.MethodPost, Pattern: "/v1/templates", Handler: s.handler.Create},
+		testutil.Route{Method: http.MethodPatch, Pattern: "/v1/templates/{id}", Handler: s.handler.Update},
+		testutil.Route{Method: http.MethodPost, Pattern: "/v1/templates/{id}/publish", Handler: s.handler.Publish},
+		testutil.Route{Method: http.MethodPost, Pattern: "/v1/templates/{id}/fork", Handler: s.handler.Fork},
+		testutil.Route{Method: http.MethodDelete, Pattern: "/v1/templates/{id}", Handler: s.handler.SoftDelete},
+	)
 }
 
 func (s *HandlerTestSuite) decodeError(w *httptest.ResponseRecorder) handler.ErrorResponse {
-	var resp handler.ErrorResponse
-	s.Require().NoError(json.Unmarshal(w.Body.Bytes(), &resp))
-	return resp
+	return testutil.DecodeError(s.T(), w)
 }
 
 func (s *HandlerTestSuite) listTemplates(target string, userID uuid.UUID) *httptest.ResponseRecorder {
-	return s.serve(http.MethodGet, target, "", userID)
+	return testutil.Serve(s.router, http.MethodGet, target, "", userID)
 }
 
 func (s *HandlerTestSuite) getTemplate(id string, userID uuid.UUID) *httptest.ResponseRecorder {
-	return s.serve(http.MethodGet, "/v1/templates/"+id, "", userID)
+	return testutil.Serve(s.router, http.MethodGet, "/v1/templates/"+id, "", userID)
 }
 
 func (s *HandlerTestSuite) createTemplate(body string, userID uuid.UUID) *httptest.ResponseRecorder {
-	return s.serve(http.MethodPost, "/v1/templates", body, userID)
+	return testutil.Serve(s.router, http.MethodPost, "/v1/templates", body, userID)
 }
 
 func (s *HandlerTestSuite) updateTemplate(id, body string, userID uuid.UUID) *httptest.ResponseRecorder {
-	return s.serve(http.MethodPatch, "/v1/templates/"+id, body, userID)
+	return testutil.Serve(s.router, http.MethodPatch, "/v1/templates/"+id, body, userID)
 }
 
 func (s *HandlerTestSuite) publishTemplate(id string, userID uuid.UUID) *httptest.ResponseRecorder {
-	return s.serve(http.MethodPost, "/v1/templates/"+id+"/publish", "", userID)
+	return testutil.Serve(s.router, http.MethodPost, "/v1/templates/"+id+"/publish", "", userID)
 }
 
 func (s *HandlerTestSuite) forkTemplate(id string, userID uuid.UUID) *httptest.ResponseRecorder {
-	return s.serve(http.MethodPost, "/v1/templates/"+id+"/fork", "", userID)
+	return testutil.Serve(s.router, http.MethodPost, "/v1/templates/"+id+"/fork", "", userID)
 }
 
 func (s *HandlerTestSuite) softDeleteTemplate(id string, userID uuid.UUID) *httptest.ResponseRecorder {
-	return s.serve(http.MethodDelete, "/v1/templates/"+id, "", userID)
+	return testutil.Serve(s.router, http.MethodDelete, "/v1/templates/"+id, "", userID)
 }
 
 func (s *HandlerTestSuite) TestList_Success() {
@@ -98,7 +86,7 @@ func (s *HandlerTestSuite) TestList_Success() {
 		Name: "Push Day",
 	}}
 	s.svc.EXPECT().List(mock.Anything, domaintemplate.TemplateFilter{
-		UserID: &s.userID,
+		UserID: s.userID,
 		Since:  since,
 	}).Return(templates, nil)
 

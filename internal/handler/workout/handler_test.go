@@ -5,7 +5,6 @@ import (
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
-	"strings"
 	"testing"
 	"time"
 
@@ -17,6 +16,7 @@ import (
 	domaintemplate "github.com/vladgrskkh/onerep-api/internal/domain/template"
 	domainworkout "github.com/vladgrskkh/onerep-api/internal/domain/workout"
 	"github.com/vladgrskkh/onerep-api/internal/handler"
+	"github.com/vladgrskkh/onerep-api/internal/handler/testutil"
 	workouthandler "github.com/vladgrskkh/onerep-api/internal/handler/workout"
 	"github.com/vladgrskkh/onerep-api/internal/handler/workout/dto"
 	workoutmocks "github.com/vladgrskkh/onerep-api/internal/handler/workout/mocks"
@@ -37,60 +37,52 @@ func (s *HandlerTestSuite) SetupTest() {
 	s.svc = workoutmocks.NewMockWorkoutService(s.T())
 	s.handler = workouthandler.NewWorkoutHandler(s.svc, slog.New(slog.DiscardHandler))
 
-	router := chi.NewRouter()
-	router.Post("/v1/workouts", s.handler.Start)
-	router.Get("/v1/workouts", s.handler.List)
-	router.Get("/v1/workouts/{id}", s.handler.Get)
-	router.Post("/v1/workouts/{id}/exercises", s.handler.AddExercise)
-	router.Post("/v1/workouts/{id}/exercises/{exId}/sets", s.handler.LogSet)
-	router.Patch("/v1/workouts/{id}/finish", s.handler.Finish)
-	s.router = router
-}
-
-func (s *HandlerTestSuite) serve(method, target, body string, userID uuid.UUID) *httptest.ResponseRecorder {
-	req := httptest.NewRequest(method, target, strings.NewReader(body))
-	if userID != uuid.Nil {
-		req = req.WithContext(handler.WithUserID(req.Context(), userID))
-	}
-	w := httptest.NewRecorder()
-	s.router.ServeHTTP(w, req)
-	return w
+	s.router = testutil.NewRouter(
+		testutil.Route{Method: http.MethodPost, Pattern: "/v1/workouts", Handler: s.handler.Start},
+		testutil.Route{Method: http.MethodGet, Pattern: "/v1/workouts", Handler: s.handler.List},
+		testutil.Route{Method: http.MethodGet, Pattern: "/v1/workouts/{id}", Handler: s.handler.Get},
+		testutil.Route{Method: http.MethodPost, Pattern: "/v1/workouts/{id}/exercises", Handler: s.handler.AddExercise},
+		testutil.Route{
+			Method:  http.MethodPost,
+			Pattern: "/v1/workouts/{id}/exercises/{exId}/sets",
+			Handler: s.handler.LogSet,
+		},
+		testutil.Route{Method: http.MethodPatch, Pattern: "/v1/workouts/{id}/finish", Handler: s.handler.Finish},
+	)
 }
 
 func (s *HandlerTestSuite) decodeError(w *httptest.ResponseRecorder) handler.ErrorResponse {
-	var resp handler.ErrorResponse
-	s.Require().NoError(json.Unmarshal(w.Body.Bytes(), &resp))
-	return resp
+	return testutil.DecodeError(s.T(), w)
 }
 
 func (s *HandlerTestSuite) startWorkout(body string, userID uuid.UUID) *httptest.ResponseRecorder {
-	return s.serve(http.MethodPost, "/v1/workouts", body, userID)
+	return testutil.Serve(s.router, http.MethodPost, "/v1/workouts", body, userID)
 }
 
 func (s *HandlerTestSuite) listWorkouts(target string, userID uuid.UUID) *httptest.ResponseRecorder {
-	return s.serve(http.MethodGet, target, "", userID)
+	return testutil.Serve(s.router, http.MethodGet, target, "", userID)
 }
 
 func (s *HandlerTestSuite) getWorkout(id string, userID uuid.UUID) *httptest.ResponseRecorder {
-	return s.serve(http.MethodGet, "/v1/workouts/"+id, "", userID)
+	return testutil.Serve(s.router, http.MethodGet, "/v1/workouts/"+id, "", userID)
 }
 
 func (s *HandlerTestSuite) addExercise(id, body string, userID uuid.UUID) *httptest.ResponseRecorder {
-	return s.serve(http.MethodPost, "/v1/workouts/"+id+"/exercises", body, userID)
+	return testutil.Serve(s.router, http.MethodPost, "/v1/workouts/"+id+"/exercises", body, userID)
 }
 
 func (s *HandlerTestSuite) logSet(id, exID, body string, userID uuid.UUID) *httptest.ResponseRecorder {
-	return s.serve(http.MethodPost, "/v1/workouts/"+id+"/exercises/"+exID+"/sets", body, userID)
+	return testutil.Serve(s.router, http.MethodPost, "/v1/workouts/"+id+"/exercises/"+exID+"/sets", body, userID)
 }
 
 func (s *HandlerTestSuite) finishWorkout(id string, userID uuid.UUID) *httptest.ResponseRecorder {
-	return s.serve(http.MethodPatch, "/v1/workouts/"+id+"/finish", "", userID)
+	return testutil.Serve(s.router, http.MethodPatch, "/v1/workouts/"+id+"/finish", "", userID)
 }
 
 func (s *HandlerTestSuite) TestStart_Success() {
 	templateID := uuid.Must(uuid.NewV7())
 	workoutID := uuid.Must(uuid.NewV7())
-	created := &domainworkout.Workout{ID: workoutID, UserID: s.userID, TemplateID: &templateID}
+	created := &domainworkout.Workout{ID: workoutID, UserID: s.userID, TemplateID: templateID}
 	s.svc.EXPECT().Start(mock.Anything, serviceworkout.StartWorkoutCommand{
 		UserID:     s.userID,
 		TemplateID: templateID,
@@ -281,7 +273,6 @@ func (s *HandlerTestSuite) TestLogSet_Success() {
 	workoutID := uuid.Must(uuid.NewV7())
 	weID := uuid.Must(uuid.NewV7())
 	setID := uuid.Must(uuid.NewV7())
-	rpe := 8
 	result := &domainworkout.SetResult{
 		WorkoutSet: domainworkout.WorkoutSet{
 			ID:                setID,
@@ -289,7 +280,7 @@ func (s *HandlerTestSuite) TestLogSet_Success() {
 			SetNumber:         1,
 			WeightKg:          100,
 			Reps:              5,
-			RPE:               &rpe,
+			RPE:               8,
 		},
 		IsPR:         true,
 		Estimated1RM: 116.7,
