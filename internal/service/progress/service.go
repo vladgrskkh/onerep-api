@@ -14,6 +14,7 @@ type ProgressRepository interface {
 	GetVolume(ctx context.Context, userID uuid.UUID, from, to time.Time) ([]*domainprogress.ProgressVolume, error)
 	GetBest1RM(ctx context.Context, exerciseID, userID uuid.UUID) (float64, error)
 	Upsert1RM(ctx context.Context, p domainprogress.Progress1RM) error
+	UpsertVolume(ctx context.Context, p domainprogress.ProgressVolume) error
 }
 
 // ProgressService reads the user's materialized progress.

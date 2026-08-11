@@ -225,6 +225,37 @@ func (s *ProgressRepoTestSuite) TestGetVolume_Empty() {
 	s.Empty(volumes)
 }
 
+func (s *ProgressRepoTestSuite) TestUpsertVolume_InsertThenUpdate() {
+	userID := uuid.New()
+	date := time.Date(2026, time.August, 1, 0, 0, 0, 0, time.UTC)
+	s.insertTestVolume(1, userID, date, 1000)
+	s.upsertTestVolume(1, userID, date, 1600)
+
+	volumes, err := s.repo.GetVolume(s.ctx, userID, time.Time{}, time.Time{})
+	s.Require().NoError(err)
+	s.Require().Len(volumes, 1)
+	s.Equal(1600.0, volumes[0].TotalKG)
+	s.Equal(1, volumes[0].MuscleGroupID)
+}
+
+func (s *ProgressRepoTestSuite) TestUpsertVolume_DoesNotMixMuscleGroups() {
+	userID := uuid.New()
+	date := time.Date(2026, time.August, 1, 0, 0, 0, 0, time.UTC)
+	s.insertTestVolume(1, userID, date, 1000)
+	s.upsertTestVolume(2, userID, date, 1600)
+
+	volumes, err := s.repo.GetVolume(s.ctx, userID, time.Time{}, time.Time{})
+	s.Require().NoError(err)
+	s.Require().Len(volumes, 2)
+}
+
+func (s *ProgressRepoTestSuite) upsertTestVolume(muscleGroupID int, userID uuid.UUID, date time.Time, totalKG float64) {
+	v, err := domainprogress.NewProgressVolume(muscleGroupID, userID, date, totalKG)
+	s.Require().NoError(err)
+	s.Require().NoError(s.repo.UpsertVolume(s.ctx, v))
+	s.volumeValues = append(s.volumeValues, v)
+}
+
 func TestProgressRepoSuite(t *testing.T) {
 	suite.Run(t, new(ProgressRepoTestSuite))
 }
