@@ -31,7 +31,7 @@ func toUpdateCommand(req dto.ExerciseUpdateRequest, exerciseID uuid.UUID) servic
 }
 
 // toExerciseResponse maps the domain exercise to the HTTP response.
-func toExerciseResponse(ex domainexercise.Exercise) dto.ExerciseResponse {
+func toExerciseResponse(ex *domainexercise.Exercise) dto.ExerciseResponse {
 	resp := dto.ExerciseResponse{
 		ID:          ex.ID,
 		Name:        ex.Name,
@@ -63,7 +63,7 @@ func toExerciseResponse(ex domainexercise.Exercise) dto.ExerciseResponse {
 }
 
 // toExerciseListResponse maps a list of domain exercises to HTTP responses.
-func toExerciseListResponse(exercises []domainexercise.Exercise) []dto.ExerciseResponse {
+func toExerciseListResponse(exercises []*domainexercise.Exercise) []dto.ExerciseResponse {
 	resp := make([]dto.ExerciseResponse, 0, len(exercises))
 	for _, ex := range exercises {
 		resp = append(resp, toExerciseResponse(ex))

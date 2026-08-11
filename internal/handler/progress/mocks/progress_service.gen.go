@@ -28,23 +28,23 @@ func (_m *MockProgressService) EXPECT() *MockProgressService_Expecter {
 }
 
 // Get1RM provides a mock function with given fields: ctx, userID, exerciseID, from, to
-func (_m *MockProgressService) Get1RM(ctx context.Context, userID uuid.UUID, exerciseID uuid.UUID, from *time.Time, to *time.Time) ([]progress.Progress1RM, error) {
+func (_m *MockProgressService) Get1RM(ctx context.Context, userID uuid.UUID, exerciseID uuid.UUID, from *time.Time, to *time.Time) ([]*progress.Progress1RM, error) {
 	ret := _m.Called(ctx, userID, exerciseID, from, to)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Get1RM")
 	}
 
-	var r0 []progress.Progress1RM
+	var r0 []*progress.Progress1RM
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID, uuid.UUID, *time.Time, *time.Time) ([]progress.Progress1RM, error)); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID, uuid.UUID, *time.Time, *time.Time) ([]*progress.Progress1RM, error)); ok {
 		return rf(ctx, userID, exerciseID, from, to)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID, uuid.UUID, *time.Time, *time.Time) []progress.Progress1RM); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID, uuid.UUID, *time.Time, *time.Time) []*progress.Progress1RM); ok {
 		r0 = rf(ctx, userID, exerciseID, from, to)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]progress.Progress1RM)
+			r0 = ret.Get(0).([]*progress.Progress1RM)
 		}
 	}
 
@@ -79,34 +79,34 @@ func (_c *MockProgressService_Get1RM_Call) Run(run func(ctx context.Context, use
 	return _c
 }
 
-func (_c *MockProgressService_Get1RM_Call) Return(_a0 []progress.Progress1RM, _a1 error) *MockProgressService_Get1RM_Call {
+func (_c *MockProgressService_Get1RM_Call) Return(_a0 []*progress.Progress1RM, _a1 error) *MockProgressService_Get1RM_Call {
 	_c.Call.Return(_a0, _a1)
 	return _c
 }
 
-func (_c *MockProgressService_Get1RM_Call) RunAndReturn(run func(context.Context, uuid.UUID, uuid.UUID, *time.Time, *time.Time) ([]progress.Progress1RM, error)) *MockProgressService_Get1RM_Call {
+func (_c *MockProgressService_Get1RM_Call) RunAndReturn(run func(context.Context, uuid.UUID, uuid.UUID, *time.Time, *time.Time) ([]*progress.Progress1RM, error)) *MockProgressService_Get1RM_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // GetVolume provides a mock function with given fields: ctx, userID, from, to
-func (_m *MockProgressService) GetVolume(ctx context.Context, userID uuid.UUID, from *time.Time, to *time.Time) ([]progress.ProgressVolume, error) {
+func (_m *MockProgressService) GetVolume(ctx context.Context, userID uuid.UUID, from *time.Time, to *time.Time) ([]*progress.ProgressVolume, error) {
 	ret := _m.Called(ctx, userID, from, to)
 
 	if len(ret) == 0 {
 		panic("no return value specified for GetVolume")
 	}
 
-	var r0 []progress.ProgressVolume
+	var r0 []*progress.ProgressVolume
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID, *time.Time, *time.Time) ([]progress.ProgressVolume, error)); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID, *time.Time, *time.Time) ([]*progress.ProgressVolume, error)); ok {
 		return rf(ctx, userID, from, to)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID, *time.Time, *time.Time) []progress.ProgressVolume); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID, *time.Time, *time.Time) []*progress.ProgressVolume); ok {
 		r0 = rf(ctx, userID, from, to)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]progress.ProgressVolume)
+			r0 = ret.Get(0).([]*progress.ProgressVolume)
 		}
 	}
 
@@ -140,12 +140,12 @@ func (_c *MockProgressService_GetVolume_Call) Run(run func(ctx context.Context, 
 	return _c
 }
 
-func (_c *MockProgressService_GetVolume_Call) Return(_a0 []progress.ProgressVolume, _a1 error) *MockProgressService_GetVolume_Call {
+func (_c *MockProgressService_GetVolume_Call) Return(_a0 []*progress.ProgressVolume, _a1 error) *MockProgressService_GetVolume_Call {
 	_c.Call.Return(_a0, _a1)
 	return _c
 }
 
-func (_c *MockProgressService_GetVolume_Call) RunAndReturn(run func(context.Context, uuid.UUID, *time.Time, *time.Time) ([]progress.ProgressVolume, error)) *MockProgressService_GetVolume_Call {
+func (_c *MockProgressService_GetVolume_Call) RunAndReturn(run func(context.Context, uuid.UUID, *time.Time, *time.Time) ([]*progress.ProgressVolume, error)) *MockProgressService_GetVolume_Call {
 	_c.Call.Return(run)
 	return _c
 }

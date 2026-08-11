@@ -5,7 +5,6 @@ import (
 	"errors"
 	"log/slog"
 	"net/http"
-	"time"
 
 	"github.com/google/uuid"
 
@@ -17,10 +16,10 @@ import (
 
 // ExerciseService is the exercise use-case contract consumed by the handler.
 type ExerciseService interface {
-	List(ctx context.Context, cmd serviceexercise.ListExercisesCommand) ([]domainexercise.Exercise, error)
-	Get(ctx context.Context, id uuid.UUID) (domainexercise.Exercise, error)
-	Create(ctx context.Context, cmd serviceexercise.CreateExerciseCommand) (domainexercise.Exercise, error)
-	Update(ctx context.Context, cmd serviceexercise.UpdateExerciseCommand) (domainexercise.Exercise, error)
+	List(ctx context.Context, cmd serviceexercise.ListExercisesCommand) ([]*domainexercise.Exercise, error)
+	Get(ctx context.Context, id uuid.UUID) (*domainexercise.Exercise, error)
+	Create(ctx context.Context, cmd serviceexercise.CreateExerciseCommand) (*domainexercise.Exercise, error)
+	Update(ctx context.Context, cmd serviceexercise.UpdateExerciseCommand) (*domainexercise.Exercise, error)
 	SoftDelete(ctx context.Context, id uuid.UUID) error
 }
 
@@ -45,6 +44,7 @@ func NewExerciseHandler(svc ExerciseService, logger *slog.Logger) *ExerciseHandl
 // @Param since query string false "Only exercises updated after this RFC 3339 timestamp"
 // @Success 200 {array} dto.ExerciseResponse
 // @Failure 400 {object} handler.ErrorResponse
+// @Failure 500 {object} handler.ErrorResponse
 // @Security BearerAuth
 // @Router /exercises [get]
 func (h *ExerciseHandler) List(w http.ResponseWriter, r *http.Request) {
@@ -53,19 +53,18 @@ func (h *ExerciseHandler) List(w http.ResponseWriter, r *http.Request) {
 		MuscleGroup: r.URL.Query().Get("muscle_group"),
 	}
 
-	if sinceStr := r.URL.Query().Get("since"); sinceStr != "" {
-		since, parseErr := time.Parse(time.RFC3339, sinceStr)
-		if parseErr != nil {
-			handler.WriteError(w, h.logger, http.StatusBadRequest, invalidSinceDetail())
-			return
-		}
+	since, present, parseErr := handler.ParseRFC3339QueryParam(r, "since")
+	if parseErr != nil {
+		handler.WriteError(w, h.logger, http.StatusBadRequest, invalidSinceDetail())
+		return
+	}
+	if present {
 		cmd.Since = &since
 	}
 
 	exercises, err := h.svc.List(r.Context(), cmd)
 	if err != nil {
-		status, detail := mapError(err)
-		handler.WriteError(w, h.logger, status, detail)
+		handler.WriteSystemError(w, h.logger, http.StatusInternalServerError, err)
 		return
 	}
 
@@ -82,7 +81,9 @@ func (h *ExerciseHandler) List(w http.ResponseWriter, r *http.Request) {
 // @Param id path string true "Exercise ID"
 // @Success 200 {object} dto.ExerciseResponse
 // @Failure 400 {object} handler.ErrorResponse
+// @Failure 500 {object} handler.ErrorResponse
 // @Failure 404 {object} handler.ErrorResponse
+// @Failure 500 {object} handler.ErrorResponse
 // @Security BearerAuth
 // @Router /exercises/{id} [get]
 func (h *ExerciseHandler) Get(w http.ResponseWriter, r *http.Request) {
@@ -94,8 +95,12 @@ func (h *ExerciseHandler) Get(w http.ResponseWriter, r *http.Request) {
 
 	ex, err := h.svc.Get(r.Context(), exerciseID)
 	if err != nil {
-		status, detail := mapError(err)
-		handler.WriteError(w, h.logger, status, detail)
+		switch {
+		case errors.Is(err, domainexercise.ErrExerciseNotFound):
+			handler.WriteError(w, h.logger, http.StatusNotFound, exerciseNotFoundDetail(err))
+		default:
+			handler.WriteSystemError(w, h.logger, http.StatusInternalServerError, err)
+		}
 		return
 	}
 
@@ -112,7 +117,9 @@ func (h *ExerciseHandler) Get(w http.ResponseWriter, r *http.Request) {
 // @Param request body dto.ExerciseCreateRequest true "Exercise data"
 // @Success 201 {object} dto.ExerciseResponse
 // @Failure 400 {object} handler.ErrorResponse
+// @Failure 500 {object} handler.ErrorResponse
 // @Failure 404 {object} handler.ErrorResponse
+// @Failure 500 {object} handler.ErrorResponse
 // @Security BearerAuth
 // @Router /exercises [post]
 func (h *ExerciseHandler) Create(w http.ResponseWriter, r *http.Request) {
@@ -129,8 +136,18 @@ func (h *ExerciseHandler) Create(w http.ResponseWriter, r *http.Request) {
 	userID := handler.UserIDFromContext(r.Context())
 	ex, err := h.svc.Create(r.Context(), toCreateCommand(req, userID))
 	if err != nil {
-		status, detail := mapError(err)
-		handler.WriteError(w, h.logger, status, detail)
+		switch {
+		case errors.Is(err, domainexercise.ErrInvalidName):
+			handler.WriteError(w, h.logger, http.StatusBadRequest, invalidNameDetail(err))
+		case errors.Is(err, domainexercise.ErrInvalidUserID):
+			handler.WriteError(w, h.logger, http.StatusBadRequest, invalidUserIDDetail(err))
+		case errors.Is(err, domainexercise.ErrInvalidID):
+			handler.WriteError(w, h.logger, http.StatusBadRequest, invalidMuscleGroupIDDetail(err))
+		case errors.Is(err, domainexercise.ErrMuscleGroupMissing):
+			handler.WriteError(w, h.logger, http.StatusNotFound, muscleGroupNotFoundDetail(err))
+		default:
+			handler.WriteSystemError(w, h.logger, http.StatusInternalServerError, err)
+		}
 		return
 	}
 
@@ -148,7 +165,9 @@ func (h *ExerciseHandler) Create(w http.ResponseWriter, r *http.Request) {
 // @Param request body dto.ExerciseUpdateRequest true "Fields to update"
 // @Success 200 {object} dto.ExerciseResponse
 // @Failure 400 {object} handler.ErrorResponse
+// @Failure 500 {object} handler.ErrorResponse
 // @Failure 404 {object} handler.ErrorResponse
+// @Failure 500 {object} handler.ErrorResponse
 // @Security BearerAuth
 // @Router /exercises/{id} [patch]
 func (h *ExerciseHandler) Update(w http.ResponseWriter, r *http.Request) {
@@ -170,8 +189,20 @@ func (h *ExerciseHandler) Update(w http.ResponseWriter, r *http.Request) {
 
 	ex, err := h.svc.Update(r.Context(), toUpdateCommand(req, exerciseID))
 	if err != nil {
-		status, detail := mapError(err)
-		handler.WriteError(w, h.logger, status, detail)
+		switch {
+		case errors.Is(err, domainexercise.ErrExerciseNotFound):
+			handler.WriteError(w, h.logger, http.StatusNotFound, exerciseNotFoundDetail(err))
+		case errors.Is(err, domainexercise.ErrCannotEditBuiltIn):
+			handler.WriteError(w, h.logger, http.StatusBadRequest, cannotEditBuiltInDetail(err))
+		case errors.Is(err, domainexercise.ErrInvalidName):
+			handler.WriteError(w, h.logger, http.StatusBadRequest, invalidNameDetail(err))
+		case errors.Is(err, domainexercise.ErrInvalidID):
+			handler.WriteError(w, h.logger, http.StatusBadRequest, invalidMuscleGroupIDDetail(err))
+		case errors.Is(err, domainexercise.ErrMuscleGroupMissing):
+			handler.WriteError(w, h.logger, http.StatusNotFound, muscleGroupNotFoundDetail(err))
+		default:
+			handler.WriteSystemError(w, h.logger, http.StatusInternalServerError, err)
+		}
 		return
 	}
 
@@ -188,7 +219,9 @@ func (h *ExerciseHandler) Update(w http.ResponseWriter, r *http.Request) {
 // @Param id path string true "Exercise ID"
 // @Success 204
 // @Failure 400 {object} handler.ErrorResponse
+// @Failure 500 {object} handler.ErrorResponse
 // @Failure 404 {object} handler.ErrorResponse
+// @Failure 500 {object} handler.ErrorResponse
 // @Security BearerAuth
 // @Router /exercises/{id} [delete]
 func (h *ExerciseHandler) SoftDelete(w http.ResponseWriter, r *http.Request) {
@@ -199,8 +232,14 @@ func (h *ExerciseHandler) SoftDelete(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := h.svc.SoftDelete(r.Context(), exerciseID); err != nil {
-		status, detail := mapError(err)
-		handler.WriteError(w, h.logger, status, detail)
+		switch {
+		case errors.Is(err, domainexercise.ErrExerciseNotFound):
+			handler.WriteError(w, h.logger, http.StatusNotFound, exerciseNotFoundDetail(err))
+		case errors.Is(err, domainexercise.ErrCannotEditBuiltIn):
+			handler.WriteError(w, h.logger, http.StatusBadRequest, cannotEditBuiltInDetail(err))
+		default:
+			handler.WriteSystemError(w, h.logger, http.StatusInternalServerError, err)
+		}
 		return
 	}
 

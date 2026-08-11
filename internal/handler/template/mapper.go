@@ -51,7 +51,7 @@ func toUpdateCommand(
 }
 
 // toTemplateResponse maps the domain template to the HTTP response.
-func toTemplateResponse(t domaintemplate.Template) dto.TemplateResponse {
+func toTemplateResponse(t *domaintemplate.Template) dto.TemplateResponse {
 	resp := dto.TemplateResponse{
 		ID:              t.ID,
 		Name:            t.Name,
@@ -81,7 +81,7 @@ func toTemplateResponse(t domaintemplate.Template) dto.TemplateResponse {
 }
 
 // toTemplateListResponse maps a list of domain templates to HTTP responses.
-func toTemplateListResponse(templates []domaintemplate.Template) []dto.TemplateResponse {
+func toTemplateListResponse(templates []*domaintemplate.Template) []dto.TemplateResponse {
 	resp := make([]dto.TemplateResponse, 0, len(templates))
 	for _, t := range templates {
 		resp = append(resp, toTemplateResponse(t))

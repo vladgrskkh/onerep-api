@@ -1,16 +1,40 @@
 package workout
 
 import (
+	"context"
 	"errors"
+	"io"
 	"log/slog"
 	"net/http"
 	"time"
 
 	"github.com/google/uuid"
 
+	domaintemplate "github.com/vladgrskkh/onerep-api/internal/domain/template"
+	domainworkout "github.com/vladgrskkh/onerep-api/internal/domain/workout"
 	"github.com/vladgrskkh/onerep-api/internal/handler"
 	"github.com/vladgrskkh/onerep-api/internal/handler/workout/dto"
+	serviceworkout "github.com/vladgrskkh/onerep-api/internal/service/workout"
 )
+
+// WorkoutService is the workout use-case contract consumed by the handler.
+type WorkoutService interface {
+	Start(ctx context.Context, cmd serviceworkout.StartWorkoutCommand) (*domainworkout.Workout, error)
+	GetActive(ctx context.Context, userID uuid.UUID) (*domainworkout.Workout, error)
+	Get(ctx context.Context, id, userID uuid.UUID) (*domainworkout.Workout, error)
+	List(ctx context.Context, userID uuid.UUID, since *time.Time) ([]*domainworkout.Workout, error)
+	AddExercise(
+		ctx context.Context,
+		cmd serviceworkout.AddExerciseCommand,
+		userID uuid.UUID,
+	) (*domainworkout.WorkoutExercise, error)
+	LogSet(ctx context.Context, cmd serviceworkout.LogSetCommand, userID uuid.UUID) (serviceworkout.SetResult, error)
+	Finish(
+		ctx context.Context,
+		cmd serviceworkout.FinishWorkoutCommand,
+		userID uuid.UUID,
+	) (*domainworkout.Workout, error)
+}
 
 type WorkoutHandler struct {
 	svc    WorkoutService
@@ -40,22 +64,24 @@ func NewWorkoutHandler(svc WorkoutService, logger *slog.Logger) *WorkoutHandler 
 // @Router /workouts [post]
 func (h *WorkoutHandler) Start(w http.ResponseWriter, r *http.Request) {
 	var req dto.StartWorkoutRequest
-	if r.ContentLength != 0 {
-		if err := handler.DecodeAndValidate(r, &req); err != nil {
-			if errors.Is(err, handler.ErrValidationFailed) {
-				handler.WriteError(w, h.logger, http.StatusBadRequest, handler.ValidationErrorDetail(err))
-				return
-			}
-			handler.WriteError(w, h.logger, http.StatusBadRequest, invalidRequestBodyDetail())
-			return
-		}
+	if err := handler.DecodeJSON(r, &req); err != nil && !errors.Is(err, io.EOF) {
+		handler.WriteError(w, h.logger, http.StatusBadRequest, invalidRequestBodyDetail())
+		return
 	}
 
 	userID := handler.UserIDFromContext(r.Context())
 	workout, err := h.svc.Start(r.Context(), toStartCommand(req, userID))
 	if err != nil {
-		status, detail := mapError(err)
-		handler.WriteError(w, h.logger, status, detail)
+		switch {
+		case errors.Is(err, domainworkout.ErrActiveWorkout):
+			handler.WriteError(w, h.logger, http.StatusConflict, activeWorkoutDetail(err))
+		case errors.Is(err, domaintemplate.ErrTemplateNotFound):
+			handler.WriteError(w, h.logger, http.StatusNotFound, templateNotFoundDetail(err))
+		case errors.Is(err, domainworkout.ErrInvalidUserID):
+			handler.WriteError(w, h.logger, http.StatusBadRequest, invalidUserIDDetail(err))
+		default:
+			handler.WriteSystemError(w, h.logger, http.StatusInternalServerError, err)
+		}
 		return
 	}
 
@@ -79,19 +105,23 @@ func (h *WorkoutHandler) List(w http.ResponseWriter, r *http.Request) {
 	userID := handler.UserIDFromContext(r.Context())
 
 	var since *time.Time
-	if sinceStr := r.URL.Query().Get("since"); sinceStr != "" {
-		parsed, parseErr := time.Parse(time.RFC3339, sinceStr)
-		if parseErr != nil {
-			handler.WriteError(w, h.logger, http.StatusBadRequest, invalidSinceDetail())
-			return
-		}
-		since = &parsed
+	sinceVal, present, parseErr := handler.ParseRFC3339QueryParam(r, "since")
+	if parseErr != nil {
+		handler.WriteError(w, h.logger, http.StatusBadRequest, invalidSinceDetail())
+		return
+	}
+	if present {
+		since = &sinceVal
 	}
 
 	workouts, err := h.svc.List(r.Context(), userID, since)
 	if err != nil {
-		status, detail := mapError(err)
-		handler.WriteError(w, h.logger, status, detail)
+		switch {
+		case errors.Is(err, domainworkout.ErrInvalidUserID):
+			handler.WriteError(w, h.logger, http.StatusBadRequest, invalidUserIDDetail(err))
+		default:
+			handler.WriteSystemError(w, h.logger, http.StatusInternalServerError, err)
+		}
 		return
 	}
 
@@ -122,8 +152,12 @@ func (h *WorkoutHandler) Get(w http.ResponseWriter, r *http.Request) {
 	userID := handler.UserIDFromContext(r.Context())
 	workout, err := h.svc.Get(r.Context(), workoutID, userID)
 	if err != nil {
-		status, detail := mapError(err)
-		handler.WriteError(w, h.logger, status, detail)
+		switch {
+		case errors.Is(err, domainworkout.ErrWorkoutNotFound):
+			handler.WriteError(w, h.logger, http.StatusNotFound, workoutNotFoundDetail(err))
+		default:
+			handler.WriteSystemError(w, h.logger, http.StatusInternalServerError, err)
+		}
 		return
 	}
 
@@ -165,8 +199,14 @@ func (h *WorkoutHandler) AddExercise(w http.ResponseWriter, r *http.Request) {
 	userID := handler.UserIDFromContext(r.Context())
 	we, err := h.svc.AddExercise(r.Context(), toAddExerciseCommand(req, workoutID), userID)
 	if err != nil {
-		status, detail := mapError(err)
-		handler.WriteError(w, h.logger, status, detail)
+		switch {
+		case errors.Is(err, domainworkout.ErrWorkoutNotFound):
+			handler.WriteError(w, h.logger, http.StatusNotFound, workoutNotFoundDetail(err))
+		case errors.Is(err, domainworkout.ErrInvalidExerciseID):
+			handler.WriteError(w, h.logger, http.StatusBadRequest, invalidExerciseIDDetail(err))
+		default:
+			handler.WriteSystemError(w, h.logger, http.StatusInternalServerError, err)
+		}
 		return
 	}
 
@@ -214,8 +254,22 @@ func (h *WorkoutHandler) LogSet(w http.ResponseWriter, r *http.Request) {
 	userID := handler.UserIDFromContext(r.Context())
 	result, err := h.svc.LogSet(r.Context(), toLogSetCommand(req, workoutID, workoutExerciseID), userID)
 	if err != nil {
-		status, detail := mapError(err)
-		handler.WriteError(w, h.logger, status, detail)
+		switch {
+		case errors.Is(err, domainworkout.ErrWorkoutNotFound):
+			handler.WriteError(w, h.logger, http.StatusNotFound, workoutNotFoundDetail(err))
+		case errors.Is(err, domainworkout.ErrWorkoutExerciseNotFound):
+			handler.WriteError(w, h.logger, http.StatusNotFound, workoutExerciseNotFoundDetail(err))
+		case errors.Is(err, domainworkout.ErrInvalidWeight):
+			handler.WriteError(w, h.logger, http.StatusBadRequest, invalidWeightDetail(err))
+		case errors.Is(err, domainworkout.ErrInvalidReps):
+			handler.WriteError(w, h.logger, http.StatusBadRequest, invalidRepsDetail(err))
+		case errors.Is(err, domainworkout.ErrInvalidRPE):
+			handler.WriteError(w, h.logger, http.StatusBadRequest, invalidRPEDetail(err))
+		case errors.Is(err, domainworkout.ErrInvalidRestSeconds):
+			handler.WriteError(w, h.logger, http.StatusBadRequest, invalidRestSecondsDetail(err))
+		default:
+			handler.WriteSystemError(w, h.logger, http.StatusInternalServerError, err)
+		}
 		return
 	}
 
@@ -246,8 +300,12 @@ func (h *WorkoutHandler) Finish(w http.ResponseWriter, r *http.Request) {
 	userID := handler.UserIDFromContext(r.Context())
 	workout, err := h.svc.Finish(r.Context(), toFinishCommand(workoutID), userID)
 	if err != nil {
-		status, detail := mapError(err)
-		handler.WriteError(w, h.logger, status, detail)
+		switch {
+		case errors.Is(err, domainworkout.ErrWorkoutNotFound):
+			handler.WriteError(w, h.logger, http.StatusNotFound, workoutNotFoundDetail(err))
+		default:
+			handler.WriteSystemError(w, h.logger, http.StatusInternalServerError, err)
+		}
 		return
 	}
 

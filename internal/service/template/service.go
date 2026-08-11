@@ -51,11 +51,19 @@ func NewTemplateService(
 func (s *TemplateService) List(
 	ctx context.Context,
 	filter domaintemplate.TemplateFilter,
-) ([]domaintemplate.Template, error) {
+) ([]*domaintemplate.Template, error) {
 	if filter.UserID == nil || *filter.UserID == uuid.Nil {
 		return nil, domaintemplate.ErrInvalidUserID
 	}
-	return s.templates.List(ctx, filter)
+	templates, err := s.templates.List(ctx, filter)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]*domaintemplate.Template, len(templates))
+	for i := range templates {
+		out[i] = &templates[i]
+	}
+	return out, nil
 }
 
 // Get returns a single template by ID, including its exercises and media.
@@ -64,22 +72,22 @@ func (s *TemplateService) List(
 func (s *TemplateService) Get(
 	ctx context.Context,
 	id, userID uuid.UUID,
-) (domaintemplate.Template, error) {
+) (*domaintemplate.Template, error) {
 	t, err := s.templates.FindByID(ctx, id)
 	if err != nil {
-		return domaintemplate.Template{}, err
+		return nil, err
 	}
 	if !t.IsPublic && t.CreatedByUserID != userID {
-		return domaintemplate.Template{}, domaintemplate.ErrNotOwner
+		return nil, domaintemplate.ErrNotOwner
 	}
-	return t, nil
+	return &t, nil
 }
 
-// Create creates a template and inserts its exercises in one transaction.
-func (s *TemplateService) Create(ctx context.Context, cmd CreateTemplateCommand) (domaintemplate.Template, error) {
+// Create creates a template and inserts its exercises along with it.
+func (s *TemplateService) Create(ctx context.Context, cmd CreateTemplateCommand) (*domaintemplate.Template, error) {
 	t, err := domaintemplate.NewTemplate(cmd.Name, cmd.Description, cmd.UserID)
 	if err != nil {
-		return domaintemplate.Template{}, err
+		return nil, err
 	}
 
 	exercises := buildExercises(t.ID, cmd.Exercises)
@@ -97,27 +105,27 @@ func (s *TemplateService) Create(ctx context.Context, cmd CreateTemplateCommand)
 		return nil
 	})
 	if err != nil {
-		return domaintemplate.Template{}, err
+		return nil, err
 	}
-	return created, nil
+	return &created, nil
 }
 
 // Update applies the non-nil fields of the command to an existing template
-// and replaces its exercises when provided, all in one transaction. Only the
-// owner may update a template.
-func (s *TemplateService) Update(ctx context.Context, cmd UpdateTemplateCommand) (domaintemplate.Template, error) {
+// and replaces its exercises when provided. Only the owner may update a
+// template.
+func (s *TemplateService) Update(ctx context.Context, cmd UpdateTemplateCommand) (*domaintemplate.Template, error) {
 	t, err := s.templates.FindByID(ctx, cmd.ID)
 	if err != nil {
-		return domaintemplate.Template{}, err
+		return nil, err
 	}
 	if t.CreatedByUserID != cmd.UserID {
-		return domaintemplate.Template{}, domaintemplate.ErrNotOwner
+		return nil, domaintemplate.ErrNotOwner
 	}
 
 	if cmd.Name != nil {
 		name := strings.TrimSpace(*cmd.Name)
 		if name == "" {
-			return domaintemplate.Template{}, domaintemplate.ErrInvalidName
+			return nil, domaintemplate.ErrInvalidName
 		}
 		t.Name = name
 	}
@@ -149,41 +157,45 @@ func (s *TemplateService) Update(ctx context.Context, cmd UpdateTemplateCommand)
 		return nil
 	})
 	if err != nil {
-		return domaintemplate.Template{}, err
+		return nil, err
 	}
-	return updated, nil
+	return &updated, nil
 }
 
 // Publish makes an owned template publicly visible.
-func (s *TemplateService) Publish(ctx context.Context, id, userID uuid.UUID) (domaintemplate.Template, error) {
+func (s *TemplateService) Publish(ctx context.Context, id, userID uuid.UUID) (*domaintemplate.Template, error) {
 	t, err := s.templates.FindByID(ctx, id)
 	if err != nil {
-		return domaintemplate.Template{}, err
+		return nil, err
 	}
 	if t.CreatedByUserID != userID {
-		return domaintemplate.Template{}, domaintemplate.ErrNotOwner
+		return nil, domaintemplate.ErrNotOwner
 	}
 
 	t.IsPublic = true
 	t.UpdatedAt = time.Now()
-	return s.templates.Update(ctx, t)
+	updated, err := s.templates.Update(ctx, t)
+	if err != nil {
+		return nil, err
+	}
+	return &updated, nil
 }
 
 // Fork copies a template, including its exercises and media, under the given
 // user as the new owner. Public templates may be forked by anyone; private
 // templates only by their owner.
-func (s *TemplateService) Fork(ctx context.Context, id, userID uuid.UUID) (domaintemplate.Template, error) {
+func (s *TemplateService) Fork(ctx context.Context, id, userID uuid.UUID) (*domaintemplate.Template, error) {
 	source, err := s.templates.FindByID(ctx, id)
 	if err != nil {
-		return domaintemplate.Template{}, err
+		return nil, err
 	}
 	if !source.IsPublic && source.CreatedByUserID != userID {
-		return domaintemplate.Template{}, domaintemplate.ErrNotOwner
+		return nil, domaintemplate.ErrNotOwner
 	}
 
 	fork, err := domaintemplate.NewTemplate(source.Name, source.Description, userID)
 	if err != nil {
-		return domaintemplate.Template{}, err
+		return nil, err
 	}
 
 	exercises := make([]domaintemplate.TemplateExercise, 0, len(source.Exercises))
@@ -224,9 +236,9 @@ func (s *TemplateService) Fork(ctx context.Context, id, userID uuid.UUID) (domai
 		return nil
 	})
 	if err != nil {
-		return domaintemplate.Template{}, err
+		return nil, err
 	}
-	return created, nil
+	return &created, nil
 }
 
 // SoftDelete marks an owned template as deleted.

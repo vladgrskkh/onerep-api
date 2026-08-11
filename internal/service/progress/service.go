@@ -31,14 +31,22 @@ func (s *ProgressService) Get1RM(
 	ctx context.Context,
 	userID, exerciseID uuid.UUID,
 	from, to *time.Time,
-) ([]domainprogress.Progress1RM, error) {
+) ([]*domainprogress.Progress1RM, error) {
 	if userID == uuid.Nil {
 		return nil, domainprogress.ErrInvalidUserID
 	}
 	if exerciseID == uuid.Nil {
 		return nil, domainprogress.ErrInvalidExerciseID
 	}
-	return s.progress.Get1RM(ctx, exerciseID, userID, from, to)
+	progress, err := s.progress.Get1RM(ctx, exerciseID, userID, from, to)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]*domainprogress.Progress1RM, len(progress))
+	for i := range progress {
+		out[i] = &progress[i]
+	}
+	return out, nil
 }
 
 // GetVolume returns the user's total volume per muscle group, optionally
@@ -47,9 +55,17 @@ func (s *ProgressService) GetVolume(
 	ctx context.Context,
 	userID uuid.UUID,
 	from, to *time.Time,
-) ([]domainprogress.ProgressVolume, error) {
+) ([]*domainprogress.ProgressVolume, error) {
 	if userID == uuid.Nil {
 		return nil, domainprogress.ErrInvalidUserID
 	}
-	return s.progress.GetVolume(ctx, userID, from, to)
+	volumes, err := s.progress.GetVolume(ctx, userID, from, to)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]*domainprogress.ProgressVolume, len(volumes))
+	for i := range volumes {
+		out[i] = &volumes[i]
+	}
+	return out, nil
 }

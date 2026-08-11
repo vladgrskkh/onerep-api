@@ -95,7 +95,8 @@ func (s *ServiceTestSuite) TestListBodyWeight_Success() {
 
 	got, err := s.svc.ListBodyWeight(context.Background(), userID, &since)
 	s.Require().NoError(err)
-	s.Equal(expected, got)
+	s.Require().Len(got, 1)
+	s.Equal(expected[0], *got[0])
 }
 
 func (s *ServiceTestSuite) TestListBodyWeight_NilUserID() {

@@ -254,7 +254,7 @@ func (s *ServiceTestSuite) TestGet_Success() {
 
 	got, err := s.svc.Get(context.Background(), workoutID, userID)
 	s.Require().NoError(err)
-	s.Equal(expected, got)
+	s.Equal(expected, *got)
 }
 
 func (s *ServiceTestSuite) TestGet_NotOwner() {
@@ -284,7 +284,8 @@ func (s *ServiceTestSuite) TestList_Success() {
 
 	got, err := s.svc.List(context.Background(), userID, &since)
 	s.Require().NoError(err)
-	s.Equal(expected, got)
+	s.Require().Len(got, 1)
+	s.Equal(expected[0], *got[0])
 }
 
 func (s *ServiceTestSuite) TestList_NilUserRejected() {
@@ -312,7 +313,7 @@ func (s *ServiceTestSuite) TestAddExercise_Success() {
 		ExerciseID: exerciseID,
 	}, userID)
 	s.Require().NoError(err)
-	s.Equal(expected, got)
+	s.Equal(expected, *got)
 }
 
 func (s *ServiceTestSuite) TestAddExercise_NotOwner() {

@@ -27,26 +27,39 @@ type HandlerTestSuite struct {
 
 	handler *workouthandler.WorkoutHandler
 	svc     *workoutmocks.MockWorkoutService
+	mux     *http.ServeMux
+	userID  uuid.UUID
 }
 
 func (s *HandlerTestSuite) SetupTest() {
+	s.userID = uuid.Must(uuid.NewV7())
 	s.svc = workoutmocks.NewMockWorkoutService(s.T())
 	logger := slog.New(slog.DiscardHandler)
 	s.handler = workouthandler.NewWorkoutHandler(s.svc, logger)
+
+	s.mux = http.NewServeMux()
+	s.mux.HandleFunc("POST /v1/workouts", s.handler.Start)
+	s.mux.HandleFunc("GET /v1/workouts", s.handler.List)
+	s.mux.HandleFunc("GET /v1/workouts/{id}", s.handler.Get)
+	s.mux.HandleFunc("POST /v1/workouts/{id}/exercises", s.handler.AddExercise)
+	s.mux.HandleFunc("POST /v1/workouts/{id}/exercises/{exId}/sets", s.handler.LogSet)
+	s.mux.HandleFunc("PATCH /v1/workouts/{id}/finish", s.handler.Finish)
 }
 
+// serve performs a request without an authenticated user context.
 func (s *HandlerTestSuite) serve(method, path string, body string) *httptest.ResponseRecorder {
-	mux := http.NewServeMux()
-	mux.HandleFunc("POST /v1/workouts", s.handler.Start)
-	mux.HandleFunc("GET /v1/workouts", s.handler.List)
-	mux.HandleFunc("GET /v1/workouts/{id}", s.handler.Get)
-	mux.HandleFunc("POST /v1/workouts/{id}/exercises", s.handler.AddExercise)
-	mux.HandleFunc("POST /v1/workouts/{id}/exercises/{exId}/sets", s.handler.LogSet)
-	mux.HandleFunc("PATCH /v1/workouts/{id}/finish", s.handler.Finish)
-
 	req := httptest.NewRequest(method, path, strings.NewReader(body))
 	w := httptest.NewRecorder()
-	mux.ServeHTTP(w, req)
+	s.mux.ServeHTTP(w, req)
+	return w
+}
+
+// serveAs performs a request authenticated as the given user.
+func (s *HandlerTestSuite) serveAs(method, path string, body string, userID uuid.UUID) *httptest.ResponseRecorder {
+	req := httptest.NewRequest(method, path, strings.NewReader(body))
+	req = req.WithContext(handler.WithUserID(req.Context(), userID))
+	w := httptest.NewRecorder()
+	s.mux.ServeHTTP(w, req)
 	return w
 }
 
@@ -57,47 +70,35 @@ func (s *HandlerTestSuite) decodeError(w *httptest.ResponseRecorder) handler.Err
 }
 
 func (s *HandlerTestSuite) TestStart_Success() {
-	userID := uuid.Must(uuid.NewV7())
 	templateID := uuid.Must(uuid.NewV7())
 	workoutID := uuid.Must(uuid.NewV7())
-	created := domainworkout.Workout{ID: workoutID, UserID: userID, TemplateID: &templateID}
+	created := &domainworkout.Workout{ID: workoutID, UserID: s.userID, TemplateID: &templateID}
 	s.svc.EXPECT().Start(mock.Anything, serviceworkout.StartWorkoutCommand{
-		UserID:     userID,
+		UserID:     s.userID,
 		TemplateID: &templateID,
 	}).Return(created, nil)
 
-	req := httptest.NewRequest(
+	w := s.serveAs(
 		http.MethodPost,
 		"/v1/workouts",
-		strings.NewReader(`{"template_id":"`+templateID.String()+`"}`),
+		`{"template_id":"`+templateID.String()+`"}`,
+		s.userID,
 	)
-	req = req.WithContext(handler.WithUserID(req.Context(), userID))
-	mux := http.NewServeMux()
-	mux.HandleFunc("POST /v1/workouts", s.handler.Start)
-	w := httptest.NewRecorder()
-	mux.ServeHTTP(w, req)
 
 	s.Equal(http.StatusCreated, w.Code)
 	var resp dto.WorkoutResponse
 	s.Require().NoError(json.Unmarshal(w.Body.Bytes(), &resp))
 	s.Equal(workoutID, resp.ID)
-	s.Equal(userID, resp.UserID)
-	s.Require().NotNil(resp.TemplateID)
-	s.Equal(templateID, *resp.TemplateID)
+	s.Equal(s.userID, resp.UserID)
+	s.Equal(templateID, resp.TemplateID)
 }
 
 func (s *HandlerTestSuite) TestStart_EmptyBody() {
-	userID := uuid.Must(uuid.NewV7())
 	workoutID := uuid.Must(uuid.NewV7())
-	s.svc.EXPECT().Start(mock.Anything, serviceworkout.StartWorkoutCommand{UserID: userID}).
-		Return(domainworkout.Workout{ID: workoutID, UserID: userID}, nil)
+	s.svc.EXPECT().Start(mock.Anything, serviceworkout.StartWorkoutCommand{UserID: s.userID}).
+		Return(&domainworkout.Workout{ID: workoutID, UserID: s.userID}, nil)
 
-	req := httptest.NewRequest(http.MethodPost, "/v1/workouts", nil)
-	req = req.WithContext(handler.WithUserID(req.Context(), userID))
-	mux := http.NewServeMux()
-	mux.HandleFunc("POST /v1/workouts", s.handler.Start)
-	w := httptest.NewRecorder()
-	mux.ServeHTTP(w, req)
+	w := s.serveAs(http.MethodPost, "/v1/workouts", "", s.userID)
 
 	s.Equal(http.StatusCreated, w.Code)
 	var resp dto.WorkoutResponse
@@ -106,17 +107,11 @@ func (s *HandlerTestSuite) TestStart_EmptyBody() {
 }
 
 func (s *HandlerTestSuite) TestStart_EmptyJSONObject() {
-	userID := uuid.Must(uuid.NewV7())
 	workoutID := uuid.Must(uuid.NewV7())
-	s.svc.EXPECT().Start(mock.Anything, serviceworkout.StartWorkoutCommand{UserID: userID}).
-		Return(domainworkout.Workout{ID: workoutID, UserID: userID}, nil)
+	s.svc.EXPECT().Start(mock.Anything, serviceworkout.StartWorkoutCommand{UserID: s.userID}).
+		Return(&domainworkout.Workout{ID: workoutID, UserID: s.userID}, nil)
 
-	req := httptest.NewRequest(http.MethodPost, "/v1/workouts", strings.NewReader(`{}`))
-	req = req.WithContext(handler.WithUserID(req.Context(), userID))
-	mux := http.NewServeMux()
-	mux.HandleFunc("POST /v1/workouts", s.handler.Start)
-	w := httptest.NewRecorder()
-	mux.ServeHTTP(w, req)
+	w := s.serveAs(http.MethodPost, "/v1/workouts", `{}`, s.userID)
 
 	s.Equal(http.StatusCreated, w.Code)
 }
@@ -131,16 +126,10 @@ func (s *HandlerTestSuite) TestStart_InvalidJSON() {
 }
 
 func (s *HandlerTestSuite) TestStart_ActiveWorkout() {
-	userID := uuid.Must(uuid.NewV7())
 	s.svc.EXPECT().Start(mock.Anything, mock.Anything).
-		Return(domainworkout.Workout{}, domainworkout.ErrActiveWorkout)
+		Return(nil, domainworkout.ErrActiveWorkout)
 
-	req := httptest.NewRequest(http.MethodPost, "/v1/workouts", nil)
-	req = req.WithContext(handler.WithUserID(req.Context(), userID))
-	mux := http.NewServeMux()
-	mux.HandleFunc("POST /v1/workouts", s.handler.Start)
-	w := httptest.NewRecorder()
-	mux.ServeHTTP(w, req)
+	w := s.serveAs(http.MethodPost, "/v1/workouts", "", s.userID)
 
 	s.Equal(http.StatusConflict, w.Code)
 	resp := s.decodeError(w)
@@ -148,16 +137,10 @@ func (s *HandlerTestSuite) TestStart_ActiveWorkout() {
 }
 
 func (s *HandlerTestSuite) TestStart_TemplateNotFound() {
-	userID := uuid.Must(uuid.NewV7())
 	s.svc.EXPECT().Start(mock.Anything, mock.Anything).
-		Return(domainworkout.Workout{}, domaintemplate.ErrTemplateNotFound)
+		Return(nil, domaintemplate.ErrTemplateNotFound)
 
-	req := httptest.NewRequest(http.MethodPost, "/v1/workouts", nil)
-	req = req.WithContext(handler.WithUserID(req.Context(), userID))
-	mux := http.NewServeMux()
-	mux.HandleFunc("POST /v1/workouts", s.handler.Start)
-	w := httptest.NewRecorder()
-	mux.ServeHTTP(w, req)
+	w := s.serveAs(http.MethodPost, "/v1/workouts", "", s.userID)
 
 	s.Equal(http.StatusNotFound, w.Code)
 	resp := s.decodeError(w)
@@ -165,22 +148,17 @@ func (s *HandlerTestSuite) TestStart_TemplateNotFound() {
 }
 
 func (s *HandlerTestSuite) TestList_Success() {
-	userID := uuid.Must(uuid.NewV7())
 	since := time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC)
 	workoutID := uuid.Must(uuid.NewV7())
-	s.svc.EXPECT().List(mock.Anything, userID, &since).
-		Return([]domainworkout.Workout{{ID: workoutID, UserID: userID}}, nil)
+	s.svc.EXPECT().List(mock.Anything, s.userID, &since).
+		Return([]*domainworkout.Workout{{ID: workoutID, UserID: s.userID}}, nil)
 
-	req := httptest.NewRequest(
+	w := s.serveAs(
 		http.MethodGet,
 		"/v1/workouts?since=2026-08-01T00%3A00%3A00Z",
-		nil,
+		"",
+		s.userID,
 	)
-	req = req.WithContext(handler.WithUserID(req.Context(), userID))
-	mux := http.NewServeMux()
-	mux.HandleFunc("GET /v1/workouts", s.handler.List)
-	w := httptest.NewRecorder()
-	mux.ServeHTTP(w, req)
 
 	s.Equal(http.StatusOK, w.Code)
 	var resp []dto.WorkoutResponse
@@ -199,17 +177,11 @@ func (s *HandlerTestSuite) TestList_InvalidSince() {
 }
 
 func (s *HandlerTestSuite) TestGet_Success() {
-	userID := uuid.Must(uuid.NewV7())
 	workoutID := uuid.Must(uuid.NewV7())
-	s.svc.EXPECT().Get(mock.Anything, workoutID, userID).
-		Return(domainworkout.Workout{ID: workoutID, UserID: userID}, nil)
+	s.svc.EXPECT().Get(mock.Anything, workoutID, s.userID).
+		Return(&domainworkout.Workout{ID: workoutID, UserID: s.userID}, nil)
 
-	req := httptest.NewRequest(http.MethodGet, "/v1/workouts/"+workoutID.String(), nil)
-	req = req.WithContext(handler.WithUserID(req.Context(), userID))
-	mux := http.NewServeMux()
-	mux.HandleFunc("GET /v1/workouts/{id}", s.handler.Get)
-	w := httptest.NewRecorder()
-	mux.ServeHTTP(w, req)
+	w := s.serveAs(http.MethodGet, "/v1/workouts/"+workoutID.String(), "", s.userID)
 
 	s.Equal(http.StatusOK, w.Code)
 	var resp dto.WorkoutResponse
@@ -227,17 +199,11 @@ func (s *HandlerTestSuite) TestGet_InvalidID() {
 }
 
 func (s *HandlerTestSuite) TestGet_NotFound() {
-	userID := uuid.Must(uuid.NewV7())
 	workoutID := uuid.Must(uuid.NewV7())
-	s.svc.EXPECT().Get(mock.Anything, workoutID, userID).
-		Return(domainworkout.Workout{}, domainworkout.ErrWorkoutNotFound)
+	s.svc.EXPECT().Get(mock.Anything, workoutID, s.userID).
+		Return(nil, domainworkout.ErrWorkoutNotFound)
 
-	req := httptest.NewRequest(http.MethodGet, "/v1/workouts/"+workoutID.String(), nil)
-	req = req.WithContext(handler.WithUserID(req.Context(), userID))
-	mux := http.NewServeMux()
-	mux.HandleFunc("GET /v1/workouts/{id}", s.handler.Get)
-	w := httptest.NewRecorder()
-	mux.ServeHTTP(w, req)
+	w := s.serveAs(http.MethodGet, "/v1/workouts/"+workoutID.String(), "", s.userID)
 
 	s.Equal(http.StatusNotFound, w.Code)
 	resp := s.decodeError(w)
@@ -245,27 +211,20 @@ func (s *HandlerTestSuite) TestGet_NotFound() {
 }
 
 func (s *HandlerTestSuite) TestGet_NotOwner() {
-	userID := uuid.Must(uuid.NewV7())
 	workoutID := uuid.Must(uuid.NewV7())
-	s.svc.EXPECT().Get(mock.Anything, workoutID, userID).
-		Return(domainworkout.Workout{}, domainworkout.ErrWorkoutNotFound)
+	s.svc.EXPECT().Get(mock.Anything, workoutID, s.userID).
+		Return(nil, domainworkout.ErrWorkoutNotFound)
 
-	req := httptest.NewRequest(http.MethodGet, "/v1/workouts/"+workoutID.String(), nil)
-	req = req.WithContext(handler.WithUserID(req.Context(), userID))
-	mux := http.NewServeMux()
-	mux.HandleFunc("GET /v1/workouts/{id}", s.handler.Get)
-	w := httptest.NewRecorder()
-	mux.ServeHTTP(w, req)
+	w := s.serveAs(http.MethodGet, "/v1/workouts/"+workoutID.String(), "", s.userID)
 
 	s.Equal(http.StatusNotFound, w.Code)
 }
 
 func (s *HandlerTestSuite) TestAddExercise_Success() {
-	userID := uuid.Must(uuid.NewV7())
 	workoutID := uuid.Must(uuid.NewV7())
 	exerciseID := uuid.Must(uuid.NewV7())
 	weID := uuid.Must(uuid.NewV7())
-	created := domainworkout.WorkoutExercise{
+	created := &domainworkout.WorkoutExercise{
 		ID:         weID,
 		WorkoutID:  workoutID,
 		ExerciseID: exerciseID,
@@ -274,18 +233,14 @@ func (s *HandlerTestSuite) TestAddExercise_Success() {
 	s.svc.EXPECT().AddExercise(mock.Anything, serviceworkout.AddExerciseCommand{
 		WorkoutID:  workoutID,
 		ExerciseID: exerciseID,
-	}, userID).Return(created, nil)
+	}, s.userID).Return(created, nil)
 
-	req := httptest.NewRequest(
+	w := s.serveAs(
 		http.MethodPost,
 		"/v1/workouts/"+workoutID.String()+"/exercises",
-		strings.NewReader(`{"exercise_id":"`+exerciseID.String()+`"}`),
+		`{"exercise_id":"`+exerciseID.String()+`"}`,
+		s.userID,
 	)
-	req = req.WithContext(handler.WithUserID(req.Context(), userID))
-	mux := http.NewServeMux()
-	mux.HandleFunc("POST /v1/workouts/{id}/exercises", s.handler.AddExercise)
-	w := httptest.NewRecorder()
-	mux.ServeHTTP(w, req)
 
 	s.Equal(http.StatusCreated, w.Code)
 	var resp dto.WorkoutExerciseResponse
@@ -320,7 +275,6 @@ func (s *HandlerTestSuite) TestAddExercise_InvalidWorkoutID() {
 }
 
 func (s *HandlerTestSuite) TestLogSet_Success() {
-	userID := uuid.Must(uuid.NewV7())
 	workoutID := uuid.Must(uuid.NewV7())
 	weID := uuid.Must(uuid.NewV7())
 	setID := uuid.Must(uuid.NewV7())
@@ -344,18 +298,14 @@ func (s *HandlerTestSuite) TestLogSet_Success() {
 		Reps:              5,
 		RPE:               &rpe,
 		IsWarmup:          true,
-	}, userID).Return(result, nil)
+	}, s.userID).Return(result, nil)
 
-	req := httptest.NewRequest(
+	w := s.serveAs(
 		http.MethodPost,
 		"/v1/workouts/"+workoutID.String()+"/exercises/"+weID.String()+"/sets",
-		strings.NewReader(`{"weight_kg":100,"reps":5,"rpe":8,"is_warmup":true}`),
+		`{"weight_kg":100,"reps":5,"rpe":8,"is_warmup":true}`,
+		s.userID,
 	)
-	req = req.WithContext(handler.WithUserID(req.Context(), userID))
-	mux := http.NewServeMux()
-	mux.HandleFunc("POST /v1/workouts/{id}/exercises/{exId}/sets", s.handler.LogSet)
-	w := httptest.NewRecorder()
-	mux.ServeHTTP(w, req)
 
 	s.Equal(http.StatusCreated, w.Code)
 	var resp dto.LogSetResponse
@@ -366,8 +316,7 @@ func (s *HandlerTestSuite) TestLogSet_Success() {
 	s.Equal(5, resp.Reps)
 	s.True(resp.IsPR)
 	s.InDelta(116.7, resp.Estimated1RM, 0.0001)
-	s.Require().NotNil(resp.RPE)
-	s.Equal(8, *resp.RPE)
+	s.Equal(8, resp.RPE)
 }
 
 func (s *HandlerTestSuite) TestLogSet_ValidationError() {
@@ -400,22 +349,17 @@ func (s *HandlerTestSuite) TestLogSet_InvalidWorkoutExerciseID() {
 }
 
 func (s *HandlerTestSuite) TestLogSet_NotFound() {
-	userID := uuid.Must(uuid.NewV7())
 	workoutID := uuid.Must(uuid.NewV7())
 	weID := uuid.Must(uuid.NewV7())
-	s.svc.EXPECT().LogSet(mock.Anything, mock.Anything, userID).
+	s.svc.EXPECT().LogSet(mock.Anything, mock.Anything, s.userID).
 		Return(serviceworkout.SetResult{}, domainworkout.ErrWorkoutNotFound)
 
-	req := httptest.NewRequest(
+	w := s.serveAs(
 		http.MethodPost,
 		"/v1/workouts/"+workoutID.String()+"/exercises/"+weID.String()+"/sets",
-		strings.NewReader(`{"weight_kg":100,"reps":5}`),
+		`{"weight_kg":100,"reps":5}`,
+		s.userID,
 	)
-	req = req.WithContext(handler.WithUserID(req.Context(), userID))
-	mux := http.NewServeMux()
-	mux.HandleFunc("POST /v1/workouts/{id}/exercises/{exId}/sets", s.handler.LogSet)
-	w := httptest.NewRecorder()
-	mux.ServeHTTP(w, req)
 
 	s.Equal(http.StatusNotFound, w.Code)
 	resp := s.decodeError(w)
@@ -423,18 +367,12 @@ func (s *HandlerTestSuite) TestLogSet_NotFound() {
 }
 
 func (s *HandlerTestSuite) TestFinish_Success() {
-	userID := uuid.Must(uuid.NewV7())
 	workoutID := uuid.Must(uuid.NewV7())
-	finished := domainworkout.Workout{ID: workoutID, UserID: userID}
-	s.svc.EXPECT().Finish(mock.Anything, serviceworkout.FinishWorkoutCommand{WorkoutID: workoutID}, userID).
+	finished := &domainworkout.Workout{ID: workoutID, UserID: s.userID}
+	s.svc.EXPECT().Finish(mock.Anything, serviceworkout.FinishWorkoutCommand{WorkoutID: workoutID}, s.userID).
 		Return(finished, nil)
 
-	req := httptest.NewRequest(http.MethodPatch, "/v1/workouts/"+workoutID.String()+"/finish", nil)
-	req = req.WithContext(handler.WithUserID(req.Context(), userID))
-	mux := http.NewServeMux()
-	mux.HandleFunc("PATCH /v1/workouts/{id}/finish", s.handler.Finish)
-	w := httptest.NewRecorder()
-	mux.ServeHTTP(w, req)
+	w := s.serveAs(http.MethodPatch, "/v1/workouts/"+workoutID.String()+"/finish", "", s.userID)
 
 	s.Equal(http.StatusOK, w.Code)
 	var resp dto.WorkoutResponse
@@ -443,17 +381,11 @@ func (s *HandlerTestSuite) TestFinish_Success() {
 }
 
 func (s *HandlerTestSuite) TestFinish_NotFound() {
-	userID := uuid.Must(uuid.NewV7())
 	workoutID := uuid.Must(uuid.NewV7())
-	s.svc.EXPECT().Finish(mock.Anything, mock.Anything, userID).
-		Return(domainworkout.Workout{}, domainworkout.ErrWorkoutNotFound)
+	s.svc.EXPECT().Finish(mock.Anything, mock.Anything, s.userID).
+		Return(nil, domainworkout.ErrWorkoutNotFound)
 
-	req := httptest.NewRequest(http.MethodPatch, "/v1/workouts/"+workoutID.String()+"/finish", nil)
-	req = req.WithContext(handler.WithUserID(req.Context(), userID))
-	mux := http.NewServeMux()
-	mux.HandleFunc("PATCH /v1/workouts/{id}/finish", s.handler.Finish)
-	w := httptest.NewRecorder()
-	mux.ServeHTTP(w, req)
+	w := s.serveAs(http.MethodPatch, "/v1/workouts/"+workoutID.String()+"/finish", "", s.userID)
 
 	s.Equal(http.StatusNotFound, w.Code)
 	resp := s.decodeError(w)

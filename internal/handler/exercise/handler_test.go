@@ -26,25 +26,38 @@ type HandlerTestSuite struct {
 
 	handler *exercise.ExerciseHandler
 	svc     *exercisemocks.MockExerciseService
+	mux     *http.ServeMux
+	userID  uuid.UUID
 }
 
 func (s *HandlerTestSuite) SetupTest() {
+	s.userID = uuid.Must(uuid.NewV7())
 	s.svc = exercisemocks.NewMockExerciseService(s.T())
 	logger := slog.New(slog.DiscardHandler)
 	s.handler = exercise.NewExerciseHandler(s.svc, logger)
+
+	s.mux = http.NewServeMux()
+	s.mux.HandleFunc("GET /v1/exercises", s.handler.List)
+	s.mux.HandleFunc("GET /v1/exercises/{id}", s.handler.Get)
+	s.mux.HandleFunc("POST /v1/exercises", s.handler.Create)
+	s.mux.HandleFunc("PATCH /v1/exercises/{id}", s.handler.Update)
+	s.mux.HandleFunc("DELETE /v1/exercises/{id}", s.handler.SoftDelete)
 }
 
+// serve performs a request without an authenticated user context.
 func (s *HandlerTestSuite) serve(method, path string, body string) *httptest.ResponseRecorder {
-	mux := http.NewServeMux()
-	mux.HandleFunc("GET /v1/exercises", s.handler.List)
-	mux.HandleFunc("GET /v1/exercises/{id}", s.handler.Get)
-	mux.HandleFunc("POST /v1/exercises", s.handler.Create)
-	mux.HandleFunc("PATCH /v1/exercises/{id}", s.handler.Update)
-	mux.HandleFunc("DELETE /v1/exercises/{id}", s.handler.SoftDelete)
-
 	req := httptest.NewRequest(method, path, strings.NewReader(body))
 	w := httptest.NewRecorder()
-	mux.ServeHTTP(w, req)
+	s.mux.ServeHTTP(w, req)
+	return w
+}
+
+// serveAs performs a request authenticated as the given user.
+func (s *HandlerTestSuite) serveAs(method, path string, body string, userID uuid.UUID) *httptest.ResponseRecorder {
+	req := httptest.NewRequest(method, path, strings.NewReader(body))
+	req = req.WithContext(handler.WithUserID(req.Context(), userID))
+	w := httptest.NewRecorder()
+	s.mux.ServeHTTP(w, req)
 	return w
 }
 
@@ -56,7 +69,7 @@ func (s *HandlerTestSuite) decodeError(w *httptest.ResponseRecorder) handler.Err
 
 func (s *HandlerTestSuite) TestList_Success() {
 	since := time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC)
-	exercises := []domainexercise.Exercise{{
+	exercises := []*domainexercise.Exercise{{
 		ID:    uuid.Must(uuid.NewV7()),
 		Name:  "Bench Press",
 		Notes: "Medium grip",
@@ -89,7 +102,7 @@ func (s *HandlerTestSuite) TestList_InvalidSince() {
 func (s *HandlerTestSuite) TestGet_Success() {
 	exerciseID := uuid.Must(uuid.NewV7())
 	s.svc.EXPECT().Get(mock.Anything, exerciseID).
-		Return(domainexercise.Exercise{ID: exerciseID, Name: "Squat"}, nil)
+		Return(&domainexercise.Exercise{ID: exerciseID, Name: "Squat"}, nil)
 
 	w := s.serve(http.MethodGet, "/v1/exercises/"+exerciseID.String(), "")
 
@@ -112,7 +125,7 @@ func (s *HandlerTestSuite) TestGet_InvalidID() {
 func (s *HandlerTestSuite) TestGet_NotFound() {
 	exerciseID := uuid.Must(uuid.NewV7())
 	s.svc.EXPECT().Get(mock.Anything, exerciseID).
-		Return(domainexercise.Exercise{}, domainexercise.ErrExerciseNotFound)
+		Return(nil, domainexercise.ErrExerciseNotFound)
 
 	w := s.serve(http.MethodGet, "/v1/exercises/"+exerciseID.String(), "")
 
@@ -157,7 +170,7 @@ func (s *HandlerTestSuite) TestCreate_InvalidJSON() {
 func (s *HandlerTestSuite) TestCreate_Success() {
 	userID := uuid.Must(uuid.NewV7())
 	exerciseID := uuid.Must(uuid.NewV7())
-	created := domainexercise.Exercise{
+	created := &domainexercise.Exercise{
 		ID:              exerciseID,
 		Name:            "Bench Press",
 		Description:     "Chest press",
@@ -172,16 +185,12 @@ func (s *HandlerTestSuite) TestCreate_Success() {
 		MuscleGroupIDs: []int{1},
 	}).Return(created, nil)
 
-	req := httptest.NewRequest(
+	w := s.serveAs(
 		http.MethodPost,
 		"/v1/exercises",
-		strings.NewReader(`{"name":"Bench Press","description":"Chest press","muscle_group_ids":[1]}`),
+		`{"name":"Bench Press","description":"Chest press","muscle_group_ids":[1]}`,
+		userID,
 	)
-	req = req.WithContext(handler.WithUserID(req.Context(), userID))
-	mux := http.NewServeMux()
-	mux.HandleFunc("POST /v1/exercises", s.handler.Create)
-	w := httptest.NewRecorder()
-	mux.ServeHTTP(w, req)
 
 	s.Equal(http.StatusCreated, w.Code)
 	var resp dto.ExerciseResponse
@@ -196,7 +205,7 @@ func (s *HandlerTestSuite) TestCreate_Success() {
 func (s *HandlerTestSuite) TestUpdate_Success() {
 	exerciseID := uuid.Must(uuid.NewV7())
 	newName := "Incline Bench Press"
-	updated := domainexercise.Exercise{ID: exerciseID, Name: newName}
+	updated := &domainexercise.Exercise{ID: exerciseID, Name: newName}
 	s.svc.EXPECT().Update(mock.Anything, serviceexercise.UpdateExerciseCommand{
 		ID:   exerciseID,
 		Name: &newName,

@@ -55,7 +55,8 @@ func (s *ServiceTestSuite) TestList_PassesFilters() {
 		Since:       &since,
 	})
 	s.Require().NoError(err)
-	s.Equal(expected, got)
+	s.Require().Len(got, 1)
+	s.Equal(expected[0], *got[0])
 }
 
 func (s *ServiceTestSuite) TestGet_Success() {
@@ -65,7 +66,7 @@ func (s *ServiceTestSuite) TestGet_Success() {
 
 	got, err := s.svc.Get(context.Background(), exerciseID)
 	s.Require().NoError(err)
-	s.Equal(expected, got)
+	s.Equal(expected, *got)
 }
 
 func (s *ServiceTestSuite) TestGet_NotFound() {

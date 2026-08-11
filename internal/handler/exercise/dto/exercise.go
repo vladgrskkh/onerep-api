@@ -25,7 +25,7 @@ type ExerciseResponse struct {
 	Name            string                  `json:"name"`
 	Description     string                  `json:"description,omitzero"`
 	Notes           string                  `json:"notes,omitzero"`
-	IsBuiltIn       bool                    `json:"is_built_in,omitzero"`
+	IsBuiltIn       bool                    `json:"is_built_in"`
 	CreatedByUserID uuid.UUID               `json:"created_by_user_id,omitzero"`
 	CreatedAt       time.Time               `json:"created_at"`
 	UpdatedAt       time.Time               `json:"updated_at"`
@@ -37,11 +37,11 @@ type ExerciseResponse struct {
 type ExerciseMediaResponse struct {
 	ID        uuid.UUID `json:"id"`
 	MediaType string    `json:"media_type"`
-	SortOrder int       `json:"sort_order,omitzero"`
-	S3Key     string    `json:"s3_key,omitzero"`
+	SortOrder int       `json:"sort_order"`
+	S3Key     string    `json:"s3_key"`
 }
 
 type MuscleGroupResponse struct {
 	ID        int  `json:"id"`
-	IsPrimary bool `json:"is_primary,omitzero"`
+	IsPrimary bool `json:"is_primary"`
 }

@@ -1,6 +1,7 @@
 package progress
 
 import (
+	"context"
 	"errors"
 	"log/slog"
 	"net/http"
@@ -8,9 +9,29 @@ import (
 
 	"github.com/google/uuid"
 
+	domainbodyweight "github.com/vladgrskkh/onerep-api/internal/domain/bodyweight"
+	domainprogress "github.com/vladgrskkh/onerep-api/internal/domain/progress"
 	"github.com/vladgrskkh/onerep-api/internal/handler"
 	"github.com/vladgrskkh/onerep-api/internal/handler/progress/dto"
+	servicebodyweight "github.com/vladgrskkh/onerep-api/internal/service/bodyweight"
 )
+
+// ProgressService is the progress read-model contract consumed by the
+// handler.
+type ProgressService interface {
+	Get1RM(
+		ctx context.Context,
+		userID, exerciseID uuid.UUID,
+		from, to *time.Time,
+	) ([]*domainprogress.Progress1RM, error)
+	GetVolume(ctx context.Context, userID uuid.UUID, from, to *time.Time) ([]*domainprogress.ProgressVolume, error)
+}
+
+// BodyWeightService is the body weight contract consumed by the handler.
+type BodyWeightService interface {
+	LogBodyWeight(ctx context.Context, cmd servicebodyweight.LogBodyWeightCommand) (*domainbodyweight.BodyWeight, error)
+	ListBodyWeight(ctx context.Context, userID uuid.UUID, since *time.Time) ([]*domainbodyweight.BodyWeight, error)
+}
 
 type ProgressHandler struct {
 	progress   ProgressService
@@ -24,15 +45,6 @@ func NewProgressHandler(
 	logger *slog.Logger,
 ) *ProgressHandler {
 	return &ProgressHandler{progress: progress, bodyWeight: bodyWeight, logger: logger}
-}
-
-// parseTimeParam parses an RFC 3339 query parameter.
-func parseTimeParam(raw string) (*time.Time, error) {
-	parsed, err := time.Parse(time.RFC3339, raw)
-	if err != nil {
-		return nil, err
-	}
-	return &parsed, nil
 }
 
 // Get1RM returns the user's estimated one-rep max history for an exercise.
@@ -53,25 +65,32 @@ func parseTimeParam(raw string) (*time.Time, error) {
 func (h *ProgressHandler) Get1RM(w http.ResponseWriter, r *http.Request) {
 	exerciseID, parseErr := uuid.Parse(r.URL.Query().Get("exercise_id"))
 	if parseErr != nil {
-		handler.WriteError(w, h.logger, http.StatusBadRequest, invalidExerciseIDDetail())
+		handler.WriteError(
+			w,
+			h.logger,
+			http.StatusBadRequest,
+			invalidExerciseIDDetail(errors.New(errMsgInvalidExerciseID)),
+		)
 		return
 	}
 
+	fromVal, fromPresent, parseErr := handler.ParseRFC3339QueryParam(r, "from")
+	if parseErr != nil {
+		handler.WriteError(w, h.logger, http.StatusBadRequest, invalidDateRangeDetail())
+		return
+	}
 	var from *time.Time
-	if fromStr := r.URL.Query().Get("from"); fromStr != "" {
-		from, parseErr = parseTimeParam(fromStr)
-		if parseErr != nil {
-			handler.WriteError(w, h.logger, http.StatusBadRequest, invalidDateRangeDetail())
-			return
-		}
+	if fromPresent {
+		from = &fromVal
+	}
+	toVal, toPresent, parseErr := handler.ParseRFC3339QueryParam(r, "to")
+	if parseErr != nil {
+		handler.WriteError(w, h.logger, http.StatusBadRequest, invalidDateRangeDetail())
+		return
 	}
 	var to *time.Time
-	if toStr := r.URL.Query().Get("to"); toStr != "" {
-		to, parseErr = parseTimeParam(toStr)
-		if parseErr != nil {
-			handler.WriteError(w, h.logger, http.StatusBadRequest, invalidDateRangeDetail())
-			return
-		}
+	if toPresent {
+		to = &toVal
 	}
 	if from != nil && to != nil && from.After(*to) {
 		handler.WriteError(w, h.logger, http.StatusBadRequest, invalidDateRangeDetail())
@@ -81,8 +100,14 @@ func (h *ProgressHandler) Get1RM(w http.ResponseWriter, r *http.Request) {
 	userID := handler.UserIDFromContext(r.Context())
 	progress, err := h.progress.Get1RM(r.Context(), userID, exerciseID, from, to)
 	if err != nil {
-		status, detail := mapError(err)
-		handler.WriteError(w, h.logger, status, detail)
+		switch {
+		case errors.Is(err, domainprogress.ErrInvalidExerciseID):
+			handler.WriteError(w, h.logger, http.StatusBadRequest, invalidExerciseIDDetail(err))
+		case errors.Is(err, domainprogress.ErrInvalidUserID):
+			handler.WriteError(w, h.logger, http.StatusBadRequest, invalidUserIDDetail(err))
+		default:
+			handler.WriteSystemError(w, h.logger, http.StatusInternalServerError, err)
+		}
 		return
 	}
 
@@ -104,22 +129,23 @@ func (h *ProgressHandler) Get1RM(w http.ResponseWriter, r *http.Request) {
 // @Security BearerAuth
 // @Router /progress/volume [get]
 func (h *ProgressHandler) GetVolume(w http.ResponseWriter, r *http.Request) {
-	var parseErr error
+	fromVal, fromPresent, parseErr := handler.ParseRFC3339QueryParam(r, "from")
+	if parseErr != nil {
+		handler.WriteError(w, h.logger, http.StatusBadRequest, invalidDateRangeDetail())
+		return
+	}
 	var from *time.Time
-	if fromStr := r.URL.Query().Get("from"); fromStr != "" {
-		from, parseErr = parseTimeParam(fromStr)
-		if parseErr != nil {
-			handler.WriteError(w, h.logger, http.StatusBadRequest, invalidDateRangeDetail())
-			return
-		}
+	if fromPresent {
+		from = &fromVal
+	}
+	toVal, toPresent, parseErr := handler.ParseRFC3339QueryParam(r, "to")
+	if parseErr != nil {
+		handler.WriteError(w, h.logger, http.StatusBadRequest, invalidDateRangeDetail())
+		return
 	}
 	var to *time.Time
-	if toStr := r.URL.Query().Get("to"); toStr != "" {
-		to, parseErr = parseTimeParam(toStr)
-		if parseErr != nil {
-			handler.WriteError(w, h.logger, http.StatusBadRequest, invalidDateRangeDetail())
-			return
-		}
+	if toPresent {
+		to = &toVal
 	}
 	if from != nil && to != nil && from.After(*to) {
 		handler.WriteError(w, h.logger, http.StatusBadRequest, invalidDateRangeDetail())
@@ -129,8 +155,12 @@ func (h *ProgressHandler) GetVolume(w http.ResponseWriter, r *http.Request) {
 	userID := handler.UserIDFromContext(r.Context())
 	volumes, err := h.progress.GetVolume(r.Context(), userID, from, to)
 	if err != nil {
-		status, detail := mapError(err)
-		handler.WriteError(w, h.logger, status, detail)
+		switch {
+		case errors.Is(err, domainprogress.ErrInvalidUserID):
+			handler.WriteError(w, h.logger, http.StatusBadRequest, invalidUserIDDetail(err))
+		default:
+			handler.WriteSystemError(w, h.logger, http.StatusInternalServerError, err)
+		}
 		return
 	}
 
@@ -151,21 +181,25 @@ func (h *ProgressHandler) GetVolume(w http.ResponseWriter, r *http.Request) {
 // @Security BearerAuth
 // @Router /progress/body-weight [get]
 func (h *ProgressHandler) GetBodyWeight(w http.ResponseWriter, r *http.Request) {
+	sinceVal, present, parseErr := handler.ParseRFC3339QueryParam(r, "since")
+	if parseErr != nil {
+		handler.WriteError(w, h.logger, http.StatusBadRequest, invalidSinceDetail())
+		return
+	}
 	var since *time.Time
-	if sinceStr := r.URL.Query().Get("since"); sinceStr != "" {
-		var parseErr error
-		since, parseErr = parseTimeParam(sinceStr)
-		if parseErr != nil {
-			handler.WriteError(w, h.logger, http.StatusBadRequest, invalidSinceDetail())
-			return
-		}
+	if present {
+		since = &sinceVal
 	}
 
 	userID := handler.UserIDFromContext(r.Context())
 	weights, err := h.bodyWeight.ListBodyWeight(r.Context(), userID, since)
 	if err != nil {
-		status, detail := mapError(err)
-		handler.WriteError(w, h.logger, status, detail)
+		switch {
+		case errors.Is(err, domainbodyweight.ErrInvalidUserID):
+			handler.WriteError(w, h.logger, http.StatusBadRequest, invalidUserIDDetail(err))
+		default:
+			handler.WriteSystemError(w, h.logger, http.StatusInternalServerError, err)
+		}
 		return
 	}
 
@@ -199,8 +233,14 @@ func (h *ProgressHandler) LogBodyWeight(w http.ResponseWriter, r *http.Request) 
 	userID := handler.UserIDFromContext(r.Context())
 	bw, err := h.bodyWeight.LogBodyWeight(r.Context(), toLogBodyWeightCommand(req, userID))
 	if err != nil {
-		status, detail := mapError(err)
-		handler.WriteError(w, h.logger, status, detail)
+		switch {
+		case errors.Is(err, domainbodyweight.ErrInvalidUserID):
+			handler.WriteError(w, h.logger, http.StatusBadRequest, invalidUserIDDetail(err))
+		case errors.Is(err, domainbodyweight.ErrInvalidWeight):
+			handler.WriteError(w, h.logger, http.StatusBadRequest, invalidWeightDetail(err))
+		default:
+			handler.WriteSystemError(w, h.logger, http.StatusInternalServerError, err)
+		}
 		return
 	}
 

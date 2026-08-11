@@ -38,7 +38,8 @@ func (s *ServiceTestSuite) TestGet1RM_Success() {
 
 	got, err := s.svc.Get1RM(context.Background(), userID, exerciseID, &from, &to)
 	s.Require().NoError(err)
-	s.Equal(expected, got)
+	s.Require().Len(got, 1)
+	s.Equal(expected[0], *got[0])
 }
 
 func (s *ServiceTestSuite) TestGet1RM_NilUserID() {
@@ -75,7 +76,8 @@ func (s *ServiceTestSuite) TestGetVolume_Success() {
 
 	got, err := s.svc.GetVolume(context.Background(), userID, &from, (*time.Time)(nil))
 	s.Require().NoError(err)
-	s.Equal(expected, got)
+	s.Require().Len(got, 1)
+	s.Equal(expected[0], *got[0])
 }
 
 func (s *ServiceTestSuite) TestGetVolume_NilUserID() {

@@ -1,12 +1,6 @@
 package template
 
-import (
-	"errors"
-	"net/http"
-
-	domaintemplate "github.com/vladgrskkh/onerep-api/internal/domain/template"
-	"github.com/vladgrskkh/onerep-api/internal/handler"
-)
+import "github.com/vladgrskkh/onerep-api/internal/handler"
 
 const (
 	errCodeInvalidRequestBody = "INVALID_REQUEST_BODY"
@@ -20,6 +14,15 @@ const (
 	errCodeInvalidSince = "INVALID_SINCE"
 	errMsgInvalidSince  = "invalid since parameter"
 	errUserInvalidSince = "The since parameter must be an RFC 3339 timestamp"
+
+	errCodeTemplateNotFound = "TEMPLATE_NOT_FOUND"
+	errUserTemplateNotFound = "Template not found"
+	errCodeForbidden        = "FORBIDDEN"
+	errUserForbidden        = "You do not have access to this template"
+	errCodeInvalidName      = "INVALID_NAME"
+	errUserInvalidName      = "Name must not be empty"
+	errCodeInvalidUserID    = "INVALID_USER_ID"
+	errUserInvalidUserID    = "You must be logged in to create templates"
 )
 
 func invalidRequestBodyDetail() handler.ErrorDetail {
@@ -46,36 +49,34 @@ func invalidSinceDetail() handler.ErrorDetail {
 	}
 }
 
-func mapError(err error) (int, handler.ErrorDetail) {
-	switch {
-	case errors.Is(err, domaintemplate.ErrTemplateNotFound):
-		return http.StatusNotFound, handler.ErrorDetail{
-			Code:        "TEMPLATE_NOT_FOUND",
-			Message:     err.Error(),
-			UserMessage: "Template not found",
-		}
-	case errors.Is(err, domaintemplate.ErrNotOwner):
-		return http.StatusForbidden, handler.ErrorDetail{
-			Code:        "FORBIDDEN",
-			Message:     err.Error(),
-			UserMessage: "You do not have access to this template",
-		}
-	case errors.Is(err, domaintemplate.ErrInvalidName):
-		return http.StatusBadRequest, handler.ErrorDetail{
-			Code:        "INVALID_NAME",
-			Message:     err.Error(),
-			UserMessage: "Name must not be empty",
-		}
-	case errors.Is(err, domaintemplate.ErrInvalidUserID):
-		return http.StatusBadRequest, handler.ErrorDetail{
-			Code:        "INVALID_USER_ID",
-			Message:     err.Error(),
-			UserMessage: "You must be logged in to create templates",
-		}
-	default:
-		return http.StatusInternalServerError, handler.ErrorDetail{
-			Code:    "INTERNAL_ERROR",
-			Message: err.Error(),
-		}
+func templateNotFoundDetail(err error) handler.ErrorDetail {
+	return handler.ErrorDetail{
+		Code:        errCodeTemplateNotFound,
+		Message:     err.Error(),
+		UserMessage: errUserTemplateNotFound,
+	}
+}
+
+func forbiddenDetail(err error) handler.ErrorDetail {
+	return handler.ErrorDetail{
+		Code:        errCodeForbidden,
+		Message:     err.Error(),
+		UserMessage: errUserForbidden,
+	}
+}
+
+func invalidNameDetail(err error) handler.ErrorDetail {
+	return handler.ErrorDetail{
+		Code:        errCodeInvalidName,
+		Message:     err.Error(),
+		UserMessage: errUserInvalidName,
+	}
+}
+
+func invalidUserIDDetail(err error) handler.ErrorDetail {
+	return handler.ErrorDetail{
+		Code:        errCodeInvalidUserID,
+		Message:     err.Error(),
+		UserMessage: errUserInvalidUserID,
 	}
 }

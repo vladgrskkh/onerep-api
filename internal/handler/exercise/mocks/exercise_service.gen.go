@@ -27,22 +27,24 @@ func (_m *MockExerciseService) EXPECT() *MockExerciseService_Expecter {
 }
 
 // Create provides a mock function with given fields: ctx, cmd
-func (_m *MockExerciseService) Create(ctx context.Context, cmd exercise.CreateExerciseCommand) (domainexercise.Exercise, error) {
+func (_m *MockExerciseService) Create(ctx context.Context, cmd exercise.CreateExerciseCommand) (*domainexercise.Exercise, error) {
 	ret := _m.Called(ctx, cmd)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Create")
 	}
 
-	var r0 domainexercise.Exercise
+	var r0 *domainexercise.Exercise
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, exercise.CreateExerciseCommand) (domainexercise.Exercise, error)); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, exercise.CreateExerciseCommand) (*domainexercise.Exercise, error)); ok {
 		return rf(ctx, cmd)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, exercise.CreateExerciseCommand) domainexercise.Exercise); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, exercise.CreateExerciseCommand) *domainexercise.Exercise); ok {
 		r0 = rf(ctx, cmd)
 	} else {
-		r0 = ret.Get(0).(domainexercise.Exercise)
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*domainexercise.Exercise)
+		}
 	}
 
 	if rf, ok := ret.Get(1).(func(context.Context, exercise.CreateExerciseCommand) error); ok {
@@ -73,33 +75,35 @@ func (_c *MockExerciseService_Create_Call) Run(run func(ctx context.Context, cmd
 	return _c
 }
 
-func (_c *MockExerciseService_Create_Call) Return(_a0 domainexercise.Exercise, _a1 error) *MockExerciseService_Create_Call {
+func (_c *MockExerciseService_Create_Call) Return(_a0 *domainexercise.Exercise, _a1 error) *MockExerciseService_Create_Call {
 	_c.Call.Return(_a0, _a1)
 	return _c
 }
 
-func (_c *MockExerciseService_Create_Call) RunAndReturn(run func(context.Context, exercise.CreateExerciseCommand) (domainexercise.Exercise, error)) *MockExerciseService_Create_Call {
+func (_c *MockExerciseService_Create_Call) RunAndReturn(run func(context.Context, exercise.CreateExerciseCommand) (*domainexercise.Exercise, error)) *MockExerciseService_Create_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // Get provides a mock function with given fields: ctx, id
-func (_m *MockExerciseService) Get(ctx context.Context, id uuid.UUID) (domainexercise.Exercise, error) {
+func (_m *MockExerciseService) Get(ctx context.Context, id uuid.UUID) (*domainexercise.Exercise, error) {
 	ret := _m.Called(ctx, id)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Get")
 	}
 
-	var r0 domainexercise.Exercise
+	var r0 *domainexercise.Exercise
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID) (domainexercise.Exercise, error)); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID) (*domainexercise.Exercise, error)); ok {
 		return rf(ctx, id)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID) domainexercise.Exercise); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID) *domainexercise.Exercise); ok {
 		r0 = rf(ctx, id)
 	} else {
-		r0 = ret.Get(0).(domainexercise.Exercise)
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*domainexercise.Exercise)
+		}
 	}
 
 	if rf, ok := ret.Get(1).(func(context.Context, uuid.UUID) error); ok {
@@ -130,34 +134,34 @@ func (_c *MockExerciseService_Get_Call) Run(run func(ctx context.Context, id uui
 	return _c
 }
 
-func (_c *MockExerciseService_Get_Call) Return(_a0 domainexercise.Exercise, _a1 error) *MockExerciseService_Get_Call {
+func (_c *MockExerciseService_Get_Call) Return(_a0 *domainexercise.Exercise, _a1 error) *MockExerciseService_Get_Call {
 	_c.Call.Return(_a0, _a1)
 	return _c
 }
 
-func (_c *MockExerciseService_Get_Call) RunAndReturn(run func(context.Context, uuid.UUID) (domainexercise.Exercise, error)) *MockExerciseService_Get_Call {
+func (_c *MockExerciseService_Get_Call) RunAndReturn(run func(context.Context, uuid.UUID) (*domainexercise.Exercise, error)) *MockExerciseService_Get_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // List provides a mock function with given fields: ctx, cmd
-func (_m *MockExerciseService) List(ctx context.Context, cmd exercise.ListExercisesCommand) ([]domainexercise.Exercise, error) {
+func (_m *MockExerciseService) List(ctx context.Context, cmd exercise.ListExercisesCommand) ([]*domainexercise.Exercise, error) {
 	ret := _m.Called(ctx, cmd)
 
 	if len(ret) == 0 {
 		panic("no return value specified for List")
 	}
 
-	var r0 []domainexercise.Exercise
+	var r0 []*domainexercise.Exercise
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, exercise.ListExercisesCommand) ([]domainexercise.Exercise, error)); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, exercise.ListExercisesCommand) ([]*domainexercise.Exercise, error)); ok {
 		return rf(ctx, cmd)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, exercise.ListExercisesCommand) []domainexercise.Exercise); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, exercise.ListExercisesCommand) []*domainexercise.Exercise); ok {
 		r0 = rf(ctx, cmd)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]domainexercise.Exercise)
+			r0 = ret.Get(0).([]*domainexercise.Exercise)
 		}
 	}
 
@@ -189,12 +193,12 @@ func (_c *MockExerciseService_List_Call) Run(run func(ctx context.Context, cmd e
 	return _c
 }
 
-func (_c *MockExerciseService_List_Call) Return(_a0 []domainexercise.Exercise, _a1 error) *MockExerciseService_List_Call {
+func (_c *MockExerciseService_List_Call) Return(_a0 []*domainexercise.Exercise, _a1 error) *MockExerciseService_List_Call {
 	_c.Call.Return(_a0, _a1)
 	return _c
 }
 
-func (_c *MockExerciseService_List_Call) RunAndReturn(run func(context.Context, exercise.ListExercisesCommand) ([]domainexercise.Exercise, error)) *MockExerciseService_List_Call {
+func (_c *MockExerciseService_List_Call) RunAndReturn(run func(context.Context, exercise.ListExercisesCommand) ([]*domainexercise.Exercise, error)) *MockExerciseService_List_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -247,22 +251,24 @@ func (_c *MockExerciseService_SoftDelete_Call) RunAndReturn(run func(context.Con
 }
 
 // Update provides a mock function with given fields: ctx, cmd
-func (_m *MockExerciseService) Update(ctx context.Context, cmd exercise.UpdateExerciseCommand) (domainexercise.Exercise, error) {
+func (_m *MockExerciseService) Update(ctx context.Context, cmd exercise.UpdateExerciseCommand) (*domainexercise.Exercise, error) {
 	ret := _m.Called(ctx, cmd)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Update")
 	}
 
-	var r0 domainexercise.Exercise
+	var r0 *domainexercise.Exercise
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, exercise.UpdateExerciseCommand) (domainexercise.Exercise, error)); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, exercise.UpdateExerciseCommand) (*domainexercise.Exercise, error)); ok {
 		return rf(ctx, cmd)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, exercise.UpdateExerciseCommand) domainexercise.Exercise); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, exercise.UpdateExerciseCommand) *domainexercise.Exercise); ok {
 		r0 = rf(ctx, cmd)
 	} else {
-		r0 = ret.Get(0).(domainexercise.Exercise)
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*domainexercise.Exercise)
+		}
 	}
 
 	if rf, ok := ret.Get(1).(func(context.Context, exercise.UpdateExerciseCommand) error); ok {
@@ -293,12 +299,12 @@ func (_c *MockExerciseService_Update_Call) Run(run func(ctx context.Context, cmd
 	return _c
 }
 
-func (_c *MockExerciseService_Update_Call) Return(_a0 domainexercise.Exercise, _a1 error) *MockExerciseService_Update_Call {
+func (_c *MockExerciseService_Update_Call) Return(_a0 *domainexercise.Exercise, _a1 error) *MockExerciseService_Update_Call {
 	_c.Call.Return(_a0, _a1)
 	return _c
 }
 
-func (_c *MockExerciseService_Update_Call) RunAndReturn(run func(context.Context, exercise.UpdateExerciseCommand) (domainexercise.Exercise, error)) *MockExerciseService_Update_Call {
+func (_c *MockExerciseService_Update_Call) RunAndReturn(run func(context.Context, exercise.UpdateExerciseCommand) (*domainexercise.Exercise, error)) *MockExerciseService_Update_Call {
 	_c.Call.Return(run)
 	return _c
 }

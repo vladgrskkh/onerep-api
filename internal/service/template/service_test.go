@@ -44,7 +44,8 @@ func (s *ServiceTestSuite) TestList_Success() {
 
 	got, err := s.svc.List(context.Background(), filter)
 	s.Require().NoError(err)
-	s.Equal(expected, got)
+	s.Require().Len(got, 1)
+	s.Equal(expected[0], *got[0])
 }
 
 func (s *ServiceTestSuite) TestList_NilUserRejected() {
@@ -68,7 +69,7 @@ func (s *ServiceTestSuite) TestGet_PrivateOwned() {
 
 	got, err := s.svc.Get(context.Background(), templateID, userID)
 	s.Require().NoError(err)
-	s.Equal(expected, got)
+	s.Equal(expected, *got)
 }
 
 func (s *ServiceTestSuite) TestGet_PublicByAnyone() {
@@ -83,7 +84,7 @@ func (s *ServiceTestSuite) TestGet_PublicByAnyone() {
 
 	got, err := s.svc.Get(context.Background(), templateID, uuid.Must(uuid.NewV7()))
 	s.Require().NoError(err)
-	s.Equal(expected, got)
+	s.Equal(expected, *got)
 }
 
 func (s *ServiceTestSuite) TestGet_PrivateByOther() {

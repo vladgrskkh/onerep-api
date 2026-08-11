@@ -1,13 +1,6 @@
 package progress
 
-import (
-	"errors"
-	"net/http"
-
-	domainbodyweight "github.com/vladgrskkh/onerep-api/internal/domain/bodyweight"
-	domainprogress "github.com/vladgrskkh/onerep-api/internal/domain/progress"
-	"github.com/vladgrskkh/onerep-api/internal/handler"
-)
+import "github.com/vladgrskkh/onerep-api/internal/handler"
 
 const (
 	errCodeInvalidRequestBody = "INVALID_REQUEST_BODY"
@@ -25,6 +18,12 @@ const (
 	errCodeInvalidSince = "INVALID_SINCE"
 	errMsgInvalidSince  = "invalid since parameter"
 	errUserInvalidSince = "The since parameter must be an RFC 3339 timestamp"
+
+	errCodeInvalidUserID = "INVALID_USER_ID"
+	errUserInvalidUserID = "You must be logged in to view progress"
+
+	errCodeInvalidWeight = "INVALID_WEIGHT"
+	errUserInvalidWeight = "Weight must be greater than zero"
 )
 
 func invalidRequestBodyDetail() handler.ErrorDetail {
@@ -35,10 +34,10 @@ func invalidRequestBodyDetail() handler.ErrorDetail {
 	}
 }
 
-func invalidExerciseIDDetail() handler.ErrorDetail {
+func invalidExerciseIDDetail(err error) handler.ErrorDetail {
 	return handler.ErrorDetail{
 		Code:        errCodeInvalidExerciseID,
-		Message:     errMsgInvalidExerciseID,
+		Message:     err.Error(),
 		UserMessage: errUserInvalidExerciseID,
 	}
 }
@@ -59,30 +58,18 @@ func invalidSinceDetail() handler.ErrorDetail {
 	}
 }
 
-func mapError(err error) (int, handler.ErrorDetail) {
-	switch {
-	case errors.Is(err, domainprogress.ErrInvalidExerciseID):
-		return http.StatusBadRequest, handler.ErrorDetail{
-			Code:        errCodeInvalidExerciseID,
-			Message:     err.Error(),
-			UserMessage: errUserInvalidExerciseID,
-		}
-	case errors.Is(err, domainprogress.ErrInvalidUserID), errors.Is(err, domainbodyweight.ErrInvalidUserID):
-		return http.StatusBadRequest, handler.ErrorDetail{
-			Code:        "INVALID_USER_ID",
-			Message:     err.Error(),
-			UserMessage: "You must be logged in to view progress",
-		}
-	case errors.Is(err, domainbodyweight.ErrInvalidWeight):
-		return http.StatusBadRequest, handler.ErrorDetail{
-			Code:        "INVALID_WEIGHT",
-			Message:     err.Error(),
-			UserMessage: "Weight must be greater than zero",
-		}
-	default:
-		return http.StatusInternalServerError, handler.ErrorDetail{
-			Code:    "INTERNAL_ERROR",
-			Message: err.Error(),
-		}
+func invalidUserIDDetail(err error) handler.ErrorDetail {
+	return handler.ErrorDetail{
+		Code:        errCodeInvalidUserID,
+		Message:     err.Error(),
+		UserMessage: errUserInvalidUserID,
+	}
+}
+
+func invalidWeightDetail(err error) handler.ErrorDetail {
+	return handler.ErrorDetail{
+		Code:        errCodeInvalidWeight,
+		Message:     err.Error(),
+		UserMessage: errUserInvalidWeight,
 	}
 }

@@ -27,24 +27,24 @@ type TemplateResponse struct {
 	ID              uuid.UUID                  `json:"id"`
 	Name            string                     `json:"name"`
 	Description     string                     `json:"description,omitzero"`
-	IsPublic        bool                       `json:"is_public,omitzero"`
-	CreatedByUserID uuid.UUID                  `json:"created_by_user_id,omitzero"`
+	IsPublic        bool                       `json:"is_public"`
+	CreatedByUserID uuid.UUID                  `json:"created_by_user_id"`
 	CreatedAt       time.Time                  `json:"created_at"`
 	UpdatedAt       time.Time                  `json:"updated_at"`
-	Version         int                        `json:"version,omitzero"`
+	Version         int                        `json:"version"`
 	Exercises       []TemplateExerciseResponse `json:"exercises,omitzero"`
 	Media           []TemplateMediaResponse    `json:"media,omitzero"`
 }
 
 type TemplateExerciseResponse struct {
 	ExerciseID  uuid.UUID `json:"exercise_id"`
-	SortOrder   int       `json:"sort_order,omitzero"`
-	PlannedSets int       `json:"planned_sets,omitzero"`
+	SortOrder   int       `json:"sort_order"`
+	PlannedSets int       `json:"planned_sets"`
 }
 
 type TemplateMediaResponse struct {
 	ID        uuid.UUID `json:"id"`
 	MediaType string    `json:"media_type"`
-	SortOrder int       `json:"sort_order,omitzero"`
-	S3Key     string    `json:"s3_key,omitzero"`
+	SortOrder int       `json:"sort_order"`
+	S3Key     string    `json:"s3_key"`
 }

@@ -28,22 +28,24 @@ func (_m *MockTemplateService) EXPECT() *MockTemplateService_Expecter {
 }
 
 // Create provides a mock function with given fields: ctx, cmd
-func (_m *MockTemplateService) Create(ctx context.Context, cmd template.CreateTemplateCommand) (domaintemplate.Template, error) {
+func (_m *MockTemplateService) Create(ctx context.Context, cmd template.CreateTemplateCommand) (*domaintemplate.Template, error) {
 	ret := _m.Called(ctx, cmd)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Create")
 	}
 
-	var r0 domaintemplate.Template
+	var r0 *domaintemplate.Template
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, template.CreateTemplateCommand) (domaintemplate.Template, error)); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, template.CreateTemplateCommand) (*domaintemplate.Template, error)); ok {
 		return rf(ctx, cmd)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, template.CreateTemplateCommand) domaintemplate.Template); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, template.CreateTemplateCommand) *domaintemplate.Template); ok {
 		r0 = rf(ctx, cmd)
 	} else {
-		r0 = ret.Get(0).(domaintemplate.Template)
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*domaintemplate.Template)
+		}
 	}
 
 	if rf, ok := ret.Get(1).(func(context.Context, template.CreateTemplateCommand) error); ok {
@@ -74,33 +76,35 @@ func (_c *MockTemplateService_Create_Call) Run(run func(ctx context.Context, cmd
 	return _c
 }
 
-func (_c *MockTemplateService_Create_Call) Return(_a0 domaintemplate.Template, _a1 error) *MockTemplateService_Create_Call {
+func (_c *MockTemplateService_Create_Call) Return(_a0 *domaintemplate.Template, _a1 error) *MockTemplateService_Create_Call {
 	_c.Call.Return(_a0, _a1)
 	return _c
 }
 
-func (_c *MockTemplateService_Create_Call) RunAndReturn(run func(context.Context, template.CreateTemplateCommand) (domaintemplate.Template, error)) *MockTemplateService_Create_Call {
+func (_c *MockTemplateService_Create_Call) RunAndReturn(run func(context.Context, template.CreateTemplateCommand) (*domaintemplate.Template, error)) *MockTemplateService_Create_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // Fork provides a mock function with given fields: ctx, id, userID
-func (_m *MockTemplateService) Fork(ctx context.Context, id uuid.UUID, userID uuid.UUID) (domaintemplate.Template, error) {
+func (_m *MockTemplateService) Fork(ctx context.Context, id uuid.UUID, userID uuid.UUID) (*domaintemplate.Template, error) {
 	ret := _m.Called(ctx, id, userID)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Fork")
 	}
 
-	var r0 domaintemplate.Template
+	var r0 *domaintemplate.Template
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID, uuid.UUID) (domaintemplate.Template, error)); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID, uuid.UUID) (*domaintemplate.Template, error)); ok {
 		return rf(ctx, id, userID)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID, uuid.UUID) domaintemplate.Template); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID, uuid.UUID) *domaintemplate.Template); ok {
 		r0 = rf(ctx, id, userID)
 	} else {
-		r0 = ret.Get(0).(domaintemplate.Template)
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*domaintemplate.Template)
+		}
 	}
 
 	if rf, ok := ret.Get(1).(func(context.Context, uuid.UUID, uuid.UUID) error); ok {
@@ -132,33 +136,35 @@ func (_c *MockTemplateService_Fork_Call) Run(run func(ctx context.Context, id uu
 	return _c
 }
 
-func (_c *MockTemplateService_Fork_Call) Return(_a0 domaintemplate.Template, _a1 error) *MockTemplateService_Fork_Call {
+func (_c *MockTemplateService_Fork_Call) Return(_a0 *domaintemplate.Template, _a1 error) *MockTemplateService_Fork_Call {
 	_c.Call.Return(_a0, _a1)
 	return _c
 }
 
-func (_c *MockTemplateService_Fork_Call) RunAndReturn(run func(context.Context, uuid.UUID, uuid.UUID) (domaintemplate.Template, error)) *MockTemplateService_Fork_Call {
+func (_c *MockTemplateService_Fork_Call) RunAndReturn(run func(context.Context, uuid.UUID, uuid.UUID) (*domaintemplate.Template, error)) *MockTemplateService_Fork_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // Get provides a mock function with given fields: ctx, id, userID
-func (_m *MockTemplateService) Get(ctx context.Context, id uuid.UUID, userID uuid.UUID) (domaintemplate.Template, error) {
+func (_m *MockTemplateService) Get(ctx context.Context, id uuid.UUID, userID uuid.UUID) (*domaintemplate.Template, error) {
 	ret := _m.Called(ctx, id, userID)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Get")
 	}
 
-	var r0 domaintemplate.Template
+	var r0 *domaintemplate.Template
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID, uuid.UUID) (domaintemplate.Template, error)); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID, uuid.UUID) (*domaintemplate.Template, error)); ok {
 		return rf(ctx, id, userID)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID, uuid.UUID) domaintemplate.Template); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID, uuid.UUID) *domaintemplate.Template); ok {
 		r0 = rf(ctx, id, userID)
 	} else {
-		r0 = ret.Get(0).(domaintemplate.Template)
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*domaintemplate.Template)
+		}
 	}
 
 	if rf, ok := ret.Get(1).(func(context.Context, uuid.UUID, uuid.UUID) error); ok {
@@ -190,34 +196,34 @@ func (_c *MockTemplateService_Get_Call) Run(run func(ctx context.Context, id uui
 	return _c
 }
 
-func (_c *MockTemplateService_Get_Call) Return(_a0 domaintemplate.Template, _a1 error) *MockTemplateService_Get_Call {
+func (_c *MockTemplateService_Get_Call) Return(_a0 *domaintemplate.Template, _a1 error) *MockTemplateService_Get_Call {
 	_c.Call.Return(_a0, _a1)
 	return _c
 }
 
-func (_c *MockTemplateService_Get_Call) RunAndReturn(run func(context.Context, uuid.UUID, uuid.UUID) (domaintemplate.Template, error)) *MockTemplateService_Get_Call {
+func (_c *MockTemplateService_Get_Call) RunAndReturn(run func(context.Context, uuid.UUID, uuid.UUID) (*domaintemplate.Template, error)) *MockTemplateService_Get_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // List provides a mock function with given fields: ctx, filter
-func (_m *MockTemplateService) List(ctx context.Context, filter domaintemplate.TemplateFilter) ([]domaintemplate.Template, error) {
+func (_m *MockTemplateService) List(ctx context.Context, filter domaintemplate.TemplateFilter) ([]*domaintemplate.Template, error) {
 	ret := _m.Called(ctx, filter)
 
 	if len(ret) == 0 {
 		panic("no return value specified for List")
 	}
 
-	var r0 []domaintemplate.Template
+	var r0 []*domaintemplate.Template
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, domaintemplate.TemplateFilter) ([]domaintemplate.Template, error)); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, domaintemplate.TemplateFilter) ([]*domaintemplate.Template, error)); ok {
 		return rf(ctx, filter)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, domaintemplate.TemplateFilter) []domaintemplate.Template); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, domaintemplate.TemplateFilter) []*domaintemplate.Template); ok {
 		r0 = rf(ctx, filter)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]domaintemplate.Template)
+			r0 = ret.Get(0).([]*domaintemplate.Template)
 		}
 	}
 
@@ -249,33 +255,35 @@ func (_c *MockTemplateService_List_Call) Run(run func(ctx context.Context, filte
 	return _c
 }
 
-func (_c *MockTemplateService_List_Call) Return(_a0 []domaintemplate.Template, _a1 error) *MockTemplateService_List_Call {
+func (_c *MockTemplateService_List_Call) Return(_a0 []*domaintemplate.Template, _a1 error) *MockTemplateService_List_Call {
 	_c.Call.Return(_a0, _a1)
 	return _c
 }
 
-func (_c *MockTemplateService_List_Call) RunAndReturn(run func(context.Context, domaintemplate.TemplateFilter) ([]domaintemplate.Template, error)) *MockTemplateService_List_Call {
+func (_c *MockTemplateService_List_Call) RunAndReturn(run func(context.Context, domaintemplate.TemplateFilter) ([]*domaintemplate.Template, error)) *MockTemplateService_List_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // Publish provides a mock function with given fields: ctx, id, userID
-func (_m *MockTemplateService) Publish(ctx context.Context, id uuid.UUID, userID uuid.UUID) (domaintemplate.Template, error) {
+func (_m *MockTemplateService) Publish(ctx context.Context, id uuid.UUID, userID uuid.UUID) (*domaintemplate.Template, error) {
 	ret := _m.Called(ctx, id, userID)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Publish")
 	}
 
-	var r0 domaintemplate.Template
+	var r0 *domaintemplate.Template
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID, uuid.UUID) (domaintemplate.Template, error)); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID, uuid.UUID) (*domaintemplate.Template, error)); ok {
 		return rf(ctx, id, userID)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID, uuid.UUID) domaintemplate.Template); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID, uuid.UUID) *domaintemplate.Template); ok {
 		r0 = rf(ctx, id, userID)
 	} else {
-		r0 = ret.Get(0).(domaintemplate.Template)
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*domaintemplate.Template)
+		}
 	}
 
 	if rf, ok := ret.Get(1).(func(context.Context, uuid.UUID, uuid.UUID) error); ok {
@@ -307,12 +315,12 @@ func (_c *MockTemplateService_Publish_Call) Run(run func(ctx context.Context, id
 	return _c
 }
 
-func (_c *MockTemplateService_Publish_Call) Return(_a0 domaintemplate.Template, _a1 error) *MockTemplateService_Publish_Call {
+func (_c *MockTemplateService_Publish_Call) Return(_a0 *domaintemplate.Template, _a1 error) *MockTemplateService_Publish_Call {
 	_c.Call.Return(_a0, _a1)
 	return _c
 }
 
-func (_c *MockTemplateService_Publish_Call) RunAndReturn(run func(context.Context, uuid.UUID, uuid.UUID) (domaintemplate.Template, error)) *MockTemplateService_Publish_Call {
+func (_c *MockTemplateService_Publish_Call) RunAndReturn(run func(context.Context, uuid.UUID, uuid.UUID) (*domaintemplate.Template, error)) *MockTemplateService_Publish_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -366,22 +374,24 @@ func (_c *MockTemplateService_SoftDelete_Call) RunAndReturn(run func(context.Con
 }
 
 // Update provides a mock function with given fields: ctx, cmd
-func (_m *MockTemplateService) Update(ctx context.Context, cmd template.UpdateTemplateCommand) (domaintemplate.Template, error) {
+func (_m *MockTemplateService) Update(ctx context.Context, cmd template.UpdateTemplateCommand) (*domaintemplate.Template, error) {
 	ret := _m.Called(ctx, cmd)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Update")
 	}
 
-	var r0 domaintemplate.Template
+	var r0 *domaintemplate.Template
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, template.UpdateTemplateCommand) (domaintemplate.Template, error)); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, template.UpdateTemplateCommand) (*domaintemplate.Template, error)); ok {
 		return rf(ctx, cmd)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, template.UpdateTemplateCommand) domaintemplate.Template); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, template.UpdateTemplateCommand) *domaintemplate.Template); ok {
 		r0 = rf(ctx, cmd)
 	} else {
-		r0 = ret.Get(0).(domaintemplate.Template)
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*domaintemplate.Template)
+		}
 	}
 
 	if rf, ok := ret.Get(1).(func(context.Context, template.UpdateTemplateCommand) error); ok {
@@ -412,12 +422,12 @@ func (_c *MockTemplateService_Update_Call) Run(run func(ctx context.Context, cmd
 	return _c
 }
 
-func (_c *MockTemplateService_Update_Call) Return(_a0 domaintemplate.Template, _a1 error) *MockTemplateService_Update_Call {
+func (_c *MockTemplateService_Update_Call) Return(_a0 *domaintemplate.Template, _a1 error) *MockTemplateService_Update_Call {
 	_c.Call.Return(_a0, _a1)
 	return _c
 }
 
-func (_c *MockTemplateService_Update_Call) RunAndReturn(run func(context.Context, template.UpdateTemplateCommand) (domaintemplate.Template, error)) *MockTemplateService_Update_Call {
+func (_c *MockTemplateService_Update_Call) RunAndReturn(run func(context.Context, template.UpdateTemplateCommand) (*domaintemplate.Template, error)) *MockTemplateService_Update_Call {
 	_c.Call.Return(run)
 	return _c
 }

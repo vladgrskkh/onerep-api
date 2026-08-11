@@ -30,23 +30,23 @@ func (_m *MockBodyWeightService) EXPECT() *MockBodyWeightService_Expecter {
 }
 
 // ListBodyWeight provides a mock function with given fields: ctx, userID, since
-func (_m *MockBodyWeightService) ListBodyWeight(ctx context.Context, userID uuid.UUID, since *time.Time) ([]bodyweight.BodyWeight, error) {
+func (_m *MockBodyWeightService) ListBodyWeight(ctx context.Context, userID uuid.UUID, since *time.Time) ([]*bodyweight.BodyWeight, error) {
 	ret := _m.Called(ctx, userID, since)
 
 	if len(ret) == 0 {
 		panic("no return value specified for ListBodyWeight")
 	}
 
-	var r0 []bodyweight.BodyWeight
+	var r0 []*bodyweight.BodyWeight
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID, *time.Time) ([]bodyweight.BodyWeight, error)); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID, *time.Time) ([]*bodyweight.BodyWeight, error)); ok {
 		return rf(ctx, userID, since)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID, *time.Time) []bodyweight.BodyWeight); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID, *time.Time) []*bodyweight.BodyWeight); ok {
 		r0 = rf(ctx, userID, since)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]bodyweight.BodyWeight)
+			r0 = ret.Get(0).([]*bodyweight.BodyWeight)
 		}
 	}
 
@@ -79,33 +79,35 @@ func (_c *MockBodyWeightService_ListBodyWeight_Call) Run(run func(ctx context.Co
 	return _c
 }
 
-func (_c *MockBodyWeightService_ListBodyWeight_Call) Return(_a0 []bodyweight.BodyWeight, _a1 error) *MockBodyWeightService_ListBodyWeight_Call {
+func (_c *MockBodyWeightService_ListBodyWeight_Call) Return(_a0 []*bodyweight.BodyWeight, _a1 error) *MockBodyWeightService_ListBodyWeight_Call {
 	_c.Call.Return(_a0, _a1)
 	return _c
 }
 
-func (_c *MockBodyWeightService_ListBodyWeight_Call) RunAndReturn(run func(context.Context, uuid.UUID, *time.Time) ([]bodyweight.BodyWeight, error)) *MockBodyWeightService_ListBodyWeight_Call {
+func (_c *MockBodyWeightService_ListBodyWeight_Call) RunAndReturn(run func(context.Context, uuid.UUID, *time.Time) ([]*bodyweight.BodyWeight, error)) *MockBodyWeightService_ListBodyWeight_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // LogBodyWeight provides a mock function with given fields: ctx, cmd
-func (_m *MockBodyWeightService) LogBodyWeight(ctx context.Context, cmd servicebodyweight.LogBodyWeightCommand) (bodyweight.BodyWeight, error) {
+func (_m *MockBodyWeightService) LogBodyWeight(ctx context.Context, cmd servicebodyweight.LogBodyWeightCommand) (*bodyweight.BodyWeight, error) {
 	ret := _m.Called(ctx, cmd)
 
 	if len(ret) == 0 {
 		panic("no return value specified for LogBodyWeight")
 	}
 
-	var r0 bodyweight.BodyWeight
+	var r0 *bodyweight.BodyWeight
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, servicebodyweight.LogBodyWeightCommand) (bodyweight.BodyWeight, error)); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, servicebodyweight.LogBodyWeightCommand) (*bodyweight.BodyWeight, error)); ok {
 		return rf(ctx, cmd)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, servicebodyweight.LogBodyWeightCommand) bodyweight.BodyWeight); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, servicebodyweight.LogBodyWeightCommand) *bodyweight.BodyWeight); ok {
 		r0 = rf(ctx, cmd)
 	} else {
-		r0 = ret.Get(0).(bodyweight.BodyWeight)
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*bodyweight.BodyWeight)
+		}
 	}
 
 	if rf, ok := ret.Get(1).(func(context.Context, servicebodyweight.LogBodyWeightCommand) error); ok {
@@ -136,12 +138,12 @@ func (_c *MockBodyWeightService_LogBodyWeight_Call) Run(run func(ctx context.Con
 	return _c
 }
 
-func (_c *MockBodyWeightService_LogBodyWeight_Call) Return(_a0 bodyweight.BodyWeight, _a1 error) *MockBodyWeightService_LogBodyWeight_Call {
+func (_c *MockBodyWeightService_LogBodyWeight_Call) Return(_a0 *bodyweight.BodyWeight, _a1 error) *MockBodyWeightService_LogBodyWeight_Call {
 	_c.Call.Return(_a0, _a1)
 	return _c
 }
 
-func (_c *MockBodyWeightService_LogBodyWeight_Call) RunAndReturn(run func(context.Context, servicebodyweight.LogBodyWeightCommand) (bodyweight.BodyWeight, error)) *MockBodyWeightService_LogBodyWeight_Call {
+func (_c *MockBodyWeightService_LogBodyWeight_Call) RunAndReturn(run func(context.Context, servicebodyweight.LogBodyWeightCommand) (*bodyweight.BodyWeight, error)) *MockBodyWeightService_LogBodyWeight_Call {
 	_c.Call.Return(run)
 	return _c
 }

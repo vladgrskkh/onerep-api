@@ -1,13 +1,6 @@
 package workout
 
-import (
-	"errors"
-	"net/http"
-
-	domaintemplate "github.com/vladgrskkh/onerep-api/internal/domain/template"
-	domainworkout "github.com/vladgrskkh/onerep-api/internal/domain/workout"
-	"github.com/vladgrskkh/onerep-api/internal/handler"
-)
+import "github.com/vladgrskkh/onerep-api/internal/handler"
 
 const (
 	errCodeInvalidRequestBody = "INVALID_REQUEST_BODY"
@@ -25,6 +18,27 @@ const (
 	errCodeInvalidSince = "INVALID_SINCE"
 	errMsgInvalidSince  = "invalid since parameter"
 	errUserInvalidSince = "The since parameter must be an RFC 3339 timestamp"
+
+	errCodeWorkoutNotFound         = "WORKOUT_NOT_FOUND"
+	errUserWorkoutNotFound         = "Workout not found"
+	errCodeWorkoutExerciseNotFound = "WORKOUT_EXERCISE_NOT_FOUND"
+	errUserWorkoutExerciseNotFound = "Workout exercise not found"
+	errCodeActiveWorkout           = "ACTIVE_WORKOUT_EXISTS"
+	errUserActiveWorkout           = "You already have an active workout"
+	errCodeTemplateNotFound        = "TEMPLATE_NOT_FOUND"
+	errUserTemplateNotFound        = "Template not found"
+	errCodeInvalidUserID           = "INVALID_USER_ID"
+	errUserInvalidUserID           = "You must be logged in to manage workouts"
+	errCodeInvalidExerciseID       = "INVALID_EXERCISE_ID"
+	errUserInvalidExerciseID       = "The exercise ID is invalid"
+	errCodeInvalidWeight           = "INVALID_WEIGHT"
+	errUserInvalidWeight           = "Weight must be greater than zero"
+	errCodeInvalidReps             = "INVALID_REPS"
+	errUserInvalidReps             = "Reps must be greater than zero"
+	errCodeInvalidRPE              = "INVALID_RPE"
+	errUserInvalidRPE              = "RPE must be between 1 and 10"
+	errCodeInvalidRestSeconds      = "INVALID_REST_SECONDS"
+	errUserInvalidRestSeconds      = "Rest seconds must not be negative"
 )
 
 func invalidRequestBodyDetail() handler.ErrorDetail {
@@ -59,84 +73,82 @@ func invalidSinceDetail() handler.ErrorDetail {
 	}
 }
 
-func mapError(err error) (int, handler.ErrorDetail) {
-	switch {
-	case errors.Is(err, domainworkout.ErrWorkoutNotFound):
-		return http.StatusNotFound, handler.ErrorDetail{
-			Code:        "WORKOUT_NOT_FOUND",
-			Message:     err.Error(),
-			UserMessage: "Workout not found",
-		}
-	case errors.Is(err, domainworkout.ErrWorkoutExerciseNotFound):
-		return http.StatusNotFound, handler.ErrorDetail{
-			Code:        "WORKOUT_EXERCISE_NOT_FOUND",
-			Message:     err.Error(),
-			UserMessage: "Workout exercise not found",
-		}
-	case errors.Is(err, domainworkout.ErrActiveWorkout):
-		return http.StatusConflict, handler.ErrorDetail{
-			Code:        "ACTIVE_WORKOUT_EXISTS",
-			Message:     err.Error(),
-			UserMessage: "You already have an active workout",
-		}
-	case errors.Is(err, domaintemplate.ErrTemplateNotFound):
-		return http.StatusNotFound, handler.ErrorDetail{
-			Code:        "TEMPLATE_NOT_FOUND",
-			Message:     err.Error(),
-			UserMessage: "Template not found",
-		}
-	case errors.Is(err, domainworkout.ErrInvalidUserID):
-		return http.StatusBadRequest, handler.ErrorDetail{
-			Code:        "INVALID_USER_ID",
-			Message:     err.Error(),
-			UserMessage: "You must be logged in to manage workouts",
-		}
-	case errors.Is(err, domainworkout.ErrInvalidWorkoutID):
-		return http.StatusBadRequest, handler.ErrorDetail{
-			Code:        "INVALID_WORKOUT_ID",
-			Message:     err.Error(),
-			UserMessage: errUserInvalidWorkoutID,
-		}
-	case errors.Is(err, domainworkout.ErrInvalidExerciseID):
-		return http.StatusBadRequest, handler.ErrorDetail{
-			Code:        "INVALID_EXERCISE_ID",
-			Message:     err.Error(),
-			UserMessage: "The exercise ID is invalid",
-		}
-	case errors.Is(err, domainworkout.ErrInvalidWorkoutExerciseID):
-		return http.StatusBadRequest, handler.ErrorDetail{
-			Code:        "INVALID_WORKOUT_EXERCISE_ID",
-			Message:     err.Error(),
-			UserMessage: errUserInvalidWorkoutExerciseID,
-		}
-	case errors.Is(err, domainworkout.ErrInvalidWeight):
-		return http.StatusBadRequest, handler.ErrorDetail{
-			Code:        "INVALID_WEIGHT",
-			Message:     err.Error(),
-			UserMessage: "Weight must be greater than zero",
-		}
-	case errors.Is(err, domainworkout.ErrInvalidReps):
-		return http.StatusBadRequest, handler.ErrorDetail{
-			Code:        "INVALID_REPS",
-			Message:     err.Error(),
-			UserMessage: "Reps must be greater than zero",
-		}
-	case errors.Is(err, domainworkout.ErrInvalidRPE):
-		return http.StatusBadRequest, handler.ErrorDetail{
-			Code:        "INVALID_RPE",
-			Message:     err.Error(),
-			UserMessage: "RPE must be between 1 and 10",
-		}
-	case errors.Is(err, domainworkout.ErrInvalidRestSeconds):
-		return http.StatusBadRequest, handler.ErrorDetail{
-			Code:        "INVALID_REST_SECONDS",
-			Message:     err.Error(),
-			UserMessage: "Rest seconds must not be negative",
-		}
-	default:
-		return http.StatusInternalServerError, handler.ErrorDetail{
-			Code:    "INTERNAL_ERROR",
-			Message: err.Error(),
-		}
+func workoutNotFoundDetail(err error) handler.ErrorDetail {
+	return handler.ErrorDetail{
+		Code:        errCodeWorkoutNotFound,
+		Message:     err.Error(),
+		UserMessage: errUserWorkoutNotFound,
+	}
+}
+
+func workoutExerciseNotFoundDetail(err error) handler.ErrorDetail {
+	return handler.ErrorDetail{
+		Code:        errCodeWorkoutExerciseNotFound,
+		Message:     err.Error(),
+		UserMessage: errUserWorkoutExerciseNotFound,
+	}
+}
+
+func activeWorkoutDetail(err error) handler.ErrorDetail {
+	return handler.ErrorDetail{
+		Code:        errCodeActiveWorkout,
+		Message:     err.Error(),
+		UserMessage: errUserActiveWorkout,
+	}
+}
+
+func templateNotFoundDetail(err error) handler.ErrorDetail {
+	return handler.ErrorDetail{
+		Code:        errCodeTemplateNotFound,
+		Message:     err.Error(),
+		UserMessage: errUserTemplateNotFound,
+	}
+}
+
+func invalidUserIDDetail(err error) handler.ErrorDetail {
+	return handler.ErrorDetail{
+		Code:        errCodeInvalidUserID,
+		Message:     err.Error(),
+		UserMessage: errUserInvalidUserID,
+	}
+}
+
+func invalidExerciseIDDetail(err error) handler.ErrorDetail {
+	return handler.ErrorDetail{
+		Code:        errCodeInvalidExerciseID,
+		Message:     err.Error(),
+		UserMessage: errUserInvalidExerciseID,
+	}
+}
+
+func invalidWeightDetail(err error) handler.ErrorDetail {
+	return handler.ErrorDetail{
+		Code:        errCodeInvalidWeight,
+		Message:     err.Error(),
+		UserMessage: errUserInvalidWeight,
+	}
+}
+
+func invalidRepsDetail(err error) handler.ErrorDetail {
+	return handler.ErrorDetail{
+		Code:        errCodeInvalidReps,
+		Message:     err.Error(),
+		UserMessage: errUserInvalidReps,
+	}
+}
+
+func invalidRPEDetail(err error) handler.ErrorDetail {
+	return handler.ErrorDetail{
+		Code:        errCodeInvalidRPE,
+		Message:     err.Error(),
+		UserMessage: errUserInvalidRPE,
+	}
+}
+
+func invalidRestSecondsDetail(err error) handler.ErrorDetail {
+	return handler.ErrorDetail{
+		Code:        errCodeInvalidRestSeconds,
+		Message:     err.Error(),
+		UserMessage: errUserInvalidRestSeconds,
 	}
 }

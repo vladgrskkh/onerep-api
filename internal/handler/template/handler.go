@@ -1,17 +1,29 @@
 package template
 
 import (
+	"context"
 	"errors"
 	"log/slog"
 	"net/http"
-	"time"
 
 	"github.com/google/uuid"
 
 	domaintemplate "github.com/vladgrskkh/onerep-api/internal/domain/template"
 	"github.com/vladgrskkh/onerep-api/internal/handler"
 	"github.com/vladgrskkh/onerep-api/internal/handler/template/dto"
+	servicetemplate "github.com/vladgrskkh/onerep-api/internal/service/template"
 )
+
+// TemplateService is the template use-case contract consumed by the handler.
+type TemplateService interface {
+	List(ctx context.Context, filter domaintemplate.TemplateFilter) ([]*domaintemplate.Template, error)
+	Get(ctx context.Context, id, userID uuid.UUID) (*domaintemplate.Template, error)
+	Create(ctx context.Context, cmd servicetemplate.CreateTemplateCommand) (*domaintemplate.Template, error)
+	Update(ctx context.Context, cmd servicetemplate.UpdateTemplateCommand) (*domaintemplate.Template, error)
+	Publish(ctx context.Context, id, userID uuid.UUID) (*domaintemplate.Template, error)
+	Fork(ctx context.Context, id, userID uuid.UUID) (*domaintemplate.Template, error)
+	SoftDelete(ctx context.Context, id, userID uuid.UUID) error
+}
 
 type TemplateHandler struct {
 	svc    TemplateService
@@ -38,19 +50,23 @@ func NewTemplateHandler(svc TemplateService, logger *slog.Logger) *TemplateHandl
 func (h *TemplateHandler) List(w http.ResponseWriter, r *http.Request) {
 	userID := handler.UserIDFromContext(r.Context())
 	filter := domaintemplate.TemplateFilter{UserID: &userID}
-	if sinceStr := r.URL.Query().Get("since"); sinceStr != "" {
-		since, parseErr := time.Parse(time.RFC3339, sinceStr)
-		if parseErr != nil {
-			handler.WriteError(w, h.logger, http.StatusBadRequest, invalidSinceDetail())
-			return
-		}
+	since, present, parseErr := handler.ParseRFC3339QueryParam(r, "since")
+	if parseErr != nil {
+		handler.WriteError(w, h.logger, http.StatusBadRequest, invalidSinceDetail())
+		return
+	}
+	if present {
 		filter.Since = &since
 	}
 
 	templates, err := h.svc.List(r.Context(), filter)
 	if err != nil {
-		status, detail := mapError(err)
-		handler.WriteError(w, h.logger, status, detail)
+		switch {
+		case errors.Is(err, domaintemplate.ErrInvalidUserID):
+			handler.WriteError(w, h.logger, http.StatusBadRequest, invalidUserIDDetail(err))
+		default:
+			handler.WriteSystemError(w, h.logger, http.StatusInternalServerError, err)
+		}
 		return
 	}
 
@@ -73,6 +89,8 @@ func (h *TemplateHandler) List(w http.ResponseWriter, r *http.Request) {
 // @Failure 500 {object} handler.ErrorResponse
 // @Security BearerAuth
 // @Router /templates/{id} [get]
+//
+//nolint:dupl // Get and Publish share the template access error mapping.
 func (h *TemplateHandler) Get(w http.ResponseWriter, r *http.Request) {
 	templateID, parseErr := uuid.Parse(r.PathValue("id"))
 	if parseErr != nil {
@@ -83,8 +101,14 @@ func (h *TemplateHandler) Get(w http.ResponseWriter, r *http.Request) {
 	userID := handler.UserIDFromContext(r.Context())
 	t, err := h.svc.Get(r.Context(), templateID, userID)
 	if err != nil {
-		status, detail := mapError(err)
-		handler.WriteError(w, h.logger, status, detail)
+		switch {
+		case errors.Is(err, domaintemplate.ErrTemplateNotFound):
+			handler.WriteError(w, h.logger, http.StatusNotFound, templateNotFoundDetail(err))
+		case errors.Is(err, domaintemplate.ErrNotOwner):
+			handler.WriteError(w, h.logger, http.StatusForbidden, forbiddenDetail(err))
+		default:
+			handler.WriteSystemError(w, h.logger, http.StatusInternalServerError, err)
+		}
 		return
 	}
 
@@ -118,8 +142,14 @@ func (h *TemplateHandler) Create(w http.ResponseWriter, r *http.Request) {
 	userID := handler.UserIDFromContext(r.Context())
 	t, err := h.svc.Create(r.Context(), toCreateCommand(req, userID))
 	if err != nil {
-		status, detail := mapError(err)
-		handler.WriteError(w, h.logger, status, detail)
+		switch {
+		case errors.Is(err, domaintemplate.ErrInvalidName):
+			handler.WriteError(w, h.logger, http.StatusBadRequest, invalidNameDetail(err))
+		case errors.Is(err, domaintemplate.ErrInvalidUserID):
+			handler.WriteError(w, h.logger, http.StatusBadRequest, invalidUserIDDetail(err))
+		default:
+			handler.WriteSystemError(w, h.logger, http.StatusInternalServerError, err)
+		}
 		return
 	}
 
@@ -162,8 +192,16 @@ func (h *TemplateHandler) Update(w http.ResponseWriter, r *http.Request) {
 	userID := handler.UserIDFromContext(r.Context())
 	t, err := h.svc.Update(r.Context(), toUpdateCommand(req, templateID, userID))
 	if err != nil {
-		status, detail := mapError(err)
-		handler.WriteError(w, h.logger, status, detail)
+		switch {
+		case errors.Is(err, domaintemplate.ErrTemplateNotFound):
+			handler.WriteError(w, h.logger, http.StatusNotFound, templateNotFoundDetail(err))
+		case errors.Is(err, domaintemplate.ErrNotOwner):
+			handler.WriteError(w, h.logger, http.StatusForbidden, forbiddenDetail(err))
+		case errors.Is(err, domaintemplate.ErrInvalidName):
+			handler.WriteError(w, h.logger, http.StatusBadRequest, invalidNameDetail(err))
+		default:
+			handler.WriteSystemError(w, h.logger, http.StatusInternalServerError, err)
+		}
 		return
 	}
 
@@ -185,6 +223,8 @@ func (h *TemplateHandler) Update(w http.ResponseWriter, r *http.Request) {
 // @Failure 500 {object} handler.ErrorResponse
 // @Security BearerAuth
 // @Router /templates/{id}/publish [post]
+//
+//nolint:dupl // Publish and Get share the template access error mapping.
 func (h *TemplateHandler) Publish(w http.ResponseWriter, r *http.Request) {
 	templateID, parseErr := uuid.Parse(r.PathValue("id"))
 	if parseErr != nil {
@@ -195,8 +235,14 @@ func (h *TemplateHandler) Publish(w http.ResponseWriter, r *http.Request) {
 	userID := handler.UserIDFromContext(r.Context())
 	t, err := h.svc.Publish(r.Context(), templateID, userID)
 	if err != nil {
-		status, detail := mapError(err)
-		handler.WriteError(w, h.logger, status, detail)
+		switch {
+		case errors.Is(err, domaintemplate.ErrTemplateNotFound):
+			handler.WriteError(w, h.logger, http.StatusNotFound, templateNotFoundDetail(err))
+		case errors.Is(err, domaintemplate.ErrNotOwner):
+			handler.WriteError(w, h.logger, http.StatusForbidden, forbiddenDetail(err))
+		default:
+			handler.WriteSystemError(w, h.logger, http.StatusInternalServerError, err)
+		}
 		return
 	}
 
@@ -229,8 +275,18 @@ func (h *TemplateHandler) Fork(w http.ResponseWriter, r *http.Request) {
 	userID := handler.UserIDFromContext(r.Context())
 	t, err := h.svc.Fork(r.Context(), templateID, userID)
 	if err != nil {
-		status, detail := mapError(err)
-		handler.WriteError(w, h.logger, status, detail)
+		switch {
+		case errors.Is(err, domaintemplate.ErrTemplateNotFound):
+			handler.WriteError(w, h.logger, http.StatusNotFound, templateNotFoundDetail(err))
+		case errors.Is(err, domaintemplate.ErrNotOwner):
+			handler.WriteError(w, h.logger, http.StatusForbidden, forbiddenDetail(err))
+		case errors.Is(err, domaintemplate.ErrInvalidName):
+			handler.WriteError(w, h.logger, http.StatusBadRequest, invalidNameDetail(err))
+		case errors.Is(err, domaintemplate.ErrInvalidUserID):
+			handler.WriteError(w, h.logger, http.StatusBadRequest, invalidUserIDDetail(err))
+		default:
+			handler.WriteSystemError(w, h.logger, http.StatusInternalServerError, err)
+		}
 		return
 	}
 
@@ -261,8 +317,14 @@ func (h *TemplateHandler) SoftDelete(w http.ResponseWriter, r *http.Request) {
 
 	userID := handler.UserIDFromContext(r.Context())
 	if err := h.svc.SoftDelete(r.Context(), templateID, userID); err != nil {
-		status, detail := mapError(err)
-		handler.WriteError(w, h.logger, status, detail)
+		switch {
+		case errors.Is(err, domaintemplate.ErrTemplateNotFound):
+			handler.WriteError(w, h.logger, http.StatusNotFound, templateNotFoundDetail(err))
+		case errors.Is(err, domaintemplate.ErrNotOwner):
+			handler.WriteError(w, h.logger, http.StatusForbidden, forbiddenDetail(err))
+		default:
+			handler.WriteSystemError(w, h.logger, http.StatusInternalServerError, err)
+		}
 		return
 	}
 

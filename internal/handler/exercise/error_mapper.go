@@ -1,12 +1,6 @@
 package exercise
 
-import (
-	"errors"
-	"net/http"
-
-	domainexercise "github.com/vladgrskkh/onerep-api/internal/domain/exercise"
-	"github.com/vladgrskkh/onerep-api/internal/handler"
-)
+import "github.com/vladgrskkh/onerep-api/internal/handler"
 
 const (
 	errCodeInvalidRequestBody = "INVALID_REQUEST_BODY"
@@ -20,6 +14,19 @@ const (
 	errCodeInvalidSince = "INVALID_SINCE"
 	errMsgInvalidSince  = "invalid since parameter"
 	errUserInvalidSince = "The since parameter must be an RFC 3339 timestamp"
+
+	errCodeExerciseNotFound     = "EXERCISE_NOT_FOUND"
+	errUserExerciseNotFound     = "Exercise not found"
+	errCodeMuscleGroupNotFound  = "MUSCLE_GROUP_NOT_FOUND"
+	errUserMuscleGroupNotFound  = "One or more muscle groups do not exist"
+	errCodeCannotEditBuiltIn    = "CANNOT_EDIT_BUILT_IN"
+	errUserCannotEditBuiltIn    = "Built-in exercises cannot be edited"
+	errCodeInvalidName          = "INVALID_NAME"
+	errUserInvalidName          = "Name must not be empty"
+	errCodeInvalidUserID        = "INVALID_USER_ID"
+	errUserInvalidUserID        = "You must be logged in to create exercises"
+	errCodeInvalidMuscleGroupID = "INVALID_MUSCLE_GROUP_ID"
+	errUserInvalidMuscleGroupID = "Muscle group IDs must be positive"
 )
 
 func invalidRequestBodyDetail() handler.ErrorDetail {
@@ -46,48 +53,50 @@ func invalidSinceDetail() handler.ErrorDetail {
 	}
 }
 
-func mapError(err error) (int, handler.ErrorDetail) {
-	switch {
-	case errors.Is(err, domainexercise.ErrExerciseNotFound):
-		return http.StatusNotFound, handler.ErrorDetail{
-			Code:        "EXERCISE_NOT_FOUND",
-			Message:     err.Error(),
-			UserMessage: "Exercise not found",
-		}
-	case errors.Is(err, domainexercise.ErrMuscleGroupMissing):
-		return http.StatusNotFound, handler.ErrorDetail{
-			Code:        "MUSCLE_GROUP_NOT_FOUND",
-			Message:     err.Error(),
-			UserMessage: "One or more muscle groups do not exist",
-		}
-	case errors.Is(err, domainexercise.ErrCannotEditBuiltIn):
-		return http.StatusBadRequest, handler.ErrorDetail{
-			Code:        "CANNOT_EDIT_BUILT_IN",
-			Message:     err.Error(),
-			UserMessage: "Built-in exercises cannot be edited",
-		}
-	case errors.Is(err, domainexercise.ErrInvalidName):
-		return http.StatusBadRequest, handler.ErrorDetail{
-			Code:        "INVALID_NAME",
-			Message:     err.Error(),
-			UserMessage: "Name must not be empty",
-		}
-	case errors.Is(err, domainexercise.ErrInvalidUserID):
-		return http.StatusBadRequest, handler.ErrorDetail{
-			Code:        "INVALID_USER_ID",
-			Message:     err.Error(),
-			UserMessage: "You must be logged in to create exercises",
-		}
-	case errors.Is(err, domainexercise.ErrInvalidID):
-		return http.StatusBadRequest, handler.ErrorDetail{
-			Code:        "INVALID_MUSCLE_GROUP_ID",
-			Message:     err.Error(),
-			UserMessage: "Muscle group IDs must be positive",
-		}
-	default:
-		return http.StatusInternalServerError, handler.ErrorDetail{
-			Code:    "INTERNAL_ERROR",
-			Message: err.Error(),
-		}
+func exerciseNotFoundDetail(err error) handler.ErrorDetail {
+	return handler.ErrorDetail{
+		Code:        errCodeExerciseNotFound,
+		Message:     err.Error(),
+		UserMessage: errUserExerciseNotFound,
+	}
+}
+
+func muscleGroupNotFoundDetail(err error) handler.ErrorDetail {
+	return handler.ErrorDetail{
+		Code:        errCodeMuscleGroupNotFound,
+		Message:     err.Error(),
+		UserMessage: errUserMuscleGroupNotFound,
+	}
+}
+
+func cannotEditBuiltInDetail(err error) handler.ErrorDetail {
+	return handler.ErrorDetail{
+		Code:        errCodeCannotEditBuiltIn,
+		Message:     err.Error(),
+		UserMessage: errUserCannotEditBuiltIn,
+	}
+}
+
+func invalidNameDetail(err error) handler.ErrorDetail {
+	return handler.ErrorDetail{
+		Code:        errCodeInvalidName,
+		Message:     err.Error(),
+		UserMessage: errUserInvalidName,
+	}
+}
+
+func invalidUserIDDetail(err error) handler.ErrorDetail {
+	return handler.ErrorDetail{
+		Code:        errCodeInvalidUserID,
+		Message:     err.Error(),
+		UserMessage: errUserInvalidUserID,
+	}
+}
+
+func invalidMuscleGroupIDDetail(err error) handler.ErrorDetail {
+	return handler.ErrorDetail{
+		Code:        errCodeInvalidMuscleGroupID,
+		Message:     err.Error(),
+		UserMessage: errUserInvalidMuscleGroupID,
 	}
 }

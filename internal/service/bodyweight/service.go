@@ -28,16 +28,20 @@ func NewBodyWeightService(weights BodyWeightRepository) *BodyWeightService {
 func (s *BodyWeightService) LogBodyWeight(
 	ctx context.Context,
 	cmd LogBodyWeightCommand,
-) (domainbodyweight.BodyWeight, error) {
+) (*domainbodyweight.BodyWeight, error) {
 	measuredAt := time.Now()
 	if cmd.MeasuredAt != nil {
 		measuredAt = *cmd.MeasuredAt
 	}
 	bw, err := domainbodyweight.NewBodyWeight(cmd.UserID, cmd.WeightKg, measuredAt)
 	if err != nil {
-		return domainbodyweight.BodyWeight{}, err
+		return nil, err
 	}
-	return s.weights.Create(ctx, bw)
+	created, err := s.weights.Create(ctx, bw)
+	if err != nil {
+		return nil, err
+	}
+	return &created, nil
 }
 
 // ListBodyWeight returns the user's body weight entries, optionally only
@@ -46,9 +50,17 @@ func (s *BodyWeightService) ListBodyWeight(
 	ctx context.Context,
 	userID uuid.UUID,
 	since *time.Time,
-) ([]domainbodyweight.BodyWeight, error) {
+) ([]*domainbodyweight.BodyWeight, error) {
 	if userID == uuid.Nil {
 		return nil, domainbodyweight.ErrInvalidUserID
 	}
-	return s.weights.List(ctx, userID, since)
+	weights, err := s.weights.List(ctx, userID, since)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]*domainbodyweight.BodyWeight, len(weights))
+	for i := range weights {
+		out[i] = &weights[i]
+	}
+	return out, nil
 }
