@@ -520,6 +520,59 @@ paths:
       summary: Update an exercise
       tags:
       - exercises
+  /exercises/{id}/media:
+    post:
+      consumes:
+      - multipart/form-data
+      description: Upload a photo or video for an exercise; the file is stored in
+        the media bucket and linked to the exercise
+      parameters:
+      - description: Exercise ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Media file (image/jpeg, image/png, image/webp, or video/mp4)
+        in: formData
+        name: file
+        required: true
+        type: file
+      - description: Media type
+        enum:
+        - photo
+        - video
+        in: formData
+        name: media_type
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/dto.ExerciseMediaResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "413":
+          description: Request Entity Too Large
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Upload exercise media
+      tags:
+      - exercises
   /progress/1rm:
     get:
       consumes:
@@ -885,6 +938,55 @@ paths:
       security:
       - BearerAuth: []
       summary: Fork a template
+      tags:
+      - templates
+  /templates/{id}/media:
+    post:
+      consumes:
+      - multipart/form-data
+      description: Upload a photo for a template; the file is stored in the media
+        bucket and linked to the template
+      parameters:
+      - description: Template ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Media file (image/jpeg, image/png, or image/webp)
+        in: formData
+        name: file
+        required: true
+        type: file
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/dto.TemplateMediaResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "413":
+          description: Request Entity Too Large
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Upload template media
       tags:
       - templates
   /templates/{id}/publish:

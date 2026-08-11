@@ -35,6 +35,16 @@ packages:
       filename: "{{.InterfaceName | snakecase}}.gen.go"
     interfaces:
       TemplateService:
+  github.com/vladgrskkh/onerep-api/internal/handler/media:
+    config:
+      dir: internal/handler/media/mocks
+      mockname: "Mock{{.InterfaceName}}"
+      outpkg: "mocks"
+      filename: "{{.InterfaceName | snakecase}}.gen.go"
+    interfaces:
+      ExerciseService:
+      TemplateService:
+      ObjectStorage:
   github.com/vladgrskkh/onerep-api/internal/service/workout:
     config:
       dir: internal/service/workout/mocks
