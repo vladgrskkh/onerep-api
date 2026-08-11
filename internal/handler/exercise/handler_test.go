@@ -14,7 +14,6 @@ import (
 	"github.com/stretchr/testify/suite"
 
 	domainexercise "github.com/vladgrskkh/onerep-api/internal/domain/exercise"
-	"github.com/vladgrskkh/onerep-api/internal/handler"
 	"github.com/vladgrskkh/onerep-api/internal/handler/exercise"
 	"github.com/vladgrskkh/onerep-api/internal/handler/exercise/dto"
 	exercisemocks "github.com/vladgrskkh/onerep-api/internal/handler/exercise/mocks"
@@ -36,17 +35,12 @@ func (s *HandlerTestSuite) SetupTest() {
 	s.svc = exercisemocks.NewMockExerciseService(s.T())
 	s.handler = exercise.NewExerciseHandler(s.svc, slog.New(slog.DiscardHandler))
 
-	s.router = testutil.NewRouter(
-		testutil.Route{Method: http.MethodGet, Pattern: "/v1/exercises", Handler: s.handler.List},
-		testutil.Route{Method: http.MethodGet, Pattern: "/v1/exercises/{id}", Handler: s.handler.Get},
-		testutil.Route{Method: http.MethodPost, Pattern: "/v1/exercises", Handler: s.handler.Create},
-		testutil.Route{Method: http.MethodPatch, Pattern: "/v1/exercises/{id}", Handler: s.handler.Update},
-		testutil.Route{Method: http.MethodDelete, Pattern: "/v1/exercises/{id}", Handler: s.handler.SoftDelete},
-	)
-}
-
-func (s *HandlerTestSuite) decodeError(w *httptest.ResponseRecorder) handler.ErrorResponse {
-	return testutil.DecodeError(s.T(), w)
+	s.router = chi.NewRouter()
+	s.router.Get("/v1/exercises", s.handler.List)
+	s.router.Get("/v1/exercises/{id}", s.handler.Get)
+	s.router.Post("/v1/exercises", s.handler.Create)
+	s.router.Patch("/v1/exercises/{id}", s.handler.Update)
+	s.router.Delete("/v1/exercises/{id}", s.handler.SoftDelete)
 }
 
 func (s *HandlerTestSuite) listExercises(target string) *httptest.ResponseRecorder {
@@ -96,7 +90,7 @@ func (s *HandlerTestSuite) TestList_InvalidSince() {
 	w := s.listExercises("/v1/exercises?since=not-a-timestamp")
 
 	s.Equal(http.StatusBadRequest, w.Code)
-	resp := s.decodeError(w)
+	resp := testutil.DecodeError(s.T(), w)
 	s.Equal("INVALID_SINCE", string(resp.Error.Code))
 	s.svc.AssertNotCalled(s.T(), "List", mock.Anything, mock.Anything)
 }
@@ -119,7 +113,7 @@ func (s *HandlerTestSuite) TestGet_InvalidID() {
 	w := s.getExercise("not-a-uuid")
 
 	s.Equal(http.StatusBadRequest, w.Code)
-	resp := s.decodeError(w)
+	resp := testutil.DecodeError(s.T(), w)
 	s.Equal("INVALID_EXERCISE_ID", string(resp.Error.Code))
 	s.svc.AssertNotCalled(s.T(), "Get", mock.Anything, mock.Anything)
 }
@@ -132,7 +126,7 @@ func (s *HandlerTestSuite) TestGet_NotFound() {
 	w := s.getExercise(exerciseID.String())
 
 	s.Equal(http.StatusNotFound, w.Code)
-	resp := s.decodeError(w)
+	resp := testutil.DecodeError(s.T(), w)
 	s.Equal("EXERCISE_NOT_FOUND", string(resp.Error.Code))
 }
 
@@ -140,7 +134,7 @@ func (s *HandlerTestSuite) TestCreate_ValidationError() {
 	w := s.createExercise(`{"name":""}`, s.userID)
 
 	s.Equal(http.StatusBadRequest, w.Code)
-	resp := s.decodeError(w)
+	resp := testutil.DecodeError(s.T(), w)
 	s.Equal("VALIDATION_ERROR", string(resp.Error.Code))
 	s.Require().Len(resp.Error.Details, 1)
 	s.Equal("name", resp.Error.Details[0].Field)
@@ -152,7 +146,7 @@ func (s *HandlerTestSuite) TestCreate_InvalidMuscleGroupID() {
 	w := s.createExercise(`{"name":"Bench Press","muscle_group_ids":[0]}`, s.userID)
 
 	s.Equal(http.StatusBadRequest, w.Code)
-	resp := s.decodeError(w)
+	resp := testutil.DecodeError(s.T(), w)
 	s.Equal("VALIDATION_ERROR", string(resp.Error.Code))
 	s.Require().Len(resp.Error.Details, 1)
 	s.Equal("muscle_group_ids[0]", resp.Error.Details[0].Field)
@@ -164,7 +158,7 @@ func (s *HandlerTestSuite) TestCreate_InvalidJSON() {
 	w := s.createExercise(`{"name":`, s.userID)
 
 	s.Equal(http.StatusBadRequest, w.Code)
-	resp := s.decodeError(w)
+	resp := testutil.DecodeError(s.T(), w)
 	s.Equal("INVALID_REQUEST_BODY", string(resp.Error.Code))
 	s.svc.AssertNotCalled(s.T(), "Create", mock.Anything, mock.Anything)
 }
@@ -233,7 +227,7 @@ func (s *HandlerTestSuite) TestSoftDelete_BuiltInRejected() {
 	w := s.softDeleteExercise(exerciseID.String())
 
 	s.Equal(http.StatusBadRequest, w.Code)
-	resp := s.decodeError(w)
+	resp := testutil.DecodeError(s.T(), w)
 	s.Equal("CANNOT_EDIT_BUILT_IN", string(resp.Error.Code))
 }
 

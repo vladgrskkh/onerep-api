@@ -16,7 +16,6 @@ import (
 
 	domainbodyweight "github.com/vladgrskkh/onerep-api/internal/domain/bodyweight"
 	domainprogress "github.com/vladgrskkh/onerep-api/internal/domain/progress"
-	"github.com/vladgrskkh/onerep-api/internal/handler"
 	progresshandler "github.com/vladgrskkh/onerep-api/internal/handler/progress"
 	"github.com/vladgrskkh/onerep-api/internal/handler/progress/dto"
 	progressmocks "github.com/vladgrskkh/onerep-api/internal/handler/progress/mocks"
@@ -43,16 +42,11 @@ func (s *HandlerTestSuite) SetupTest() {
 	s.bodyWeightSvc = progressmocks.NewMockBodyWeightService(s.T())
 	s.handler = progresshandler.NewProgressHandler(s.progressSvc, s.bodyWeightSvc, slog.New(slog.DiscardHandler))
 
-	s.router = testutil.NewRouter(
-		testutil.Route{Method: http.MethodGet, Pattern: "/v1/progress/1rm", Handler: s.handler.Get1RM},
-		testutil.Route{Method: http.MethodGet, Pattern: "/v1/progress/volume", Handler: s.handler.GetVolume},
-		testutil.Route{Method: http.MethodGet, Pattern: "/v1/progress/body-weight", Handler: s.handler.GetBodyWeight},
-		testutil.Route{Method: http.MethodPost, Pattern: "/v1/progress/body-weight", Handler: s.handler.LogBodyWeight},
-	)
-}
-
-func (s *HandlerTestSuite) decodeError(w *httptest.ResponseRecorder) handler.ErrorResponse {
-	return testutil.DecodeError(s.T(), w)
+	s.router = chi.NewRouter()
+	s.router.Get("/v1/progress/1rm", s.handler.Get1RM)
+	s.router.Get("/v1/progress/volume", s.handler.GetVolume)
+	s.router.Get("/v1/progress/body-weight", s.handler.GetBodyWeight)
+	s.router.Post("/v1/progress/body-weight", s.handler.LogBodyWeight)
 }
 
 func (s *HandlerTestSuite) get1RM(target string, userID uuid.UUID) *httptest.ResponseRecorder {
@@ -109,7 +103,7 @@ func (s *HandlerTestSuite) TestGet1RM_InvalidExerciseID() {
 	w := s.get1RM("/v1/progress/1rm?exercise_id=not-a-uuid", s.userID)
 
 	s.Equal(http.StatusBadRequest, w.Code)
-	resp := s.decodeError(w)
+	resp := testutil.DecodeError(s.T(), w)
 	s.Equal("INVALID_EXERCISE_ID", string(resp.Error.Code))
 	s.progressSvc.AssertNotCalled(
 		s.T(),
@@ -127,7 +121,7 @@ func (s *HandlerTestSuite) TestGet1RM_InvalidFrom() {
 	w := s.get1RM("/v1/progress/1rm?exercise_id="+exerciseID.String()+"&from=not-a-timestamp", s.userID)
 
 	s.Equal(http.StatusBadRequest, w.Code)
-	resp := s.decodeError(w)
+	resp := testutil.DecodeError(s.T(), w)
 	s.Equal("INVALID_DATE_RANGE", string(resp.Error.Code))
 	s.progressSvc.AssertNotCalled(
 		s.T(),
@@ -145,7 +139,7 @@ func (s *HandlerTestSuite) TestGet1RM_InvalidTo() {
 	w := s.get1RM("/v1/progress/1rm?exercise_id="+exerciseID.String()+"&to=not-a-timestamp", s.userID)
 
 	s.Equal(http.StatusBadRequest, w.Code)
-	resp := s.decodeError(w)
+	resp := testutil.DecodeError(s.T(), w)
 	s.Equal("INVALID_DATE_RANGE", string(resp.Error.Code))
 	s.progressSvc.AssertNotCalled(
 		s.T(),
@@ -167,7 +161,7 @@ func (s *HandlerTestSuite) TestGet1RM_InvertedRange() {
 	)
 
 	s.Equal(http.StatusBadRequest, w.Code)
-	resp := s.decodeError(w)
+	resp := testutil.DecodeError(s.T(), w)
 	s.Equal("INVALID_DATE_RANGE", string(resp.Error.Code))
 	s.progressSvc.AssertNotCalled(
 		s.T(),
@@ -189,7 +183,7 @@ func (s *HandlerTestSuite) TestGet1RM_ServiceError() {
 	w := s.get1RM("/v1/progress/1rm?exercise_id="+exerciseID.String(), s.userID)
 
 	s.Equal(http.StatusBadRequest, w.Code)
-	resp := s.decodeError(w)
+	resp := testutil.DecodeError(s.T(), w)
 	s.Equal("INVALID_EXERCISE_ID", string(resp.Error.Code))
 }
 
@@ -202,7 +196,7 @@ func (s *HandlerTestSuite) TestGet1RM_InternalError() {
 	w := s.get1RM("/v1/progress/1rm?exercise_id="+exerciseID.String(), s.userID)
 
 	s.Equal(http.StatusInternalServerError, w.Code)
-	resp := s.decodeError(w)
+	resp := testutil.DecodeError(s.T(), w)
 	s.Equal("INTERNAL_ERROR", string(resp.Error.Code))
 }
 
@@ -228,7 +222,7 @@ func (s *HandlerTestSuite) TestGetVolume_InvalidTo() {
 	w := s.getVolume("/v1/progress/volume?to=not-a-timestamp", s.userID)
 
 	s.Equal(http.StatusBadRequest, w.Code)
-	resp := s.decodeError(w)
+	resp := testutil.DecodeError(s.T(), w)
 	s.Equal("INVALID_DATE_RANGE", string(resp.Error.Code))
 	s.progressSvc.AssertNotCalled(
 		s.T(),
@@ -247,7 +241,7 @@ func (s *HandlerTestSuite) TestGetVolume_InvertedRange() {
 	)
 
 	s.Equal(http.StatusBadRequest, w.Code)
-	resp := s.decodeError(w)
+	resp := testutil.DecodeError(s.T(), w)
 	s.Equal("INVALID_DATE_RANGE", string(resp.Error.Code))
 	s.progressSvc.AssertNotCalled(
 		s.T(),
@@ -282,7 +276,7 @@ func (s *HandlerTestSuite) TestGetBodyWeight_InvalidSince() {
 	w := s.getBodyWeight("/v1/progress/body-weight?since=not-a-timestamp", s.userID)
 
 	s.Equal(http.StatusBadRequest, w.Code)
-	resp := s.decodeError(w)
+	resp := testutil.DecodeError(s.T(), w)
 	s.Equal("INVALID_SINCE", string(resp.Error.Code))
 	s.bodyWeightSvc.AssertNotCalled(
 		s.T(),
@@ -335,7 +329,7 @@ func (s *HandlerTestSuite) TestLogBodyWeight_ValidationError() {
 	w := s.logBodyWeight(`{}`, s.userID)
 
 	s.Equal(http.StatusBadRequest, w.Code)
-	resp := s.decodeError(w)
+	resp := testutil.DecodeError(s.T(), w)
 	s.Equal("VALIDATION_ERROR", string(resp.Error.Code))
 	s.Require().Len(resp.Error.Details, 1)
 	s.Equal("weight_kg", resp.Error.Details[0].Field)
@@ -346,7 +340,7 @@ func (s *HandlerTestSuite) TestLogBodyWeight_InvalidJSON() {
 	w := s.logBodyWeight(`{"weight_kg":`, s.userID)
 
 	s.Equal(http.StatusBadRequest, w.Code)
-	resp := s.decodeError(w)
+	resp := testutil.DecodeError(s.T(), w)
 	s.Equal("INVALID_REQUEST_BODY", string(resp.Error.Code))
 	s.bodyWeightSvc.AssertNotCalled(s.T(), "LogBodyWeight", mock.Anything, mock.Anything)
 }

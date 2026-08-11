@@ -3,7 +3,6 @@ package testutil
 import (
 	"context"
 	"encoding/json"
-	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
@@ -14,22 +13,6 @@ import (
 
 	"github.com/vladgrskkh/onerep-api/internal/handler"
 )
-
-// Route pairs an HTTP method and path pattern with a handler function.
-type Route struct {
-	Method  string
-	Pattern string
-	Handler http.HandlerFunc
-}
-
-// NewRouter builds a chi router with the given routes registered.
-func NewRouter(routes ...Route) *chi.Mux {
-	router := chi.NewRouter()
-	for _, r := range routes {
-		router.Method(r.Method, r.Pattern, r.Handler)
-	}
-	return router
-}
 
 // Serve builds a request with the given body and serves it on the router.
 // When userID is not the nil UUID it is injected into the request context.
