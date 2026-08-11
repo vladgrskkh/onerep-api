@@ -84,15 +84,10 @@ func NewWorkoutService(
 }
 
 // Start begins a new workout for the user. When a template is provided, its
-// exercises are copied into the workout; a nil or zero TemplateID starts a
-// workout without one.
+// exercises are copied into the workout; a zero TemplateID starts a workout
+// without one.
 func (s *WorkoutService) Start(ctx context.Context, cmd StartWorkoutCommand) (*domainworkout.Workout, error) {
-	var templateID *uuid.UUID
-	if cmd.TemplateID != uuid.Nil {
-		templateID = &cmd.TemplateID
-	}
-
-	workout, err := domainworkout.NewWorkout(cmd.UserID, templateID)
+	workout, err := domainworkout.NewWorkout(cmd.UserID, cmd.TemplateID)
 	if err != nil {
 		return nil, err
 	}
@@ -106,8 +101,8 @@ func (s *WorkoutService) Start(ctx context.Context, cmd StartWorkoutCommand) (*d
 	}
 
 	var exercises []domainworkout.WorkoutExercise
-	if templateID != nil {
-		exercises, err = s.copyTemplateExercises(ctx, workout.ID, *templateID, cmd.UserID)
+	if cmd.TemplateID != uuid.Nil {
+		exercises, err = s.copyTemplateExercises(ctx, workout.ID, cmd.TemplateID, cmd.UserID)
 		if err != nil {
 			return nil, err
 		}

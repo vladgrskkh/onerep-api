@@ -49,15 +49,19 @@ type SetResult struct {
 	Estimated1RM float64
 }
 
-func NewWorkout(userID uuid.UUID, templateID *uuid.UUID) (Workout, error) {
+func NewWorkout(userID, templateID uuid.UUID) (Workout, error) {
 	if userID == uuid.Nil {
 		return Workout{}, ErrInvalidUserID
+	}
+	var templateIDPtr *uuid.UUID
+	if templateID != uuid.Nil {
+		templateIDPtr = &templateID
 	}
 	now := time.Now()
 	return Workout{
 		ID:         uuid.Must(uuid.NewV7()),
 		UserID:     userID,
-		TemplateID: templateID,
+		TemplateID: templateIDPtr,
 		StartedAt:  now,
 		CreatedAt:  now,
 		UpdatedAt:  now,

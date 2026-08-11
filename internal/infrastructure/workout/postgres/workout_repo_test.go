@@ -65,7 +65,7 @@ func (s *WorkoutRepoTestSuite) insertTestExercise() uuid.UUID {
 }
 
 func (s *WorkoutRepoTestSuite) newTestWorkout(userID uuid.UUID) domainworkout.Workout {
-	w, err := domainworkout.NewWorkout(userID, nil)
+	w, err := domainworkout.NewWorkout(userID, uuid.Nil)
 	s.Require().NoError(err)
 	ex1 := s.insertTestExercise()
 	ex2 := s.insertTestExercise()
@@ -157,7 +157,7 @@ func (s *WorkoutRepoTestSuite) TestCreateAndFindByID() {
 
 func (s *WorkoutRepoTestSuite) TestCreate_HeaderOnly() {
 	userID := uuid.New()
-	w, err := domainworkout.NewWorkout(userID, nil)
+	w, err := domainworkout.NewWorkout(userID, uuid.Nil)
 	s.Require().NoError(err)
 	var created *domainworkout.Workout
 	err = s.trManager.Do(s.ctx, func(ctx context.Context) error {
@@ -177,7 +177,7 @@ func (s *WorkoutRepoTestSuite) TestCreate_HeaderOnly() {
 func (s *WorkoutRepoTestSuite) TestCreate_WithTemplateAndNotes() {
 	userID := uuid.New()
 	templateID := uuid.New()
-	w, err := domainworkout.NewWorkout(userID, &templateID)
+	w, err := domainworkout.NewWorkout(userID, templateID)
 	s.Require().NoError(err)
 	w.Notes = "push day"
 	s.createTestWorkout(w)
@@ -254,7 +254,7 @@ func (s *WorkoutRepoTestSuite) insertWorkoutExercise(id, workoutID, exerciseID u
 }
 
 func (s *WorkoutRepoTestSuite) TestFindByID_AttributesSetsWithEqualSortOrder() {
-	w, err := domainworkout.NewWorkout(uuid.New(), nil)
+	w, err := domainworkout.NewWorkout(uuid.New(), uuid.Nil)
 	s.Require().NoError(err)
 	s.createTestWorkout(w)
 	ex1 := s.insertTestExercise()
@@ -378,7 +378,7 @@ func (s *WorkoutRepoTestSuite) TestLogSet_IncrementsSetNumber() {
 
 func (s *WorkoutRepoTestSuite) TestBatchInsertExercises_AndSets() {
 	userID := uuid.New()
-	w, err := domainworkout.NewWorkout(userID, nil)
+	w, err := domainworkout.NewWorkout(userID, uuid.Nil)
 	s.Require().NoError(err)
 	created := s.createTestWorkout(w)
 
@@ -459,7 +459,7 @@ func (s *WorkoutRepoTestSuite) TestUpdate_VersionConflict() {
 }
 
 func (s *WorkoutRepoTestSuite) TestUpdate_NotFound() {
-	w, err := domainworkout.NewWorkout(uuid.New(), nil)
+	w, err := domainworkout.NewWorkout(uuid.New(), uuid.Nil)
 	s.Require().NoError(err)
 	_, err = s.updateTestWorkout(w)
 	s.ErrorIs(err, domainworkout.ErrWorkoutNotFound)

@@ -18,7 +18,7 @@ func (s *WorkoutTestSuite) TestNewWorkout() {
 	userID := uuid.MustParse("9f3b8f3e-4f1d-4f6a-8b3e-3a2f5c9d1e2a")
 	templateID := uuid.MustParse("1a2b3c4d-5e6f-7a8b-9c0d-1e2f3a4b5c6d")
 
-	w, err := workout.NewWorkout(userID, &templateID)
+	w, err := workout.NewWorkout(userID, templateID)
 
 	s.Require().NoError(err)
 	s.NotEqual(uuid.Nil, w.ID)
@@ -40,7 +40,7 @@ func (s *WorkoutTestSuite) TestNewWorkout() {
 func (s *WorkoutTestSuite) TestNewWorkout_NoTemplate() {
 	userID := uuid.MustParse("9f3b8f3e-4f1d-4f6a-8b3e-3a2f5c9d1e2a")
 
-	w, err := workout.NewWorkout(userID, nil)
+	w, err := workout.NewWorkout(userID, uuid.Nil)
 
 	s.Require().NoError(err)
 	s.Nil(w.TemplateID)
@@ -61,7 +61,7 @@ func (s *WorkoutTestSuite) TestNewWorkout_Validation() {
 	}
 	for _, tt := range tests {
 		s.Run(tt.name, func() {
-			w, err := workout.NewWorkout(tt.userID, nil)
+			w, err := workout.NewWorkout(tt.userID, uuid.Nil)
 			if tt.wantErr != nil {
 				s.Require().ErrorIs(err, tt.wantErr)
 				s.Equal(uuid.Nil, w.ID)
