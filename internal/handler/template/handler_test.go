@@ -5,18 +5,20 @@ import (
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
+	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
 
 	domaintemplate "github.com/vladgrskkh/onerep-api/internal/domain/template"
+	"github.com/vladgrskkh/onerep-api/internal/handler"
 	"github.com/vladgrskkh/onerep-api/internal/handler/template"
 	"github.com/vladgrskkh/onerep-api/internal/handler/template/dto"
 	templatemocks "github.com/vladgrskkh/onerep-api/internal/handler/template/mocks"
-	"github.com/vladgrskkh/onerep-api/internal/handler/testutil"
 	servicetemplate "github.com/vladgrskkh/onerep-api/internal/service/template"
 )
 
@@ -25,6 +27,7 @@ type HandlerTestSuite struct {
 
 	handler *template.TemplateHandler
 	svc     *templatemocks.MockTemplateService
+	router  *chi.Mux
 	userID  uuid.UUID
 }
 
@@ -32,69 +35,60 @@ func (s *HandlerTestSuite) SetupTest() {
 	s.userID = uuid.Must(uuid.NewV7())
 	s.svc = templatemocks.NewMockTemplateService(s.T())
 	s.handler = template.NewTemplateHandler(s.svc, slog.New(slog.DiscardHandler))
+
+	router := chi.NewRouter()
+	router.Get("/v1/templates", s.handler.List)
+	router.Get("/v1/templates/{id}", s.handler.Get)
+	router.Post("/v1/templates", s.handler.Create)
+	router.Patch("/v1/templates/{id}", s.handler.Update)
+	router.Post("/v1/templates/{id}/publish", s.handler.Publish)
+	router.Post("/v1/templates/{id}/fork", s.handler.Fork)
+	router.Delete("/v1/templates/{id}", s.handler.SoftDelete)
+	s.router = router
+}
+
+func (s *HandlerTestSuite) serve(method, target, body string, userID uuid.UUID) *httptest.ResponseRecorder {
+	req := httptest.NewRequest(method, target, strings.NewReader(body))
+	if userID != uuid.Nil {
+		req = req.WithContext(handler.WithUserID(req.Context(), userID))
+	}
+	w := httptest.NewRecorder()
+	s.router.ServeHTTP(w, req)
+	return w
+}
+
+func (s *HandlerTestSuite) decodeError(w *httptest.ResponseRecorder) handler.ErrorResponse {
+	var resp handler.ErrorResponse
+	s.Require().NoError(json.Unmarshal(w.Body.Bytes(), &resp))
+	return resp
 }
 
 func (s *HandlerTestSuite) listTemplates(target string, userID uuid.UUID) *httptest.ResponseRecorder {
-	req := testutil.NewRequest(http.MethodGet, target, "")
-	req = testutil.AsUser(req, userID)
-	w := httptest.NewRecorder()
-	s.handler.List(w, req)
-	return w
+	return s.serve(http.MethodGet, target, "", userID)
 }
 
 func (s *HandlerTestSuite) getTemplate(id string, userID uuid.UUID) *httptest.ResponseRecorder {
-	req := testutil.NewRequest(http.MethodGet, "/v1/templates/"+id, "")
-	req = testutil.AsUser(req, userID)
-	req.SetPathValue("id", id)
-	w := httptest.NewRecorder()
-	s.handler.Get(w, req)
-	return w
+	return s.serve(http.MethodGet, "/v1/templates/"+id, "", userID)
 }
 
 func (s *HandlerTestSuite) createTemplate(body string, userID uuid.UUID) *httptest.ResponseRecorder {
-	req := testutil.NewRequest(http.MethodPost, "/v1/templates", body)
-	if userID != uuid.Nil {
-		req = testutil.AsUser(req, userID)
-	}
-	w := httptest.NewRecorder()
-	s.handler.Create(w, req)
-	return w
+	return s.serve(http.MethodPost, "/v1/templates", body, userID)
 }
 
 func (s *HandlerTestSuite) updateTemplate(id, body string, userID uuid.UUID) *httptest.ResponseRecorder {
-	req := testutil.NewRequest(http.MethodPatch, "/v1/templates/"+id, body)
-	req = testutil.AsUser(req, userID)
-	req.SetPathValue("id", id)
-	w := httptest.NewRecorder()
-	s.handler.Update(w, req)
-	return w
+	return s.serve(http.MethodPatch, "/v1/templates/"+id, body, userID)
 }
 
 func (s *HandlerTestSuite) publishTemplate(id string, userID uuid.UUID) *httptest.ResponseRecorder {
-	req := testutil.NewRequest(http.MethodPost, "/v1/templates/"+id+"/publish", "")
-	req = testutil.AsUser(req, userID)
-	req.SetPathValue("id", id)
-	w := httptest.NewRecorder()
-	s.handler.Publish(w, req)
-	return w
+	return s.serve(http.MethodPost, "/v1/templates/"+id+"/publish", "", userID)
 }
 
 func (s *HandlerTestSuite) forkTemplate(id string, userID uuid.UUID) *httptest.ResponseRecorder {
-	req := testutil.NewRequest(http.MethodPost, "/v1/templates/"+id+"/fork", "")
-	req = testutil.AsUser(req, userID)
-	req.SetPathValue("id", id)
-	w := httptest.NewRecorder()
-	s.handler.Fork(w, req)
-	return w
+	return s.serve(http.MethodPost, "/v1/templates/"+id+"/fork", "", userID)
 }
 
 func (s *HandlerTestSuite) softDeleteTemplate(id string, userID uuid.UUID) *httptest.ResponseRecorder {
-	req := testutil.NewRequest(http.MethodDelete, "/v1/templates/"+id, "")
-	req = testutil.AsUser(req, userID)
-	req.SetPathValue("id", id)
-	w := httptest.NewRecorder()
-	s.handler.SoftDelete(w, req)
-	return w
+	return s.serve(http.MethodDelete, "/v1/templates/"+id, "", userID)
 }
 
 func (s *HandlerTestSuite) TestList_Success() {
@@ -122,7 +116,7 @@ func (s *HandlerTestSuite) TestList_InvalidSince() {
 	w := s.listTemplates("/v1/templates?since=not-a-timestamp", s.userID)
 
 	s.Equal(http.StatusBadRequest, w.Code)
-	resp := testutil.DecodeError(s.T(), w)
+	resp := s.decodeError(w)
 	s.Equal("INVALID_SINCE", string(resp.Error.Code))
 	s.svc.AssertNotCalled(s.T(), "List", mock.Anything, mock.Anything)
 }
@@ -134,7 +128,7 @@ func (s *HandlerTestSuite) TestList_ServiceError() {
 	w := s.listTemplates("/v1/templates", s.userID)
 
 	s.Equal(http.StatusBadRequest, w.Code)
-	resp := testutil.DecodeError(s.T(), w)
+	resp := s.decodeError(w)
 	s.Equal("INVALID_USER_ID", string(resp.Error.Code))
 }
 
@@ -161,7 +155,7 @@ func (s *HandlerTestSuite) TestGet_PrivateByOther() {
 	w := s.getTemplate(templateID.String(), userID)
 
 	s.Equal(http.StatusForbidden, w.Code)
-	resp := testutil.DecodeError(s.T(), w)
+	resp := s.decodeError(w)
 	s.Equal("FORBIDDEN", string(resp.Error.Code))
 }
 
@@ -169,7 +163,7 @@ func (s *HandlerTestSuite) TestGet_InvalidID() {
 	w := s.getTemplate("not-a-uuid", s.userID)
 
 	s.Equal(http.StatusBadRequest, w.Code)
-	resp := testutil.DecodeError(s.T(), w)
+	resp := s.decodeError(w)
 	s.Equal("INVALID_TEMPLATE_ID", string(resp.Error.Code))
 	s.svc.AssertNotCalled(s.T(), "Get", mock.Anything, mock.Anything)
 }
@@ -182,7 +176,7 @@ func (s *HandlerTestSuite) TestGet_NotFound() {
 	w := s.getTemplate(templateID.String(), s.userID)
 
 	s.Equal(http.StatusNotFound, w.Code)
-	resp := testutil.DecodeError(s.T(), w)
+	resp := s.decodeError(w)
 	s.Equal("TEMPLATE_NOT_FOUND", string(resp.Error.Code))
 }
 
@@ -190,7 +184,7 @@ func (s *HandlerTestSuite) TestCreate_ValidationError() {
 	w := s.createTemplate(`{"name":""}`, s.userID)
 
 	s.Equal(http.StatusBadRequest, w.Code)
-	resp := testutil.DecodeError(s.T(), w)
+	resp := s.decodeError(w)
 	s.Equal("VALIDATION_ERROR", string(resp.Error.Code))
 	s.Require().Len(resp.Error.Details, 1)
 	s.Equal("name", resp.Error.Details[0].Field)
@@ -202,7 +196,7 @@ func (s *HandlerTestSuite) TestCreate_InvalidExerciseID() {
 	w := s.createTemplate(`{"name":"Push Day","exercises":[{"planned_sets":3}]}`, s.userID)
 
 	s.Equal(http.StatusBadRequest, w.Code)
-	resp := testutil.DecodeError(s.T(), w)
+	resp := s.decodeError(w)
 	s.Equal("VALIDATION_ERROR", string(resp.Error.Code))
 	s.Require().Len(resp.Error.Details, 1)
 	s.Equal("exercise_id", resp.Error.Details[0].Field)
@@ -214,7 +208,7 @@ func (s *HandlerTestSuite) TestCreate_InvalidJSON() {
 	w := s.createTemplate(`{"name":`, s.userID)
 
 	s.Equal(http.StatusBadRequest, w.Code)
-	resp := testutil.DecodeError(s.T(), w)
+	resp := s.decodeError(w)
 	s.Equal("INVALID_REQUEST_BODY", string(resp.Error.Code))
 	s.svc.AssertNotCalled(s.T(), "Create", mock.Anything, mock.Anything)
 }
@@ -276,7 +270,7 @@ func (s *HandlerTestSuite) TestUpdate_NotOwner() {
 	w := s.updateTemplate(templateID.String(), `{"name":"Renamed"}`, s.userID)
 
 	s.Equal(http.StatusForbidden, w.Code)
-	resp := testutil.DecodeError(s.T(), w)
+	resp := s.decodeError(w)
 	s.Equal("FORBIDDEN", string(resp.Error.Code))
 }
 
@@ -319,7 +313,7 @@ func (s *HandlerTestSuite) TestPublish_NotFound() {
 	w := s.publishTemplate(templateID.String(), s.userID)
 
 	s.Equal(http.StatusNotFound, w.Code)
-	resp := testutil.DecodeError(s.T(), w)
+	resp := s.decodeError(w)
 	s.Equal("TEMPLATE_NOT_FOUND", string(resp.Error.Code))
 }
 
@@ -346,7 +340,7 @@ func (s *HandlerTestSuite) TestFork_PrivateByOther() {
 	w := s.forkTemplate(templateID.String(), userID)
 
 	s.Equal(http.StatusForbidden, w.Code)
-	resp := testutil.DecodeError(s.T(), w)
+	resp := s.decodeError(w)
 	s.Equal("FORBIDDEN", string(resp.Error.Code))
 }
 
@@ -354,7 +348,7 @@ func (s *HandlerTestSuite) TestFork_InvalidID() {
 	w := s.forkTemplate("not-a-uuid", s.userID)
 
 	s.Equal(http.StatusBadRequest, w.Code)
-	resp := testutil.DecodeError(s.T(), w)
+	resp := s.decodeError(w)
 	s.Equal("INVALID_TEMPLATE_ID", string(resp.Error.Code))
 	s.svc.AssertNotCalled(s.T(), "Fork", mock.Anything, mock.Anything, mock.Anything)
 }

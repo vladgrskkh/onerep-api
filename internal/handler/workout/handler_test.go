@@ -5,16 +5,18 @@ import (
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
+	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
 
 	domaintemplate "github.com/vladgrskkh/onerep-api/internal/domain/template"
 	domainworkout "github.com/vladgrskkh/onerep-api/internal/domain/workout"
-	"github.com/vladgrskkh/onerep-api/internal/handler/testutil"
+	"github.com/vladgrskkh/onerep-api/internal/handler"
 	workouthandler "github.com/vladgrskkh/onerep-api/internal/handler/workout"
 	"github.com/vladgrskkh/onerep-api/internal/handler/workout/dto"
 	workoutmocks "github.com/vladgrskkh/onerep-api/internal/handler/workout/mocks"
@@ -26,6 +28,7 @@ type HandlerTestSuite struct {
 
 	handler *workouthandler.WorkoutHandler
 	svc     *workoutmocks.MockWorkoutService
+	router  *chi.Mux
 	userID  uuid.UUID
 }
 
@@ -33,61 +36,55 @@ func (s *HandlerTestSuite) SetupTest() {
 	s.userID = uuid.Must(uuid.NewV7())
 	s.svc = workoutmocks.NewMockWorkoutService(s.T())
 	s.handler = workouthandler.NewWorkoutHandler(s.svc, slog.New(slog.DiscardHandler))
+
+	router := chi.NewRouter()
+	router.Post("/v1/workouts", s.handler.Start)
+	router.Get("/v1/workouts", s.handler.List)
+	router.Get("/v1/workouts/{id}", s.handler.Get)
+	router.Post("/v1/workouts/{id}/exercises", s.handler.AddExercise)
+	router.Post("/v1/workouts/{id}/exercises/{exId}/sets", s.handler.LogSet)
+	router.Patch("/v1/workouts/{id}/finish", s.handler.Finish)
+	s.router = router
+}
+
+func (s *HandlerTestSuite) serve(method, target, body string, userID uuid.UUID) *httptest.ResponseRecorder {
+	req := httptest.NewRequest(method, target, strings.NewReader(body))
+	if userID != uuid.Nil {
+		req = req.WithContext(handler.WithUserID(req.Context(), userID))
+	}
+	w := httptest.NewRecorder()
+	s.router.ServeHTTP(w, req)
+	return w
+}
+
+func (s *HandlerTestSuite) decodeError(w *httptest.ResponseRecorder) handler.ErrorResponse {
+	var resp handler.ErrorResponse
+	s.Require().NoError(json.Unmarshal(w.Body.Bytes(), &resp))
+	return resp
 }
 
 func (s *HandlerTestSuite) startWorkout(body string, userID uuid.UUID) *httptest.ResponseRecorder {
-	req := testutil.NewRequest(http.MethodPost, "/v1/workouts", body)
-	if userID != uuid.Nil {
-		req = testutil.AsUser(req, userID)
-	}
-	w := httptest.NewRecorder()
-	s.handler.Start(w, req)
-	return w
+	return s.serve(http.MethodPost, "/v1/workouts", body, userID)
 }
 
 func (s *HandlerTestSuite) listWorkouts(target string, userID uuid.UUID) *httptest.ResponseRecorder {
-	req := testutil.NewRequest(http.MethodGet, target, "")
-	req = testutil.AsUser(req, userID)
-	w := httptest.NewRecorder()
-	s.handler.List(w, req)
-	return w
+	return s.serve(http.MethodGet, target, "", userID)
 }
 
 func (s *HandlerTestSuite) getWorkout(id string, userID uuid.UUID) *httptest.ResponseRecorder {
-	req := testutil.NewRequest(http.MethodGet, "/v1/workouts/"+id, "")
-	req = testutil.AsUser(req, userID)
-	req.SetPathValue("id", id)
-	w := httptest.NewRecorder()
-	s.handler.Get(w, req)
-	return w
+	return s.serve(http.MethodGet, "/v1/workouts/"+id, "", userID)
 }
 
 func (s *HandlerTestSuite) addExercise(id, body string, userID uuid.UUID) *httptest.ResponseRecorder {
-	req := testutil.NewRequest(http.MethodPost, "/v1/workouts/"+id+"/exercises", body)
-	req = testutil.AsUser(req, userID)
-	req.SetPathValue("id", id)
-	w := httptest.NewRecorder()
-	s.handler.AddExercise(w, req)
-	return w
+	return s.serve(http.MethodPost, "/v1/workouts/"+id+"/exercises", body, userID)
 }
 
 func (s *HandlerTestSuite) logSet(id, exID, body string, userID uuid.UUID) *httptest.ResponseRecorder {
-	req := testutil.NewRequest(http.MethodPost, "/v1/workouts/"+id+"/exercises/"+exID+"/sets", body)
-	req = testutil.AsUser(req, userID)
-	req.SetPathValue("id", id)
-	req.SetPathValue("exId", exID)
-	w := httptest.NewRecorder()
-	s.handler.LogSet(w, req)
-	return w
+	return s.serve(http.MethodPost, "/v1/workouts/"+id+"/exercises/"+exID+"/sets", body, userID)
 }
 
 func (s *HandlerTestSuite) finishWorkout(id string, userID uuid.UUID) *httptest.ResponseRecorder {
-	req := testutil.NewRequest(http.MethodPatch, "/v1/workouts/"+id+"/finish", "")
-	req = testutil.AsUser(req, userID)
-	req.SetPathValue("id", id)
-	w := httptest.NewRecorder()
-	s.handler.Finish(w, req)
-	return w
+	return s.serve(http.MethodPatch, "/v1/workouts/"+id+"/finish", "", userID)
 }
 
 func (s *HandlerTestSuite) TestStart_Success() {
@@ -136,7 +133,7 @@ func (s *HandlerTestSuite) TestStart_InvalidJSON() {
 	w := s.startWorkout(`{"template_id":`, s.userID)
 
 	s.Equal(http.StatusBadRequest, w.Code)
-	resp := testutil.DecodeError(s.T(), w)
+	resp := s.decodeError(w)
 	s.Equal("INVALID_REQUEST_BODY", string(resp.Error.Code))
 	s.svc.AssertNotCalled(s.T(), "Start", mock.Anything, mock.Anything)
 }
@@ -148,7 +145,7 @@ func (s *HandlerTestSuite) TestStart_ActiveWorkout() {
 	w := s.startWorkout("", s.userID)
 
 	s.Equal(http.StatusConflict, w.Code)
-	resp := testutil.DecodeError(s.T(), w)
+	resp := s.decodeError(w)
 	s.Equal("ACTIVE_WORKOUT_EXISTS", string(resp.Error.Code))
 }
 
@@ -159,7 +156,7 @@ func (s *HandlerTestSuite) TestStart_TemplateNotFound() {
 	w := s.startWorkout("", s.userID)
 
 	s.Equal(http.StatusNotFound, w.Code)
-	resp := testutil.DecodeError(s.T(), w)
+	resp := s.decodeError(w)
 	s.Equal("TEMPLATE_NOT_FOUND", string(resp.Error.Code))
 }
 
@@ -182,7 +179,7 @@ func (s *HandlerTestSuite) TestList_InvalidSince() {
 	w := s.listWorkouts("/v1/workouts?since=not-a-timestamp", s.userID)
 
 	s.Equal(http.StatusBadRequest, w.Code)
-	resp := testutil.DecodeError(s.T(), w)
+	resp := s.decodeError(w)
 	s.Equal("INVALID_SINCE", string(resp.Error.Code))
 	s.svc.AssertNotCalled(s.T(), "List", mock.Anything, mock.Anything, mock.Anything)
 }
@@ -204,7 +201,7 @@ func (s *HandlerTestSuite) TestGet_InvalidID() {
 	w := s.getWorkout("not-a-uuid", s.userID)
 
 	s.Equal(http.StatusBadRequest, w.Code)
-	resp := testutil.DecodeError(s.T(), w)
+	resp := s.decodeError(w)
 	s.Equal("INVALID_WORKOUT_ID", string(resp.Error.Code))
 	s.svc.AssertNotCalled(s.T(), "Get", mock.Anything, mock.Anything, mock.Anything)
 }
@@ -217,7 +214,7 @@ func (s *HandlerTestSuite) TestGet_NotFound() {
 	w := s.getWorkout(workoutID.String(), s.userID)
 
 	s.Equal(http.StatusNotFound, w.Code)
-	resp := testutil.DecodeError(s.T(), w)
+	resp := s.decodeError(w)
 	s.Equal("WORKOUT_NOT_FOUND", string(resp.Error.Code))
 }
 
@@ -260,7 +257,7 @@ func (s *HandlerTestSuite) TestAddExercise_ValidationError() {
 	w := s.addExercise(uuid.Must(uuid.NewV7()).String(), `{}`, s.userID)
 
 	s.Equal(http.StatusBadRequest, w.Code)
-	resp := testutil.DecodeError(s.T(), w)
+	resp := s.decodeError(w)
 	s.Equal("VALIDATION_ERROR", string(resp.Error.Code))
 	s.Require().Len(resp.Error.Details, 1)
 	s.Equal("exercise_id", resp.Error.Details[0].Field)
@@ -275,7 +272,7 @@ func (s *HandlerTestSuite) TestAddExercise_InvalidWorkoutID() {
 	)
 
 	s.Equal(http.StatusBadRequest, w.Code)
-	resp := testutil.DecodeError(s.T(), w)
+	resp := s.decodeError(w)
 	s.Equal("INVALID_WORKOUT_ID", string(resp.Error.Code))
 	s.svc.AssertNotCalled(s.T(), "AddExercise", mock.Anything, mock.Anything, mock.Anything)
 }
@@ -335,7 +332,7 @@ func (s *HandlerTestSuite) TestLogSet_ValidationError() {
 	)
 
 	s.Equal(http.StatusBadRequest, w.Code)
-	resp := testutil.DecodeError(s.T(), w)
+	resp := s.decodeError(w)
 	s.Equal("VALIDATION_ERROR", string(resp.Error.Code))
 	s.Require().Len(resp.Error.Details, 1)
 	s.Equal("reps", resp.Error.Details[0].Field)
@@ -351,7 +348,7 @@ func (s *HandlerTestSuite) TestLogSet_InvalidWorkoutExerciseID() {
 	)
 
 	s.Equal(http.StatusBadRequest, w.Code)
-	resp := testutil.DecodeError(s.T(), w)
+	resp := s.decodeError(w)
 	s.Equal("INVALID_WORKOUT_EXERCISE_ID", string(resp.Error.Code))
 	s.svc.AssertNotCalled(s.T(), "LogSet", mock.Anything, mock.Anything, mock.Anything)
 }
@@ -370,7 +367,7 @@ func (s *HandlerTestSuite) TestLogSet_NotFound() {
 	)
 
 	s.Equal(http.StatusNotFound, w.Code)
-	resp := testutil.DecodeError(s.T(), w)
+	resp := s.decodeError(w)
 	s.Equal("WORKOUT_NOT_FOUND", string(resp.Error.Code))
 }
 
@@ -396,7 +393,7 @@ func (s *HandlerTestSuite) TestFinish_NotFound() {
 	w := s.finishWorkout(workoutID.String(), s.userID)
 
 	s.Equal(http.StatusNotFound, w.Code)
-	resp := testutil.DecodeError(s.T(), w)
+	resp := s.decodeError(w)
 	s.Equal("WORKOUT_NOT_FOUND", string(resp.Error.Code))
 }
 
@@ -404,7 +401,7 @@ func (s *HandlerTestSuite) TestFinish_InvalidID() {
 	w := s.finishWorkout("not-a-uuid", s.userID)
 
 	s.Equal(http.StatusBadRequest, w.Code)
-	resp := testutil.DecodeError(s.T(), w)
+	resp := s.decodeError(w)
 	s.Equal("INVALID_WORKOUT_ID", string(resp.Error.Code))
 	s.svc.AssertNotCalled(s.T(), "Finish", mock.Anything, mock.Anything, mock.Anything)
 }
