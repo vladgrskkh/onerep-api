@@ -98,3 +98,11 @@ packages:
     interfaces:
       ProgressService:
       BodyWeightService:
+  github.com/vladgrskkh/onerep-api/internal/handler/middleware:
+    config:
+      dir: internal/handler/middleware/mocks
+      mockname: "Mock{{.InterfaceName}}"
+      outpkg: "mocks"
+      filename: "{{.InterfaceName | snakecase}}.gen.go"
+    interfaces:
+      JWTValidator:
