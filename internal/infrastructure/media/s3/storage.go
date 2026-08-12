@@ -86,6 +86,12 @@ func GenerateKey(prefix string) string {
 	return prefix + "/" + uuid.Must(uuid.NewV7()).String()
 }
 
+// GenerateKey builds a unique object key under the given prefix. It exists
+// to satisfy the handler.ObjectStorage contract.
+func (s *Storage) GenerateKey(prefix string) string {
+	return GenerateKey(prefix)
+}
+
 // endpointWithScheme prepends a scheme to the endpoint when it has none.
 func endpointWithScheme(endpoint string, useSSL bool) string {
 	if strings.Contains(endpoint, "://") {

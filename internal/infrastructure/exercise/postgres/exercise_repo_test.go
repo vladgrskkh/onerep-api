@@ -162,7 +162,7 @@ func (s *ExerciseRepoTestSuite) TestBatchInsertMedia_AndMuscleGroups() {
 		if err := s.repo.BatchInsertMedia(ctx, media); err != nil {
 			return err
 		}
-		return s.repo.BatchInsertMuscleGroups(ctx, groups)
+		return s.repo.BatchInsertMuscleGroups(ctx, created.ID, groups)
 	})
 	s.Require().NoError(err)
 
