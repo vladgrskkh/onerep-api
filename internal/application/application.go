@@ -249,7 +249,14 @@ func (app *Application) Run(ctx context.Context) error {
 		return errors.New("worker not initialized: use application.WithServices")
 	}
 
-	go app.volumeWorker.Run(ctx)
+	workerCtx, cancelWorker := context.WithCancel(ctx)
+	defer cancelWorker()
+
+	workerDone := make(chan struct{})
+	go func() {
+		app.volumeWorker.Run(workerCtx)
+		close(workerDone)
+	}()
 
 	app.server = &http.Server{
 		Addr:              ":" + app.cfg.Port,
@@ -263,6 +270,7 @@ func (app *Application) Run(ctx context.Context) error {
 		errCh <- app.server.ListenAndServe()
 	}()
 
+	var runErr error
 	select {
 	case <-ctx.Done():
 		app.logger.Info("shutting down...")
@@ -273,13 +281,21 @@ func (app *Application) Run(ctx context.Context) error {
 		defer shutdownCancel()
 
 		if err := app.server.Shutdown(shutdownCtx); err != nil {
-			return err
+			runErr = err
 		}
-		return nil
 	case err := <-errCh:
 		if err != nil && !errors.Is(err, http.ErrServerClosed) {
-			return err
+			runErr = err
 		}
-		return nil
 	}
+
+	// The worker must exit before its database pool and redis client are
+	// closed; cancelWorker stops it and workerDone waits for it.
+	cancelWorker()
+	<-workerDone
+
+	_ = app.redisClient.Close()
+	app.pool.Close()
+
+	return runErr
 }

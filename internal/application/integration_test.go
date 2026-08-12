@@ -43,10 +43,11 @@ const (
 type ApplicationIntegrationSuite struct {
 	suite.Suite
 
-	router http.Handler
-	userID uuid.UUID
-	token  string
-	pool   *pgxpool.Pool
+	router            http.Handler
+	userID            uuid.UUID
+	token             string
+	pool              *pgxpool.Pool
+	createdExerciseID []uuid.UUID
 }
 
 func TestApplicationIntegrationSuite(t *testing.T) {
@@ -95,9 +96,20 @@ func (s *ApplicationIntegrationSuite) SetupTest() {
 }
 
 func (s *ApplicationIntegrationSuite) TearDownTest() {
-	if s.pool != nil {
-		s.pool.Close()
+	if s.pool == nil {
+		return
 	}
+	// Cleanup runs here, before the pool is closed: t.Cleanup callbacks fire
+	// only when the subtest completes, after TearDownTest, when the pool is
+	// already closed and the DELETE would fail silently.
+	for _, id := range s.createdExerciseID {
+		_, err := s.pool.Exec(context.Background(),
+			`DELETE FROM gym.exercises WHERE id = $1`, id)
+		s.Require().NoError(err, "delete leftover exercise %s", id)
+	}
+	s.createdExerciseID = nil
+	s.pool.Close()
+	s.pool = nil
 }
 
 func (s *ApplicationIntegrationSuite) TestHealth() {
@@ -174,10 +186,7 @@ func (s *ApplicationIntegrationSuite) createExercise(name, description string) u
 	s.Require().NoError(json.Unmarshal(w.Body.Bytes(), &resp))
 	s.NotEqual(uuid.Nil, resp.ID)
 
-	s.T().Cleanup(func() {
-		_, _ = s.pool.Exec(context.Background(),
-			`DELETE FROM gym.exercises WHERE id = $1`, resp.ID)
-	})
+	s.createdExerciseID = append(s.createdExerciseID, resp.ID)
 
 	return resp.ID
 }
