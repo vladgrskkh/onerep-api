@@ -51,7 +51,6 @@ const (
 	errUserForbidden = "You do not have access to this template"
 
 	errCodeInvalidMediaType = "INVALID_MEDIA_TYPE"
-	errMsgInvalidMediaType  = "media type must be photo or video"
 	errUserInvalidMediaType = "Media type must be photo or video"
 )
 

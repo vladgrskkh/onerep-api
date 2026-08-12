@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"log/slog"
 	"mime/multipart"
 	"net/http"
@@ -100,7 +101,6 @@ func (s *HandlerTestSuite) TestUploadExerciseMedia_Success() {
 		ExerciseID: exerciseID,
 		MediaType:  domainexercise.MediaTypePhoto,
 		S3Key:      key,
-		SortOrder:  0,
 	}).Return(media, nil)
 
 	w := s.serveMultipart(
@@ -243,6 +243,29 @@ func (s *HandlerTestSuite) TestUploadExerciseMedia_ExerciseNotFound() {
 	key := "exercises/" + exerciseID.String() + "/media-uuid"
 	s.storage.EXPECT().GenerateKey("exercises/" + exerciseID.String()).Return(key)
 	s.storage.EXPECT().Upload(mock.Anything, key, mock.Anything, "image/jpeg").Return(nil)
+	s.storage.EXPECT().Delete(mock.Anything, key).Return(nil)
+	s.exerciseSvc.EXPECT().UploadMedia(mock.Anything, mock.Anything).
+		Return(nil, domainexercise.ErrExerciseNotFound)
+
+	w := s.serveMultipart(
+		"/v1/exercises/"+exerciseID.String()+"/media",
+		"photo",
+		"image/jpeg",
+		[]byte("fake image bytes"),
+		uuid.Nil,
+	)
+
+	s.Equal(http.StatusNotFound, w.Code)
+	resp := testutil.DecodeError(s.T(), w)
+	s.Equal("EXERCISE_NOT_FOUND", string(resp.Error.Code))
+}
+
+func (s *HandlerTestSuite) TestUploadExerciseMedia_DeleteFailureKeepsOriginalError() {
+	exerciseID := uuid.Must(uuid.NewV7())
+	key := "exercises/" + exerciseID.String() + "/media-uuid"
+	s.storage.EXPECT().GenerateKey("exercises/" + exerciseID.String()).Return(key)
+	s.storage.EXPECT().Upload(mock.Anything, key, mock.Anything, "image/jpeg").Return(nil)
+	s.storage.EXPECT().Delete(mock.Anything, key).Return(errors.New("delete failed"))
 	s.exerciseSvc.EXPECT().UploadMedia(mock.Anything, mock.Anything).
 		Return(nil, domainexercise.ErrExerciseNotFound)
 
@@ -264,6 +287,7 @@ func (s *HandlerTestSuite) TestUploadExerciseMedia_BuiltIn() {
 	key := "exercises/" + exerciseID.String() + "/media-uuid"
 	s.storage.EXPECT().GenerateKey("exercises/" + exerciseID.String()).Return(key)
 	s.storage.EXPECT().Upload(mock.Anything, key, mock.Anything, "image/jpeg").Return(nil)
+	s.storage.EXPECT().Delete(mock.Anything, key).Return(nil)
 	s.exerciseSvc.EXPECT().UploadMedia(mock.Anything, mock.Anything).
 		Return(nil, domainexercise.ErrCannotEditBuiltIn)
 
@@ -297,7 +321,6 @@ func (s *HandlerTestSuite) TestUploadTemplateMedia_Success() {
 		TemplateID: templateID,
 		UserID:     userID,
 		S3Key:      key,
-		SortOrder:  0,
 	}).Return(media, nil)
 
 	w := s.serveMultipart(
@@ -321,6 +344,7 @@ func (s *HandlerTestSuite) TestUploadTemplateMedia_NotOwner() {
 	key := "templates/" + templateID.String() + "/media-uuid"
 	s.storage.EXPECT().GenerateKey("templates/" + templateID.String()).Return(key)
 	s.storage.EXPECT().Upload(mock.Anything, key, mock.Anything, "image/jpeg").Return(nil)
+	s.storage.EXPECT().Delete(mock.Anything, key).Return(nil)
 	s.templateSvc.EXPECT().UploadMedia(mock.Anything, mock.Anything).
 		Return(nil, domaintemplate.ErrNotOwner)
 
@@ -342,6 +366,7 @@ func (s *HandlerTestSuite) TestUploadTemplateMedia_NotFound() {
 	key := "templates/" + templateID.String() + "/media-uuid"
 	s.storage.EXPECT().GenerateKey("templates/" + templateID.String()).Return(key)
 	s.storage.EXPECT().Upload(mock.Anything, key, mock.Anything, "image/jpeg").Return(nil)
+	s.storage.EXPECT().Delete(mock.Anything, key).Return(nil)
 	s.templateSvc.EXPECT().UploadMedia(mock.Anything, mock.Anything).
 		Return(nil, domaintemplate.ErrTemplateNotFound)
 

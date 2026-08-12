@@ -20,9 +20,6 @@ import (
 // maxUploadSize bounds the total size of a single multipart media upload.
 const maxUploadSize = 10 << 20 // 10 MiB
 
-// mediaSortOrder is the sort order assigned to each uploaded media object.
-const mediaSortOrder = 0
-
 // ExerciseService is the exercise media upload use case consumed by the
 // media handler.
 type ExerciseService interface {
@@ -41,9 +38,11 @@ type TemplateService interface {
 	) (*domaintemplate.TemplateMedia, error)
 }
 
-// ObjectStorage uploads media objects to the backing object store.
+// ObjectStorage uploads and removes media objects in the backing object
+// store.
 type ObjectStorage interface {
 	Upload(ctx context.Context, key string, body io.Reader, contentType string) error
+	Delete(ctx context.Context, key string) error
 	GenerateKey(prefix string) string
 }
 
@@ -121,10 +120,9 @@ func (h *MediaHandler) UploadExerciseMedia(w http.ResponseWriter, r *http.Reques
 		ExerciseID: exerciseID,
 		MediaType:  mediaType,
 		S3Key:      key,
-		SortOrder:  mediaSortOrder,
 	})
 	if err != nil {
-		h.logger.Warn("uploaded media object has no database record", "s3_key", key, "error", err)
+		h.deleteUploadedObject(r.Context(), key)
 		switch {
 		case errors.Is(err, domainexercise.ErrExerciseNotFound):
 			handler.WriteError(w, h.logger, http.StatusNotFound, exerciseNotFoundDetail(err))
@@ -190,10 +188,9 @@ func (h *MediaHandler) UploadTemplateMedia(w http.ResponseWriter, r *http.Reques
 		TemplateID: templateID,
 		UserID:     handler.UserIDFromContext(r.Context()),
 		S3Key:      key,
-		SortOrder:  mediaSortOrder,
 	})
 	if err != nil {
-		h.logger.Warn("uploaded media object has no database record", "s3_key", key, "error", err)
+		h.deleteUploadedObject(r.Context(), key)
 		switch {
 		case errors.Is(err, domaintemplate.ErrTemplateNotFound):
 			handler.WriteError(w, h.logger, http.StatusNotFound, templateNotFoundDetail(err))
@@ -265,5 +262,14 @@ func (h *MediaHandler) writeUploadParseError(w http.ResponseWriter, err error) {
 		handler.WriteError(w, h.logger, http.StatusBadRequest, invalidRequestBodyDetail())
 	default:
 		handler.WriteError(w, h.logger, http.StatusBadRequest, malformedMultipartDetail())
+	}
+}
+
+// deleteUploadedObject best-effort removes an object that was uploaded but
+// never linked to a database record. The caller's original error is
+// preserved; a failed delete is only logged.
+func (h *MediaHandler) deleteUploadedObject(ctx context.Context, key string) {
+	if err := h.storage.Delete(ctx, key); err != nil {
+		h.logger.Warn("failed to delete orphaned media object", "s3_key", key, "error", err)
 	}
 }

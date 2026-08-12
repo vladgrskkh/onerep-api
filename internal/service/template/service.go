@@ -247,7 +247,8 @@ func (s *TemplateService) SoftDelete(ctx context.Context, id, userID uuid.UUID) 
 }
 
 // UploadMedia attaches an uploaded photo to an owned template. Template
-// media is photo-only.
+// media is photo-only. The new media item gets the sort order following the
+// highest existing one.
 func (s *TemplateService) UploadMedia(
 	ctx context.Context,
 	cmd UploadTemplateMediaCommand,
@@ -267,13 +268,25 @@ func (s *TemplateService) UploadMedia(
 		ID:         uuid.Must(uuid.NewV7()),
 		TemplateID: cmd.TemplateID,
 		MediaType:  domaintemplate.MediaTypePhoto,
-		SortOrder:  cmd.SortOrder,
+		SortOrder:  nextSortOrder(t.Media),
 		S3Key:      cmd.S3Key,
 	}
 	if err = s.templates.InsertMedia(ctx, media); err != nil {
 		return nil, err
 	}
 	return &media, nil
+}
+
+// nextSortOrder returns the highest existing media sort order plus one, or
+// zero when the template has no media yet.
+func nextSortOrder(media []domaintemplate.TemplateMedia) int {
+	next := 0
+	for _, m := range media {
+		if m.SortOrder >= next {
+			next = m.SortOrder + 1
+		}
+	}
+	return next
 }
 
 // buildExercises converts command exercises into domain rows, assigning each

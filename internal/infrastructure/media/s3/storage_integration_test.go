@@ -63,6 +63,22 @@ func (s *StorageIntegrationSuite) TestUploadAndPresignedGetURL_RoundTrip() {
 	s.Equal(payload, got)
 }
 
+func (s *StorageIntegrationSuite) TestDelete_RemovesObject() {
+	key := medias3.GenerateKey("tests")
+	payload := []byte("to be deleted")
+	s.Require().NoError(s.storage.Upload(s.ctx, key, bytes.NewReader(payload), "text/plain"))
+
+	s.Require().NoError(s.storage.Delete(s.ctx, key))
+
+	url, err := s.storage.PresignedGetURL(s.ctx, key, time.Minute)
+	s.Require().NoError(err)
+	client := &http.Client{Timeout: integrationHTTPTimeout}
+	resp, err := client.Get(url)
+	s.Require().NoError(err)
+	defer resp.Body.Close()
+	s.Equal(http.StatusNotFound, resp.StatusCode)
+}
+
 func (s *StorageIntegrationSuite) TestNewStorage_IsIdempotent() {
 	// Rebuilding the storage against the same bucket must not fail.
 	_, err := medias3.NewStorage(

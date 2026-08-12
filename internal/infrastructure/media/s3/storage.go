@@ -58,6 +58,16 @@ func (s *Storage) Upload(ctx context.Context, key string, body io.Reader, conten
 	return err
 }
 
+// Delete removes the object at key. Deleting a missing object is not an
+// error.
+func (s *Storage) Delete(ctx context.Context, key string) error {
+	_, err := s.client.DeleteObject(ctx, &s3.DeleteObjectInput{
+		Bucket: aws.String(s.bucket),
+		Key:    aws.String(key),
+	})
+	return err
+}
+
 // PresignedGetURL returns a time-limited URL for downloading the object at
 // key without credentials.
 func (s *Storage) PresignedGetURL(ctx context.Context, key string, ttl time.Duration) (string, error) {

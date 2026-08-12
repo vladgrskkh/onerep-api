@@ -466,12 +466,15 @@ func (s *ServiceTestSuite) TestUploadMedia_Success() {
 			ID:              templateID,
 			Name:            "Push Day",
 			CreatedByUserID: userID,
+			Media: []domaintemplate.TemplateMedia{
+				{ID: uuid.Must(uuid.NewV7()), SortOrder: 1, S3Key: "templates/cover.jpg"},
+			},
 		}, nil)
 	s.tmplRepo.EXPECT().InsertMedia(mock.Anything, mock.MatchedBy(func(m domaintemplate.TemplateMedia) bool {
 		return m.ID != uuid.Nil &&
 			m.TemplateID == templateID &&
 			m.MediaType == domaintemplate.MediaTypePhoto &&
-			m.SortOrder == 0 &&
+			m.SortOrder == 2 &&
 			m.S3Key == "templates/push-day.jpg"
 	})).Return(nil)
 
@@ -479,12 +482,12 @@ func (s *ServiceTestSuite) TestUploadMedia_Success() {
 		TemplateID: templateID,
 		UserID:     userID,
 		S3Key:      "templates/push-day.jpg",
-		SortOrder:  0,
 	})
 	s.Require().NoError(err)
 	s.Equal(templateID, got.TemplateID)
 	s.Equal(domaintemplate.MediaTypePhoto, got.MediaType)
 	s.Equal("templates/push-day.jpg", got.S3Key)
+	s.Equal(2, got.SortOrder)
 	s.NotEqual(uuid.Nil, got.ID)
 }
 

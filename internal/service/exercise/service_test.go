@@ -249,12 +249,19 @@ func (s *ServiceTestSuite) TestSoftDelete_BuiltInRejected() {
 func (s *ServiceTestSuite) TestUploadMedia_Success() {
 	exerciseID := uuid.Must(uuid.NewV7())
 	s.exerciseRepo.EXPECT().FindByID(mock.Anything, exerciseID).
-		Return(&domainexercise.Exercise{ID: exerciseID, Name: "Squat"}, nil)
+		Return(&domainexercise.Exercise{
+			ID:   exerciseID,
+			Name: "Squat",
+			Media: []domainexercise.ExerciseMedia{
+				{ID: uuid.Must(uuid.NewV7()), SortOrder: 0, S3Key: "exercises/first.jpg"},
+				{ID: uuid.Must(uuid.NewV7()), SortOrder: 2, S3Key: "exercises/third.jpg"},
+			},
+		}, nil)
 	s.exerciseRepo.EXPECT().InsertMedia(mock.Anything, mock.MatchedBy(func(m domainexercise.ExerciseMedia) bool {
 		return m.ID != uuid.Nil &&
 			m.ExerciseID == exerciseID &&
 			m.MediaType == domainexercise.MediaTypePhoto &&
-			m.SortOrder == 0 &&
+			m.SortOrder == 3 &&
 			m.S3Key == "exercises/squat.jpg"
 	})).Return(nil)
 
@@ -262,13 +269,30 @@ func (s *ServiceTestSuite) TestUploadMedia_Success() {
 		ExerciseID: exerciseID,
 		MediaType:  domainexercise.MediaTypePhoto,
 		S3Key:      "exercises/squat.jpg",
-		SortOrder:  0,
 	})
 	s.Require().NoError(err)
 	s.Equal(exerciseID, got.ExerciseID)
 	s.Equal(domainexercise.MediaTypePhoto, got.MediaType)
 	s.Equal("exercises/squat.jpg", got.S3Key)
+	s.Equal(3, got.SortOrder)
 	s.NotEqual(uuid.Nil, got.ID)
+}
+
+func (s *ServiceTestSuite) TestUploadMedia_FirstItemGetsSortOrderZero() {
+	exerciseID := uuid.Must(uuid.NewV7())
+	s.exerciseRepo.EXPECT().FindByID(mock.Anything, exerciseID).
+		Return(&domainexercise.Exercise{ID: exerciseID, Name: "Squat"}, nil)
+	s.exerciseRepo.EXPECT().InsertMedia(mock.Anything, mock.MatchedBy(func(m domainexercise.ExerciseMedia) bool {
+		return m.SortOrder == 0
+	})).Return(nil)
+
+	got, err := s.svc.UploadMedia(context.Background(), serviceexercise.UploadExerciseMediaCommand{
+		ExerciseID: exerciseID,
+		MediaType:  domainexercise.MediaTypePhoto,
+		S3Key:      "exercises/squat.jpg",
+	})
+	s.Require().NoError(err)
+	s.Equal(0, got.SortOrder)
 }
 
 func (s *ServiceTestSuite) TestUploadMedia_NotFound() {

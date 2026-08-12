@@ -36,12 +36,11 @@ type ListExercisesCommand struct {
 }
 
 // UploadExerciseMediaCommand carries the fields needed to attach an uploaded
-// media object to an exercise.
+// media object to an exercise. The sort order is computed by the service.
 type UploadExerciseMediaCommand struct {
 	ExerciseID uuid.UUID
 	MediaType  domainexercise.MediaType
 	S3Key      string
-	SortOrder  int
 }
 
 // Filter converts the command into the domain list filter.

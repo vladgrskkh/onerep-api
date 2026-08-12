@@ -170,7 +170,8 @@ func (s *ExerciseService) SoftDelete(ctx context.Context, id uuid.UUID) error {
 }
 
 // UploadMedia attaches an uploaded media object to an existing exercise.
-// Built-in exercises are read-only and reject media uploads.
+// Built-in exercises are read-only and reject media uploads. The new media
+// item gets the sort order following the highest existing one.
 func (s *ExerciseService) UploadMedia(
 	ctx context.Context,
 	cmd UploadExerciseMediaCommand,
@@ -195,13 +196,25 @@ func (s *ExerciseService) UploadMedia(
 		ID:         uuid.Must(uuid.NewV7()),
 		ExerciseID: cmd.ExerciseID,
 		MediaType:  cmd.MediaType,
-		SortOrder:  cmd.SortOrder,
+		SortOrder:  nextSortOrder(ex.Media),
 		S3Key:      cmd.S3Key,
 	}
 	if err = s.exercises.InsertMedia(ctx, media); err != nil {
 		return nil, err
 	}
 	return &media, nil
+}
+
+// nextSortOrder returns the highest existing media sort order plus one, or
+// zero when the exercise has no media yet.
+func nextSortOrder(media []domainexercise.ExerciseMedia) int {
+	next := 0
+	for _, m := range media {
+		if m.SortOrder >= next {
+			next = m.SortOrder + 1
+		}
+	}
+	return next
 }
 
 // resolveMuscleGroups validates the given muscle group IDs and builds the
