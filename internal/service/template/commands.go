@@ -26,10 +26,11 @@ type UpdateTemplateCommand struct {
 	Exercises   *[]TemplateExerciseCommand
 }
 
-// UploadTemplateMediaCommand carries the fields needed to attach an uploaded
-// photo to a template. The sort order is computed by the service.
+// UploadTemplateMediaCommand carries the fields needed to register an
+// uploaded photo for a template and presign its upload. The sort order and
+// S3 key are computed by the service.
 type UploadTemplateMediaCommand struct {
-	TemplateID uuid.UUID
-	UserID     uuid.UUID
-	S3Key      string
+	TemplateID  uuid.UUID
+	UserID      uuid.UUID
+	ContentType string
 }

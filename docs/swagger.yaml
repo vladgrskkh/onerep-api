@@ -45,6 +45,19 @@ definitions:
       sort_order:
         type: integer
     type: object
+  dto.ExerciseMediaUploadRequest:
+    properties:
+      content_type:
+        type: string
+      media_type:
+        enum:
+        - photo
+        - video
+        type: string
+    required:
+    - content_type
+    - media_type
+    type: object
   dto.ExerciseResponse:
     properties:
       created_at:
@@ -137,6 +150,17 @@ definitions:
       weight_kg:
         type: number
     type: object
+  dto.MediaUploadResponse:
+    properties:
+      expires_in:
+        type: integer
+      id:
+        type: string
+      s3_key:
+        type: string
+      upload_url:
+        type: string
+    type: object
   dto.MuscleGroupResponse:
     properties:
       id:
@@ -198,6 +222,13 @@ definitions:
         type: string
       sort_order:
         type: integer
+    type: object
+  dto.TemplateMediaUploadRequest:
+    properties:
+      content_type:
+        type: string
+    required:
+    - content_type
     type: object
   dto.TemplateResponse:
     properties:
@@ -523,35 +554,28 @@ paths:
   /exercises/{id}/media:
     post:
       consumes:
-      - multipart/form-data
-      description: Upload a photo or video for an exercise; the file is stored in
-        the media bucket and linked to the exercise
+      - application/json
+      description: Register a photo or video for an exercise and return a presigned
+        URL for uploading the file to the media bucket
       parameters:
       - description: Exercise ID
         in: path
         name: id
         required: true
         type: string
-      - description: Media file (image/jpeg, image/png, image/webp, or video/mp4)
-        in: formData
-        name: file
+      - description: Media upload data
+        in: body
+        name: request
         required: true
-        type: file
-      - description: Media type
-        enum:
-        - photo
-        - video
-        in: formData
-        name: media_type
-        required: true
-        type: string
+        schema:
+          $ref: '#/definitions/dto.ExerciseMediaUploadRequest'
       produces:
       - application/json
       responses:
         "201":
           description: Created
           schema:
-            $ref: '#/definitions/dto.ExerciseMediaResponse'
+            $ref: '#/definitions/dto.MediaUploadResponse'
         "400":
           description: Bad Request
           schema:
@@ -560,17 +584,13 @@ paths:
           description: Not Found
           schema:
             $ref: '#/definitions/handler.ErrorResponse'
-        "413":
-          description: Request Entity Too Large
-          schema:
-            $ref: '#/definitions/handler.ErrorResponse'
         "500":
           description: Internal Server Error
           schema:
             $ref: '#/definitions/handler.ErrorResponse'
       security:
       - BearerAuth: []
-      summary: Upload exercise media
+      summary: Create exercise media upload
       tags:
       - exercises
   /progress/1rm:
@@ -943,27 +963,28 @@ paths:
   /templates/{id}/media:
     post:
       consumes:
-      - multipart/form-data
-      description: Upload a photo for a template; the file is stored in the media
-        bucket and linked to the template
+      - application/json
+      description: Register a photo for a template and return a presigned URL for
+        uploading the file to the media bucket
       parameters:
       - description: Template ID
         in: path
         name: id
         required: true
         type: string
-      - description: Media file (image/jpeg, image/png, or image/webp)
-        in: formData
-        name: file
+      - description: Media upload data
+        in: body
+        name: request
         required: true
-        type: file
+        schema:
+          $ref: '#/definitions/dto.TemplateMediaUploadRequest'
       produces:
       - application/json
       responses:
         "201":
           description: Created
           schema:
-            $ref: '#/definitions/dto.TemplateMediaResponse'
+            $ref: '#/definitions/dto.MediaUploadResponse'
         "400":
           description: Bad Request
           schema:
@@ -976,17 +997,13 @@ paths:
           description: Not Found
           schema:
             $ref: '#/definitions/handler.ErrorResponse'
-        "413":
-          description: Request Entity Too Large
-          schema:
-            $ref: '#/definitions/handler.ErrorResponse'
         "500":
           description: Internal Server Error
           schema:
             $ref: '#/definitions/handler.ErrorResponse'
       security:
       - BearerAuth: []
-      summary: Upload template media
+      summary: Create template media upload
       tags:
       - templates
   /templates/{id}/publish:

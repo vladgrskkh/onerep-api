@@ -15,6 +15,9 @@ import (
 	exercisemocks "github.com/vladgrskkh/onerep-api/internal/service/exercise/mocks"
 )
 
+// uploadTTL is the presigned upload URL lifetime used across the tests.
+const uploadTTL = 15 * time.Minute
+
 type ServiceTestSuite struct {
 	suite.Suite
 
@@ -22,13 +25,21 @@ type ServiceTestSuite struct {
 	exerciseRepo    *exercisemocks.MockExerciseRepository
 	muscleGroupRepo *exercisemocks.MockMuscleGroupRepository
 	trManager       *exercisemocks.MockTransactionManager
+	storage         *exercisemocks.MockObjectStorage
 }
 
 func (s *ServiceTestSuite) SetupTest() {
 	s.exerciseRepo = exercisemocks.NewMockExerciseRepository(s.T())
 	s.muscleGroupRepo = exercisemocks.NewMockMuscleGroupRepository(s.T())
 	s.trManager = exercisemocks.NewMockTransactionManager(s.T())
-	s.svc = serviceexercise.NewExerciseService(s.exerciseRepo, s.muscleGroupRepo, s.trManager)
+	s.storage = exercisemocks.NewMockObjectStorage(s.T())
+	s.svc = serviceexercise.NewExerciseService(
+		s.exerciseRepo,
+		s.muscleGroupRepo,
+		s.trManager,
+		s.storage,
+		uploadTTL,
+	)
 }
 
 // expectTx runs the transaction closure inline.
@@ -257,42 +268,52 @@ func (s *ServiceTestSuite) TestUploadMedia_Success() {
 				{ID: uuid.Must(uuid.NewV7()), SortOrder: 2, S3Key: "exercises/third.jpg"},
 			},
 		}, nil)
+	s.storage.EXPECT().GenerateKey("exercises/" + exerciseID.String()).Return("exercises/generated-key")
 	s.exerciseRepo.EXPECT().InsertMedia(mock.Anything, mock.MatchedBy(func(m domainexercise.ExerciseMedia) bool {
 		return m.ID != uuid.Nil &&
 			m.ExerciseID == exerciseID &&
 			m.MediaType == domainexercise.MediaTypePhoto &&
 			m.SortOrder == 3 &&
-			m.S3Key == "exercises/squat.jpg"
+			m.S3Key == "exercises/generated-key"
 	})).Return(nil)
+	s.storage.EXPECT().
+		PresignedPutURL(mock.Anything, "exercises/generated-key", "image/jpeg", uploadTTL).
+		Return("https://presigned.example/upload", nil)
 
 	got, err := s.svc.UploadMedia(context.Background(), serviceexercise.UploadExerciseMediaCommand{
-		ExerciseID: exerciseID,
-		MediaType:  domainexercise.MediaTypePhoto,
-		S3Key:      "exercises/squat.jpg",
+		ExerciseID:  exerciseID,
+		MediaType:   domainexercise.MediaTypePhoto,
+		ContentType: "image/jpeg",
 	})
 	s.Require().NoError(err)
-	s.Equal(exerciseID, got.ExerciseID)
-	s.Equal(domainexercise.MediaTypePhoto, got.MediaType)
-	s.Equal("exercises/squat.jpg", got.S3Key)
-	s.Equal(3, got.SortOrder)
-	s.NotEqual(uuid.Nil, got.ID)
+	s.Equal(exerciseID, got.Media.ExerciseID)
+	s.Equal(domainexercise.MediaTypePhoto, got.Media.MediaType)
+	s.Equal("exercises/generated-key", got.Media.S3Key)
+	s.Equal(3, got.Media.SortOrder)
+	s.NotEqual(uuid.Nil, got.Media.ID)
+	s.Equal("https://presigned.example/upload", got.UploadURL)
+	s.Equal(uploadTTL, got.ExpiresIn)
 }
 
 func (s *ServiceTestSuite) TestUploadMedia_FirstItemGetsSortOrderZero() {
 	exerciseID := uuid.Must(uuid.NewV7())
 	s.exerciseRepo.EXPECT().FindByID(mock.Anything, exerciseID).
 		Return(&domainexercise.Exercise{ID: exerciseID, Name: "Squat"}, nil)
+	s.storage.EXPECT().GenerateKey("exercises/" + exerciseID.String()).Return("exercises/generated-key")
 	s.exerciseRepo.EXPECT().InsertMedia(mock.Anything, mock.MatchedBy(func(m domainexercise.ExerciseMedia) bool {
 		return m.SortOrder == 0
 	})).Return(nil)
+	s.storage.EXPECT().
+		PresignedPutURL(mock.Anything, "exercises/generated-key", "image/jpeg", uploadTTL).
+		Return("https://presigned.example/upload", nil)
 
 	got, err := s.svc.UploadMedia(context.Background(), serviceexercise.UploadExerciseMediaCommand{
-		ExerciseID: exerciseID,
-		MediaType:  domainexercise.MediaTypePhoto,
-		S3Key:      "exercises/squat.jpg",
+		ExerciseID:  exerciseID,
+		MediaType:   domainexercise.MediaTypePhoto,
+		ContentType: "image/jpeg",
 	})
 	s.Require().NoError(err)
-	s.Equal(0, got.SortOrder)
+	s.Equal(0, got.Media.SortOrder)
 }
 
 func (s *ServiceTestSuite) TestUploadMedia_NotFound() {
@@ -301,12 +322,13 @@ func (s *ServiceTestSuite) TestUploadMedia_NotFound() {
 		Return(nil, domainexercise.ErrExerciseNotFound)
 
 	_, err := s.svc.UploadMedia(context.Background(), serviceexercise.UploadExerciseMediaCommand{
-		ExerciseID: exerciseID,
-		MediaType:  domainexercise.MediaTypePhoto,
-		S3Key:      "exercises/squat.jpg",
+		ExerciseID:  exerciseID,
+		MediaType:   domainexercise.MediaTypePhoto,
+		ContentType: "image/jpeg",
 	})
 	s.Require().ErrorIs(err, domainexercise.ErrExerciseNotFound)
 	s.exerciseRepo.AssertNotCalled(s.T(), "InsertMedia", mock.Anything, mock.Anything)
+	s.storage.AssertNotCalled(s.T(), "GenerateKey", mock.Anything)
 }
 
 func (s *ServiceTestSuite) TestUploadMedia_BuiltInRejected() {
@@ -315,12 +337,13 @@ func (s *ServiceTestSuite) TestUploadMedia_BuiltInRejected() {
 		Return(&domainexercise.Exercise{ID: exerciseID, Name: "Squat", IsBuiltIn: true}, nil)
 
 	_, err := s.svc.UploadMedia(context.Background(), serviceexercise.UploadExerciseMediaCommand{
-		ExerciseID: exerciseID,
-		MediaType:  domainexercise.MediaTypePhoto,
-		S3Key:      "exercises/squat.jpg",
+		ExerciseID:  exerciseID,
+		MediaType:   domainexercise.MediaTypePhoto,
+		ContentType: "image/jpeg",
 	})
 	s.Require().ErrorIs(err, domainexercise.ErrCannotEditBuiltIn)
 	s.exerciseRepo.AssertNotCalled(s.T(), "InsertMedia", mock.Anything, mock.Anything)
+	s.storage.AssertNotCalled(s.T(), "GenerateKey", mock.Anything)
 }
 
 func (s *ServiceTestSuite) TestUploadMedia_InvalidMediaType() {
@@ -329,40 +352,63 @@ func (s *ServiceTestSuite) TestUploadMedia_InvalidMediaType() {
 		Return(&domainexercise.Exercise{ID: exerciseID, Name: "Squat"}, nil)
 
 	_, err := s.svc.UploadMedia(context.Background(), serviceexercise.UploadExerciseMediaCommand{
-		ExerciseID: exerciseID,
-		MediaType:  "gif",
-		S3Key:      "exercises/squat.gif",
+		ExerciseID:  exerciseID,
+		MediaType:   "gif",
+		ContentType: "image/gif",
 	})
 	s.Require().ErrorIs(err, domainexercise.ErrInvalidMediaType)
 	s.exerciseRepo.AssertNotCalled(s.T(), "InsertMedia", mock.Anything, mock.Anything)
+	s.storage.AssertNotCalled(s.T(), "GenerateKey", mock.Anything)
 }
 
-func (s *ServiceTestSuite) TestUploadMedia_EmptyS3Key() {
+func (s *ServiceTestSuite) TestUploadMedia_ContentTypeMismatch() {
 	exerciseID := uuid.Must(uuid.NewV7())
 	s.exerciseRepo.EXPECT().FindByID(mock.Anything, exerciseID).
 		Return(&domainexercise.Exercise{ID: exerciseID, Name: "Squat"}, nil)
 
 	_, err := s.svc.UploadMedia(context.Background(), serviceexercise.UploadExerciseMediaCommand{
-		ExerciseID: exerciseID,
-		MediaType:  domainexercise.MediaTypePhoto,
+		ExerciseID:  exerciseID,
+		MediaType:   domainexercise.MediaTypeVideo,
+		ContentType: "image/jpeg",
 	})
-	s.Require().ErrorIs(err, domainexercise.ErrInvalidS3Key)
+	s.Require().ErrorIs(err, domainexercise.ErrUnsupportedContentType)
 	s.exerciseRepo.AssertNotCalled(s.T(), "InsertMedia", mock.Anything, mock.Anything)
+	s.storage.AssertNotCalled(s.T(), "GenerateKey", mock.Anything)
 }
 
 func (s *ServiceTestSuite) TestUploadMedia_InsertFails() {
 	exerciseID := uuid.Must(uuid.NewV7())
 	s.exerciseRepo.EXPECT().FindByID(mock.Anything, exerciseID).
 		Return(&domainexercise.Exercise{ID: exerciseID, Name: "Squat"}, nil)
+	s.storage.EXPECT().GenerateKey("exercises/" + exerciseID.String()).Return("exercises/generated-key")
 	s.exerciseRepo.EXPECT().InsertMedia(mock.Anything, mock.Anything).
 		Return(errors.New("insert failed"))
 
 	_, err := s.svc.UploadMedia(context.Background(), serviceexercise.UploadExerciseMediaCommand{
-		ExerciseID: exerciseID,
-		MediaType:  domainexercise.MediaTypePhoto,
-		S3Key:      "exercises/squat.jpg",
+		ExerciseID:  exerciseID,
+		MediaType:   domainexercise.MediaTypePhoto,
+		ContentType: "image/jpeg",
 	})
 	s.Require().ErrorContains(err, "insert failed")
+	s.storage.AssertNotCalled(s.T(), "PresignedPutURL", mock.Anything, mock.Anything, mock.Anything, mock.Anything)
+}
+
+func (s *ServiceTestSuite) TestUploadMedia_PresignFails() {
+	exerciseID := uuid.Must(uuid.NewV7())
+	s.exerciseRepo.EXPECT().FindByID(mock.Anything, exerciseID).
+		Return(&domainexercise.Exercise{ID: exerciseID, Name: "Squat"}, nil)
+	s.storage.EXPECT().GenerateKey("exercises/" + exerciseID.String()).Return("exercises/generated-key")
+	s.exerciseRepo.EXPECT().InsertMedia(mock.Anything, mock.Anything).Return(nil)
+	s.storage.EXPECT().
+		PresignedPutURL(mock.Anything, "exercises/generated-key", "image/jpeg", uploadTTL).
+		Return("", errors.New("presign failed"))
+
+	_, err := s.svc.UploadMedia(context.Background(), serviceexercise.UploadExerciseMediaCommand{
+		ExerciseID:  exerciseID,
+		MediaType:   domainexercise.MediaTypePhoto,
+		ContentType: "image/jpeg",
+	})
+	s.Require().ErrorContains(err, "presign failed")
 }
 
 func TestServiceSuite(t *testing.T) {

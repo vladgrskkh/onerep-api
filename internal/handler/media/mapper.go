@@ -1,30 +1,39 @@
 package media
 
 import (
+	"time"
+
 	domainexercise "github.com/vladgrskkh/onerep-api/internal/domain/exercise"
 	domaintemplate "github.com/vladgrskkh/onerep-api/internal/domain/template"
-	exercisedto "github.com/vladgrskkh/onerep-api/internal/handler/exercise/dto"
-	templatedto "github.com/vladgrskkh/onerep-api/internal/handler/template/dto"
+	"github.com/vladgrskkh/onerep-api/internal/handler/media/dto"
 )
 
-// toExerciseMediaResponse maps the created exercise media to the HTTP
+// toExerciseMediaUploadResponse maps an exercise media upload to the HTTP
 // response.
-func toExerciseMediaResponse(m *domainexercise.ExerciseMedia) exercisedto.ExerciseMediaResponse {
-	return exercisedto.ExerciseMediaResponse{
-		ID:        m.ID,
-		MediaType: string(m.MediaType),
-		SortOrder: m.SortOrder,
-		S3Key:     m.S3Key,
+func toExerciseMediaUploadResponse(
+	media *domainexercise.ExerciseMedia,
+	uploadURL string,
+	expiresIn time.Duration,
+) dto.MediaUploadResponse {
+	return dto.MediaUploadResponse{
+		ID:        media.ID,
+		S3Key:     media.S3Key,
+		UploadURL: uploadURL,
+		ExpiresIn: int64(expiresIn / time.Second),
 	}
 }
 
-// toTemplateMediaResponse maps the created template media to the HTTP
+// toTemplateMediaUploadResponse maps a template media upload to the HTTP
 // response.
-func toTemplateMediaResponse(m *domaintemplate.TemplateMedia) templatedto.TemplateMediaResponse {
-	return templatedto.TemplateMediaResponse{
-		ID:        m.ID,
-		MediaType: string(m.MediaType),
-		SortOrder: m.SortOrder,
-		S3Key:     m.S3Key,
+func toTemplateMediaUploadResponse(
+	media *domaintemplate.TemplateMedia,
+	uploadURL string,
+	expiresIn time.Duration,
+) dto.MediaUploadResponse {
+	return dto.MediaUploadResponse{
+		ID:        media.ID,
+		S3Key:     media.S3Key,
+		UploadURL: uploadURL,
+		ExpiresIn: int64(expiresIn / time.Second),
 	}
 }

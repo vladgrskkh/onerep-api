@@ -1,34 +1,15 @@
 package media
 
-import (
-	"errors"
-
-	"github.com/vladgrskkh/onerep-api/internal/handler"
-)
-
-var (
-	errUploadTooLarge     = errors.New("media upload exceeds the size limit")
-	errMalformedMultipart = errors.New("malformed multipart request")
-	errMissingFile        = errors.New("multipart form is missing the file field")
-	errInvalidMediaType   = errors.New("media type must be photo or video")
-)
+import "github.com/vladgrskkh/onerep-api/internal/handler"
 
 const (
 	errCodeInvalidRequestBody = "INVALID_REQUEST_BODY"
 	errMsgInvalidRequestBody  = "invalid request body"
 	errUserInvalidRequestBody = "The upload is invalid"
 
-	errCodeMalformedMultipart = "MALFORMED_MULTIPART"
-	errMsgMalformedMultipart  = "malformed multipart request"
-	errUserMalformedMultipart = "The uploaded data is malformed"
-
 	errCodeUnsupportedMediaType = "UNSUPPORTED_MEDIA_TYPE"
 	errMsgUnsupportedMediaType  = "unsupported media type"
 	errUserUnsupportedMediaType = "The file type is not supported"
-
-	errCodePayloadTooLarge = "PAYLOAD_TOO_LARGE"
-	errMsgPayloadTooLarge  = "media upload exceeds the size limit"
-	errUserPayloadTooLarge = "The file is too large (max 10 MB)"
 
 	errCodeInvalidExerciseID = "INVALID_EXERCISE_ID"
 	errMsgInvalidExerciseID  = "invalid exercise id"
@@ -62,27 +43,11 @@ func invalidRequestBodyDetail() handler.ErrorDetail {
 	}
 }
 
-func malformedMultipartDetail() handler.ErrorDetail {
-	return handler.ErrorDetail{
-		Code:        errCodeMalformedMultipart,
-		Message:     errMsgMalformedMultipart,
-		UserMessage: errUserMalformedMultipart,
-	}
-}
-
 func unsupportedMediaTypeDetail() handler.ErrorDetail {
 	return handler.ErrorDetail{
 		Code:        errCodeUnsupportedMediaType,
 		Message:     errMsgUnsupportedMediaType,
 		UserMessage: errUserUnsupportedMediaType,
-	}
-}
-
-func payloadTooLargeDetail() handler.ErrorDetail {
-	return handler.ErrorDetail{
-		Code:        errCodePayloadTooLarge,
-		Message:     errMsgPayloadTooLarge,
-		UserMessage: errUserPayloadTooLarge,
 	}
 }
 

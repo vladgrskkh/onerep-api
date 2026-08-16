@@ -5,7 +5,6 @@ package mocks
 import (
 	context "context"
 
-	domainexercise "github.com/vladgrskkh/onerep-api/internal/domain/exercise"
 	exercise "github.com/vladgrskkh/onerep-api/internal/service/exercise"
 
 	mock "github.com/stretchr/testify/mock"
@@ -25,23 +24,23 @@ func (_m *MockExerciseService) EXPECT() *MockExerciseService_Expecter {
 }
 
 // UploadMedia provides a mock function with given fields: ctx, cmd
-func (_m *MockExerciseService) UploadMedia(ctx context.Context, cmd exercise.UploadExerciseMediaCommand) (*domainexercise.ExerciseMedia, error) {
+func (_m *MockExerciseService) UploadMedia(ctx context.Context, cmd exercise.UploadExerciseMediaCommand) (*exercise.ExerciseMediaUpload, error) {
 	ret := _m.Called(ctx, cmd)
 
 	if len(ret) == 0 {
 		panic("no return value specified for UploadMedia")
 	}
 
-	var r0 *domainexercise.ExerciseMedia
+	var r0 *exercise.ExerciseMediaUpload
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, exercise.UploadExerciseMediaCommand) (*domainexercise.ExerciseMedia, error)); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, exercise.UploadExerciseMediaCommand) (*exercise.ExerciseMediaUpload, error)); ok {
 		return rf(ctx, cmd)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, exercise.UploadExerciseMediaCommand) *domainexercise.ExerciseMedia); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, exercise.UploadExerciseMediaCommand) *exercise.ExerciseMediaUpload); ok {
 		r0 = rf(ctx, cmd)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*domainexercise.ExerciseMedia)
+			r0 = ret.Get(0).(*exercise.ExerciseMediaUpload)
 		}
 	}
 
@@ -73,12 +72,12 @@ func (_c *MockExerciseService_UploadMedia_Call) Run(run func(ctx context.Context
 	return _c
 }
 
-func (_c *MockExerciseService_UploadMedia_Call) Return(_a0 *domainexercise.ExerciseMedia, _a1 error) *MockExerciseService_UploadMedia_Call {
+func (_c *MockExerciseService_UploadMedia_Call) Return(_a0 *exercise.ExerciseMediaUpload, _a1 error) *MockExerciseService_UploadMedia_Call {
 	_c.Call.Return(_a0, _a1)
 	return _c
 }
 
-func (_c *MockExerciseService_UploadMedia_Call) RunAndReturn(run func(context.Context, exercise.UploadExerciseMediaCommand) (*domainexercise.ExerciseMedia, error)) *MockExerciseService_UploadMedia_Call {
+func (_c *MockExerciseService_UploadMedia_Call) RunAndReturn(run func(context.Context, exercise.UploadExerciseMediaCommand) (*exercise.ExerciseMediaUpload, error)) *MockExerciseService_UploadMedia_Call {
 	_c.Call.Return(run)
 	return _c
 }

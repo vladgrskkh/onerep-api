@@ -32,6 +32,7 @@ type StorageIntegrationSuite struct {
 
 func (s *StorageIntegrationSuite) SetupTest() {
 	storage, err := medias3.NewStorage(
+		context.Background(),
 		integrationEndpoint,
 		integrationAccessKey,
 		integrationSecretKey,
@@ -63,6 +64,34 @@ func (s *StorageIntegrationSuite) TestUploadAndPresignedGetURL_RoundTrip() {
 	s.Equal(payload, got)
 }
 
+func (s *StorageIntegrationSuite) TestPresignedPutURL_RoundTrip() {
+	key := medias3.GenerateKey("tests")
+	payload := []byte("uploaded via a presigned put")
+
+	url, err := s.storage.PresignedPutURL(s.ctx, key, "text/plain", time.Minute)
+	s.Require().NoError(err)
+
+	req, err := http.NewRequestWithContext(s.ctx, http.MethodPut, url, bytes.NewReader(payload))
+	s.Require().NoError(err)
+	req.Header.Set("Content-Type", "text/plain")
+	client := &http.Client{Timeout: integrationHTTPTimeout}
+	resp, err := client.Do(req)
+	s.Require().NoError(err)
+	defer resp.Body.Close()
+	s.Equal(http.StatusOK, resp.StatusCode)
+
+	getURL, err := s.storage.PresignedGetURL(s.ctx, key, time.Minute)
+	s.Require().NoError(err)
+	resp, err = client.Get(getURL)
+	s.Require().NoError(err)
+	defer resp.Body.Close()
+	s.Equal(http.StatusOK, resp.StatusCode)
+
+	got, err := io.ReadAll(resp.Body)
+	s.Require().NoError(err)
+	s.Equal(payload, got)
+}
+
 func (s *StorageIntegrationSuite) TestDelete_RemovesObject() {
 	key := medias3.GenerateKey("tests")
 	payload := []byte("to be deleted")
@@ -82,6 +111,7 @@ func (s *StorageIntegrationSuite) TestDelete_RemovesObject() {
 func (s *StorageIntegrationSuite) TestNewStorage_IsIdempotent() {
 	// Rebuilding the storage against the same bucket must not fail.
 	_, err := medias3.NewStorage(
+		context.Background(),
 		integrationEndpoint,
 		integrationAccessKey,
 		integrationSecretKey,

@@ -5,8 +5,6 @@ package mocks
 import (
 	context "context"
 
-	domaintemplate "github.com/vladgrskkh/onerep-api/internal/domain/template"
-
 	mock "github.com/stretchr/testify/mock"
 
 	template "github.com/vladgrskkh/onerep-api/internal/service/template"
@@ -26,23 +24,23 @@ func (_m *MockTemplateService) EXPECT() *MockTemplateService_Expecter {
 }
 
 // UploadMedia provides a mock function with given fields: ctx, cmd
-func (_m *MockTemplateService) UploadMedia(ctx context.Context, cmd template.UploadTemplateMediaCommand) (*domaintemplate.TemplateMedia, error) {
+func (_m *MockTemplateService) UploadMedia(ctx context.Context, cmd template.UploadTemplateMediaCommand) (*template.TemplateMediaUpload, error) {
 	ret := _m.Called(ctx, cmd)
 
 	if len(ret) == 0 {
 		panic("no return value specified for UploadMedia")
 	}
 
-	var r0 *domaintemplate.TemplateMedia
+	var r0 *template.TemplateMediaUpload
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, template.UploadTemplateMediaCommand) (*domaintemplate.TemplateMedia, error)); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, template.UploadTemplateMediaCommand) (*template.TemplateMediaUpload, error)); ok {
 		return rf(ctx, cmd)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, template.UploadTemplateMediaCommand) *domaintemplate.TemplateMedia); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, template.UploadTemplateMediaCommand) *template.TemplateMediaUpload); ok {
 		r0 = rf(ctx, cmd)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*domaintemplate.TemplateMedia)
+			r0 = ret.Get(0).(*template.TemplateMediaUpload)
 		}
 	}
 
@@ -74,12 +72,12 @@ func (_c *MockTemplateService_UploadMedia_Call) Run(run func(ctx context.Context
 	return _c
 }
 
-func (_c *MockTemplateService_UploadMedia_Call) Return(_a0 *domaintemplate.TemplateMedia, _a1 error) *MockTemplateService_UploadMedia_Call {
+func (_c *MockTemplateService_UploadMedia_Call) Return(_a0 *template.TemplateMediaUpload, _a1 error) *MockTemplateService_UploadMedia_Call {
 	_c.Call.Return(_a0, _a1)
 	return _c
 }
 
-func (_c *MockTemplateService_UploadMedia_Call) RunAndReturn(run func(context.Context, template.UploadTemplateMediaCommand) (*domaintemplate.TemplateMedia, error)) *MockTemplateService_UploadMedia_Call {
+func (_c *MockTemplateService_UploadMedia_Call) RunAndReturn(run func(context.Context, template.UploadTemplateMediaCommand) (*template.TemplateMediaUpload, error)) *MockTemplateService_UploadMedia_Call {
 	_c.Call.Return(run)
 	return _c
 }

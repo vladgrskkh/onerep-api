@@ -16,8 +16,7 @@ import (
 	"github.com/google/uuid"
 )
 
-// Storage uploads objects to and reads them from an S3-compatible bucket,
-// such as AWS S3 or MinIO.
+// Storage is the S3 media bucket adapter.
 type Storage struct {
 	client *s3.Client
 	bucket string
@@ -26,8 +25,12 @@ type Storage struct {
 // NewStorage builds an S3 client for the given endpoint, ensures the bucket
 // exists, and returns the storage adapter. useSSL only applies when the
 // endpoint carries no scheme.
-func NewStorage(endpoint, accessKey, secretKey, bucket string, useSSL bool) (*Storage, error) {
-	cfg, err := config.LoadDefaultConfig(context.Background(),
+func NewStorage(
+	ctx context.Context,
+	endpoint, accessKey, secretKey, bucket string,
+	useSSL bool,
+) (*Storage, error) {
+	cfg, err := config.LoadDefaultConfig(ctx,
 		config.WithBaseEndpoint(endpointWithScheme(endpoint, useSSL)),
 		config.WithRegion("us-east-1"),
 		config.WithCredentialsProvider(credentials.NewStaticCredentialsProvider(accessKey, secretKey, "")),
@@ -40,7 +43,7 @@ func NewStorage(endpoint, accessKey, secretKey, bucket string, useSSL bool) (*St
 		o.UsePathStyle = true
 	})
 
-	if err := ensureBucket(context.Background(), client, bucket); err != nil {
+	if err := ensureBucket(ctx, client, bucket); err != nil {
 		return nil, err
 	}
 
@@ -81,13 +84,26 @@ func (s *Storage) PresignedGetURL(ctx context.Context, key string, ttl time.Dura
 	return req.URL, nil
 }
 
+// PresignedPutURL returns a time-limited URL for uploading an object with
+// the given content type to key without credentials.
+func (s *Storage) PresignedPutURL(ctx context.Context, key, contentType string, ttl time.Duration) (string, error) {
+	req, err := s3.NewPresignClient(s.client).PresignPutObject(ctx, &s3.PutObjectInput{
+		Bucket:      aws.String(s.bucket),
+		Key:         aws.String(key),
+		ContentType: aws.String(contentType),
+	}, s3.WithPresignExpires(ttl))
+	if err != nil {
+		return "", err
+	}
+	return req.URL, nil
+}
+
 // GenerateKey builds a unique object key under the given prefix.
 func GenerateKey(prefix string) string {
 	return prefix + "/" + uuid.Must(uuid.NewV7()).String()
 }
 
-// GenerateKey builds a unique object key under the given prefix. It exists
-// to satisfy the handler.ObjectStorage contract.
+// GenerateKey builds a unique object key under the given prefix.
 func (s *Storage) GenerateKey(prefix string) string {
 	return GenerateKey(prefix)
 }

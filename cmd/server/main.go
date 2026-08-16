@@ -25,7 +25,7 @@ func main() {
 		application.WithLogger(logger),
 		application.WithDatabase(ctx),
 		application.WithRedis(ctx),
-		application.WithS3(),
+		application.WithS3(ctx),
 		application.WithJWKS(ctx),
 		application.WithServices(),
 		application.WithHandlers(),

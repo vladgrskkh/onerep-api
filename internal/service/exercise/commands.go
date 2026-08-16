@@ -35,12 +35,13 @@ type ListExercisesCommand struct {
 	Since       time.Time
 }
 
-// UploadExerciseMediaCommand carries the fields needed to attach an uploaded
-// media object to an exercise. The sort order is computed by the service.
+// UploadExerciseMediaCommand carries the fields needed to register an
+// uploaded media object for an exercise and presign its upload. The sort
+// order and S3 key are computed by the service.
 type UploadExerciseMediaCommand struct {
-	ExerciseID uuid.UUID
-	MediaType  domainexercise.MediaType
-	S3Key      string
+	ExerciseID  uuid.UUID
+	MediaType   domainexercise.MediaType
+	ContentType string
 }
 
 // Filter converts the command into the domain list filter.

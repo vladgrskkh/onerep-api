@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"testing"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/mock"
@@ -14,18 +15,23 @@ import (
 	templatemocks "github.com/vladgrskkh/onerep-api/internal/service/template/mocks"
 )
 
+// uploadTTL is the presigned upload URL lifetime used across the tests.
+const uploadTTL = 15 * time.Minute
+
 type ServiceTestSuite struct {
 	suite.Suite
 
 	svc       *servicetemplate.TemplateService
 	tmplRepo  *templatemocks.MockTemplateRepository
 	trManager *templatemocks.MockTransactionManager
+	storage   *templatemocks.MockObjectStorage
 }
 
 func (s *ServiceTestSuite) SetupTest() {
 	s.tmplRepo = templatemocks.NewMockTemplateRepository(s.T())
 	s.trManager = templatemocks.NewMockTransactionManager(s.T())
-	s.svc = servicetemplate.NewTemplateService(s.tmplRepo, s.trManager)
+	s.storage = templatemocks.NewMockObjectStorage(s.T())
+	s.svc = servicetemplate.NewTemplateService(s.tmplRepo, s.trManager, s.storage, uploadTTL)
 }
 
 // expectTx runs the transaction closure inline.
@@ -470,25 +476,31 @@ func (s *ServiceTestSuite) TestUploadMedia_Success() {
 				{ID: uuid.Must(uuid.NewV7()), SortOrder: 1, S3Key: "templates/cover.jpg"},
 			},
 		}, nil)
+	s.storage.EXPECT().GenerateKey("templates/" + templateID.String()).Return("templates/generated-key")
 	s.tmplRepo.EXPECT().InsertMedia(mock.Anything, mock.MatchedBy(func(m domaintemplate.TemplateMedia) bool {
 		return m.ID != uuid.Nil &&
 			m.TemplateID == templateID &&
 			m.MediaType == domaintemplate.MediaTypePhoto &&
 			m.SortOrder == 2 &&
-			m.S3Key == "templates/push-day.jpg"
+			m.S3Key == "templates/generated-key"
 	})).Return(nil)
+	s.storage.EXPECT().
+		PresignedPutURL(mock.Anything, "templates/generated-key", "image/jpeg", uploadTTL).
+		Return("https://presigned.example/upload", nil)
 
 	got, err := s.svc.UploadMedia(context.Background(), servicetemplate.UploadTemplateMediaCommand{
-		TemplateID: templateID,
-		UserID:     userID,
-		S3Key:      "templates/push-day.jpg",
+		TemplateID:  templateID,
+		UserID:      userID,
+		ContentType: "image/jpeg",
 	})
 	s.Require().NoError(err)
-	s.Equal(templateID, got.TemplateID)
-	s.Equal(domaintemplate.MediaTypePhoto, got.MediaType)
-	s.Equal("templates/push-day.jpg", got.S3Key)
-	s.Equal(2, got.SortOrder)
-	s.NotEqual(uuid.Nil, got.ID)
+	s.Equal(templateID, got.Media.TemplateID)
+	s.Equal(domaintemplate.MediaTypePhoto, got.Media.MediaType)
+	s.Equal("templates/generated-key", got.Media.S3Key)
+	s.Equal(2, got.Media.SortOrder)
+	s.NotEqual(uuid.Nil, got.Media.ID)
+	s.Equal("https://presigned.example/upload", got.UploadURL)
+	s.Equal(uploadTTL, got.ExpiresIn)
 }
 
 func (s *ServiceTestSuite) TestUploadMedia_NotFound() {
@@ -497,12 +509,13 @@ func (s *ServiceTestSuite) TestUploadMedia_NotFound() {
 		Return(nil, domaintemplate.ErrTemplateNotFound)
 
 	_, err := s.svc.UploadMedia(context.Background(), servicetemplate.UploadTemplateMediaCommand{
-		TemplateID: templateID,
-		UserID:     uuid.Must(uuid.NewV7()),
-		S3Key:      "templates/push-day.jpg",
+		TemplateID:  templateID,
+		UserID:      uuid.Must(uuid.NewV7()),
+		ContentType: "image/jpeg",
 	})
 	s.Require().ErrorIs(err, domaintemplate.ErrTemplateNotFound)
 	s.tmplRepo.AssertNotCalled(s.T(), "InsertMedia", mock.Anything, mock.Anything)
+	s.storage.AssertNotCalled(s.T(), "GenerateKey", mock.Anything)
 }
 
 func (s *ServiceTestSuite) TestUploadMedia_NotOwner() {
@@ -515,15 +528,16 @@ func (s *ServiceTestSuite) TestUploadMedia_NotOwner() {
 		}, nil)
 
 	_, err := s.svc.UploadMedia(context.Background(), servicetemplate.UploadTemplateMediaCommand{
-		TemplateID: templateID,
-		UserID:     uuid.Must(uuid.NewV7()),
-		S3Key:      "templates/push-day.jpg",
+		TemplateID:  templateID,
+		UserID:      uuid.Must(uuid.NewV7()),
+		ContentType: "image/jpeg",
 	})
 	s.Require().ErrorIs(err, domaintemplate.ErrNotOwner)
 	s.tmplRepo.AssertNotCalled(s.T(), "InsertMedia", mock.Anything, mock.Anything)
+	s.storage.AssertNotCalled(s.T(), "GenerateKey", mock.Anything)
 }
 
-func (s *ServiceTestSuite) TestUploadMedia_EmptyS3Key() {
+func (s *ServiceTestSuite) TestUploadMedia_UnsupportedContentType() {
 	templateID := uuid.Must(uuid.NewV7())
 	userID := uuid.Must(uuid.NewV7())
 	s.tmplRepo.EXPECT().FindByID(mock.Anything, templateID).
@@ -534,11 +548,13 @@ func (s *ServiceTestSuite) TestUploadMedia_EmptyS3Key() {
 		}, nil)
 
 	_, err := s.svc.UploadMedia(context.Background(), servicetemplate.UploadTemplateMediaCommand{
-		TemplateID: templateID,
-		UserID:     userID,
+		TemplateID:  templateID,
+		UserID:      userID,
+		ContentType: "video/mp4",
 	})
-	s.Require().ErrorIs(err, domaintemplate.ErrInvalidS3Key)
+	s.Require().ErrorIs(err, domaintemplate.ErrUnsupportedContentType)
 	s.tmplRepo.AssertNotCalled(s.T(), "InsertMedia", mock.Anything, mock.Anything)
+	s.storage.AssertNotCalled(s.T(), "GenerateKey", mock.Anything)
 }
 
 func (s *ServiceTestSuite) TestUploadMedia_InsertFails() {
@@ -550,15 +566,40 @@ func (s *ServiceTestSuite) TestUploadMedia_InsertFails() {
 			Name:            "Push Day",
 			CreatedByUserID: userID,
 		}, nil)
+	s.storage.EXPECT().GenerateKey("templates/" + templateID.String()).Return("templates/generated-key")
 	s.tmplRepo.EXPECT().InsertMedia(mock.Anything, mock.Anything).
 		Return(errors.New("insert failed"))
 
 	_, err := s.svc.UploadMedia(context.Background(), servicetemplate.UploadTemplateMediaCommand{
-		TemplateID: templateID,
-		UserID:     userID,
-		S3Key:      "templates/push-day.jpg",
+		TemplateID:  templateID,
+		UserID:      userID,
+		ContentType: "image/jpeg",
 	})
 	s.Require().ErrorContains(err, "insert failed")
+	s.storage.AssertNotCalled(s.T(), "PresignedPutURL", mock.Anything, mock.Anything, mock.Anything, mock.Anything)
+}
+
+func (s *ServiceTestSuite) TestUploadMedia_PresignFails() {
+	templateID := uuid.Must(uuid.NewV7())
+	userID := uuid.Must(uuid.NewV7())
+	s.tmplRepo.EXPECT().FindByID(mock.Anything, templateID).
+		Return(&domaintemplate.Template{
+			ID:              templateID,
+			Name:            "Push Day",
+			CreatedByUserID: userID,
+		}, nil)
+	s.storage.EXPECT().GenerateKey("templates/" + templateID.String()).Return("templates/generated-key")
+	s.tmplRepo.EXPECT().InsertMedia(mock.Anything, mock.Anything).Return(nil)
+	s.storage.EXPECT().
+		PresignedPutURL(mock.Anything, "templates/generated-key", "image/jpeg", uploadTTL).
+		Return("", errors.New("presign failed"))
+
+	_, err := s.svc.UploadMedia(context.Background(), servicetemplate.UploadTemplateMediaCommand{
+		TemplateID:  templateID,
+		UserID:      userID,
+		ContentType: "image/jpeg",
+	})
+	s.Require().ErrorContains(err, "presign failed")
 }
 
 func (s *ServiceTestSuite) TestSoftDelete_NotOwner() {

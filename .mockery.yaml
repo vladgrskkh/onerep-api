@@ -10,6 +10,7 @@ packages:
       ExerciseRepository:
       MuscleGroupRepository:
       TransactionManager:
+      ObjectStorage:
   github.com/vladgrskkh/onerep-api/internal/handler/exercise:
     config:
       dir: internal/handler/exercise/mocks
@@ -27,6 +28,7 @@ packages:
     interfaces:
       TemplateRepository:
       TransactionManager:
+      ObjectStorage:
   github.com/vladgrskkh/onerep-api/internal/handler/template:
     config:
       dir: internal/handler/template/mocks
@@ -44,7 +46,6 @@ packages:
     interfaces:
       ExerciseService:
       TemplateService:
-      ObjectStorage:
   github.com/vladgrskkh/onerep-api/internal/service/workout:
     config:
       dir: internal/service/workout/mocks

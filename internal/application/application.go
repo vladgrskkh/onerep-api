@@ -95,9 +95,10 @@ func WithRedis(_ context.Context) Option {
 
 // WithS3 connects to the S3-compatible object store using the configured
 // endpoint and credentials.
-func WithS3() Option {
+func WithS3(ctx context.Context) Option {
 	return func(a *Application) error {
 		storage, err := medias3.NewStorage(
+			ctx,
 			a.cfg.S3Endpoint,
 			a.cfg.S3AccessKey,
 			a.cfg.S3SecretKey,
@@ -138,6 +139,11 @@ func WithServices() Option {
 				"redis client not initialized: use application.WithRedis before application.WithServices",
 			)
 		}
+		if a.storage == nil {
+			return errors.New(
+				"s3 storage not initialized: use application.WithS3 before application.WithServices",
+			)
+		}
 
 		trManager, err := manager.New(trmpgx.NewDefaultFactory(a.pool))
 		if err != nil {
@@ -151,8 +157,19 @@ func WithServices() Option {
 		bodyWeightRepo := bodyweightpostgres.NewBodyWeightRepo(a.pool)
 		progressRepo := progresspostgres.NewProgressRepo(a.pool)
 
-		a.exerciseSvc = exerciseSvc.NewExerciseService(exerciseRepo, muscleGroupRepo, trManager)
-		a.templateSvc = templatesvc.NewTemplateService(templateRepo, trManager)
+		a.exerciseSvc = exerciseSvc.NewExerciseService(
+			exerciseRepo,
+			muscleGroupRepo,
+			trManager,
+			a.storage,
+			a.cfg.MediaUploadTTL,
+		)
+		a.templateSvc = templatesvc.NewTemplateService(
+			templateRepo,
+			trManager,
+			a.storage,
+			a.cfg.MediaUploadTTL,
+		)
 		a.progressSvc = progresssvc.NewProgressService(progressRepo)
 		a.bodyWeightSvc = bodyweightsvc.NewBodyWeightService(bodyWeightRepo)
 
@@ -185,11 +202,6 @@ func WithHandlers() Option {
 				"services not initialized: use application.WithServices before application.WithHandlers",
 			)
 		}
-		if a.storage == nil {
-			return errors.New(
-				"s3 storage not initialized: use application.WithS3 before application.WithHandlers",
-			)
-		}
 
 		a.exerciseHandler = exercisehandler.NewExerciseHandler(a.exerciseSvc, a.logger)
 		a.templateHandler = templatehandler.NewTemplateHandler(a.templateSvc, a.logger)
@@ -200,7 +212,6 @@ func WithHandlers() Option {
 			a.logger,
 		)
 		a.mediaHandler = mediahandler.NewMediaHandler(
-			a.storage,
 			a.exerciseSvc,
 			a.templateSvc,
 			a.logger,

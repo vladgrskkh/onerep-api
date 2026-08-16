@@ -308,9 +308,9 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Upload a photo or video for an exercise; the file is stored in the media bucket and linked to the exercise",
+                "description": "Register a photo or video for an exercise and return a presigned URL for uploading the file to the media bucket",
                 "consumes": [
-                    "multipart/form-data"
+                    "application/json"
                 ],
                 "produces": [
                     "application/json"
@@ -318,7 +318,7 @@ const docTemplate = `{
                 "tags": [
                     "exercises"
                 ],
-                "summary": "Upload exercise media",
+                "summary": "Create exercise media upload",
                 "parameters": [
                     {
                         "type": "string",
@@ -328,29 +328,20 @@ const docTemplate = `{
                         "required": true
                     },
                     {
-                        "type": "file",
-                        "description": "Media file (image/jpeg, image/png, image/webp, or video/mp4)",
-                        "name": "file",
-                        "in": "formData",
-                        "required": true
-                    },
-                    {
-                        "enum": [
-                            "photo",
-                            "video"
-                        ],
-                        "type": "string",
-                        "description": "Media type",
-                        "name": "media_type",
-                        "in": "formData",
-                        "required": true
+                        "description": "Media upload data",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dto.ExerciseMediaUploadRequest"
+                        }
                     }
                 ],
                 "responses": {
                     "201": {
                         "description": "Created",
                         "schema": {
-                            "$ref": "#/definitions/dto.ExerciseMediaResponse"
+                            "$ref": "#/definitions/dto.MediaUploadResponse"
                         }
                     },
                     "400": {
@@ -361,12 +352,6 @@ const docTemplate = `{
                     },
                     "404": {
                         "description": "Not Found",
-                        "schema": {
-                            "$ref": "#/definitions/handler.ErrorResponse"
-                        }
-                    },
-                    "413": {
-                        "description": "Request Entity Too Large",
                         "schema": {
                             "$ref": "#/definitions/handler.ErrorResponse"
                         }
@@ -954,9 +939,9 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Upload a photo for a template; the file is stored in the media bucket and linked to the template",
+                "description": "Register a photo for a template and return a presigned URL for uploading the file to the media bucket",
                 "consumes": [
-                    "multipart/form-data"
+                    "application/json"
                 ],
                 "produces": [
                     "application/json"
@@ -964,7 +949,7 @@ const docTemplate = `{
                 "tags": [
                     "templates"
                 ],
-                "summary": "Upload template media",
+                "summary": "Create template media upload",
                 "parameters": [
                     {
                         "type": "string",
@@ -974,18 +959,20 @@ const docTemplate = `{
                         "required": true
                     },
                     {
-                        "type": "file",
-                        "description": "Media file (image/jpeg, image/png, or image/webp)",
-                        "name": "file",
-                        "in": "formData",
-                        "required": true
+                        "description": "Media upload data",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dto.TemplateMediaUploadRequest"
+                        }
                     }
                 ],
                 "responses": {
                     "201": {
                         "description": "Created",
                         "schema": {
-                            "$ref": "#/definitions/dto.TemplateMediaResponse"
+                            "$ref": "#/definitions/dto.MediaUploadResponse"
                         }
                     },
                     "400": {
@@ -1002,12 +989,6 @@ const docTemplate = `{
                     },
                     "404": {
                         "description": "Not Found",
-                        "schema": {
-                            "$ref": "#/definitions/handler.ErrorResponse"
-                        }
-                    },
-                    "413": {
-                        "description": "Request Entity Too Large",
                         "schema": {
                             "$ref": "#/definitions/handler.ErrorResponse"
                         }
@@ -1509,6 +1490,25 @@ const docTemplate = `{
                 }
             }
         },
+        "dto.ExerciseMediaUploadRequest": {
+            "type": "object",
+            "required": [
+                "content_type",
+                "media_type"
+            ],
+            "properties": {
+                "content_type": {
+                    "type": "string"
+                },
+                "media_type": {
+                    "type": "string",
+                    "enum": [
+                        "photo",
+                        "video"
+                    ]
+                }
+            }
+        },
         "dto.ExerciseResponse": {
             "type": "object",
             "properties": {
@@ -1647,6 +1647,23 @@ const docTemplate = `{
                 }
             }
         },
+        "dto.MediaUploadResponse": {
+            "type": "object",
+            "properties": {
+                "expires_in": {
+                    "type": "integer"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "s3_key": {
+                    "type": "string"
+                },
+                "upload_url": {
+                    "type": "string"
+                }
+            }
+        },
         "dto.MuscleGroupResponse": {
             "type": "object",
             "properties": {
@@ -1740,6 +1757,17 @@ const docTemplate = `{
                 },
                 "sort_order": {
                     "type": "integer"
+                }
+            }
+        },
+        "dto.TemplateMediaUploadRequest": {
+            "type": "object",
+            "required": [
+                "content_type"
+            ],
+            "properties": {
+                "content_type": {
+                    "type": "string"
                 }
             }
         },

@@ -16,6 +16,7 @@ type Config struct {
 	S3SecretKey       string        `env:"S3_SECRET_KEY"         envDefault:"minioadmin"`
 	S3Bucket          string        `env:"S3_BUCKET"             envDefault:"gym-media"`
 	S3UseSSL          bool          `env:"S3_USE_SSL"            envDefault:"false"`
+	MediaUploadTTL    time.Duration `env:"MEDIA_UPLOAD_TTL"      envDefault:"15m"`
 	ReadHeaderTimeout time.Duration `env:"READ_HEADER_TIMEOUT"   envDefault:"5s"`
 	ShutdownTimeout   time.Duration `env:"SHUTDOWN_TIMEOUT"      envDefault:"10s"`
 }

@@ -14,6 +14,22 @@ const (
 	MediaTypeVideo MediaType = "video"
 )
 
+// AllowsContentType reports whether contentType is uploadable for the media
+// type: photos accept JPEG, PNG, and WebP images; videos accept MP4.
+func (m MediaType) AllowsContentType(contentType string) bool {
+	switch m {
+	case MediaTypePhoto:
+		switch contentType {
+		case "image/jpeg", "image/png", "image/webp":
+			return true
+		}
+		return false
+	case MediaTypeVideo:
+		return contentType == "video/mp4"
+	}
+	return false
+}
+
 type Exercise struct {
 	ID              uuid.UUID
 	Name            string
@@ -41,6 +57,18 @@ type ExerciseMuscleGroup struct {
 	ExerciseID    uuid.UUID
 	MuscleGroupID int
 	IsPrimary     bool
+}
+
+// NextMediaSortOrder returns the highest existing media sort order plus one,
+// or zero when the exercise has no media yet.
+func NextMediaSortOrder(media []ExerciseMedia) int {
+	next := 0
+	for _, m := range media {
+		if m.SortOrder >= next {
+			next = m.SortOrder + 1
+		}
+	}
+	return next
 }
 
 // NewExercise creates a user exercise. A nil createdByUserID marks a

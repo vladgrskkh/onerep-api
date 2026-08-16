@@ -11,7 +11,10 @@ import (
 )
 
 type TemplateRepository interface {
-	List(ctx context.Context, filter domaintemplate.TemplateFilter) ([]*domaintemplate.Template, error)
+	List(
+		ctx context.Context,
+		filter domaintemplate.TemplateFilter,
+	) ([]*domaintemplate.Template, error)
 	FindByID(ctx context.Context, id uuid.UUID) (*domaintemplate.Template, error)
 	Create(ctx context.Context, t domaintemplate.Template) (*domaintemplate.Template, error)
 	Update(ctx context.Context, t domaintemplate.Template) (*domaintemplate.Template, error)
@@ -21,10 +24,21 @@ type TemplateRepository interface {
 		templateID uuid.UUID,
 		exercises []domaintemplate.TemplateExercise,
 	) error
-	ReplaceMedia(ctx context.Context, templateID uuid.UUID, media []domaintemplate.TemplateMedia) error
+	ReplaceMedia(
+		ctx context.Context,
+		templateID uuid.UUID,
+		media []domaintemplate.TemplateMedia,
+	) error
 	BatchInsertExercises(ctx context.Context, exercises []domaintemplate.TemplateExercise) error
 	BatchInsertMedia(ctx context.Context, media []domaintemplate.TemplateMedia) error
 	SoftDelete(ctx context.Context, id uuid.UUID) error
+}
+
+// ObjectStorage generates media object keys and presigned upload URLs in the
+// media bucket.
+type ObjectStorage interface {
+	GenerateKey(prefix string) string
+	PresignedPutURL(ctx context.Context, key, contentType string, ttl time.Duration) (string, error)
 }
 
 // TransactionManager runs a function inside a transaction.
@@ -32,18 +46,32 @@ type TransactionManager interface {
 	Do(ctx context.Context, fn func(ctx context.Context) error) error
 }
 
+// TemplateMediaUpload carries a registered template media record and the
+// presigned URL the client uploads the file to.
+type TemplateMediaUpload struct {
+	Media     *domaintemplate.TemplateMedia
+	UploadURL string
+	ExpiresIn time.Duration
+}
+
 type TemplateService struct {
-	templates TemplateRepository
-	trManager TransactionManager
+	templates      TemplateRepository
+	trManager      TransactionManager
+	storage        ObjectStorage
+	mediaUploadTTL time.Duration
 }
 
 func NewTemplateService(
 	templates TemplateRepository,
 	trManager TransactionManager,
+	storage ObjectStorage,
+	mediaUploadTTL time.Duration,
 ) *TemplateService {
 	return &TemplateService{
-		templates: templates,
-		trManager: trManager,
+		templates:      templates,
+		trManager:      trManager,
+		storage:        storage,
+		mediaUploadTTL: mediaUploadTTL,
 	}
 }
 
@@ -77,7 +105,10 @@ func (s *TemplateService) Get(
 }
 
 // Create creates a template and inserts its exercises along with it.
-func (s *TemplateService) Create(ctx context.Context, cmd CreateTemplateCommand) (*domaintemplate.Template, error) {
+func (s *TemplateService) Create(
+	ctx context.Context,
+	cmd CreateTemplateCommand,
+) (*domaintemplate.Template, error) {
 	t, err := domaintemplate.NewTemplate(cmd.Name, cmd.Description, cmd.UserID)
 	if err != nil {
 		return nil, err
@@ -106,7 +137,10 @@ func (s *TemplateService) Create(ctx context.Context, cmd CreateTemplateCommand)
 // Update applies the non-nil fields of the command to an existing template
 // and replaces its exercises when provided. Only the owner may update a
 // template.
-func (s *TemplateService) Update(ctx context.Context, cmd UpdateTemplateCommand) (*domaintemplate.Template, error) {
+func (s *TemplateService) Update(
+	ctx context.Context,
+	cmd UpdateTemplateCommand,
+) (*domaintemplate.Template, error) {
 	t, err := s.templates.FindByID(ctx, cmd.ID)
 	if err != nil {
 		return nil, err
@@ -156,7 +190,10 @@ func (s *TemplateService) Update(ctx context.Context, cmd UpdateTemplateCommand)
 }
 
 // Publish makes an owned template publicly visible.
-func (s *TemplateService) Publish(ctx context.Context, id, userID uuid.UUID) (*domaintemplate.Template, error) {
+func (s *TemplateService) Publish(
+	ctx context.Context,
+	id, userID uuid.UUID,
+) (*domaintemplate.Template, error) {
 	t, err := s.templates.FindByID(ctx, id)
 	if err != nil {
 		return nil, err
@@ -177,7 +214,10 @@ func (s *TemplateService) Publish(ctx context.Context, id, userID uuid.UUID) (*d
 // Fork copies a template, including its exercises and media, under the given
 // user as the new owner. Public templates may be forked by anyone; private
 // templates only by their owner.
-func (s *TemplateService) Fork(ctx context.Context, id, userID uuid.UUID) (*domaintemplate.Template, error) {
+func (s *TemplateService) Fork(
+	ctx context.Context,
+	id, userID uuid.UUID,
+) (*domaintemplate.Template, error) {
 	source, err := s.templates.FindByID(ctx, id)
 	if err != nil {
 		return nil, err
@@ -246,13 +286,14 @@ func (s *TemplateService) SoftDelete(ctx context.Context, id, userID uuid.UUID) 
 	return s.templates.SoftDelete(ctx, id)
 }
 
-// UploadMedia attaches an uploaded photo to an owned template. Template
-// media is photo-only. The new media item gets the sort order following the
-// highest existing one.
+// UploadMedia registers an uploaded photo for an owned template and returns
+// the presigned URL the client uploads the file to. Template media is
+// photo-only. The new media item gets the sort order following the highest
+// existing one and a generated S3 key.
 func (s *TemplateService) UploadMedia(
 	ctx context.Context,
 	cmd UploadTemplateMediaCommand,
-) (*domaintemplate.TemplateMedia, error) {
+) (*TemplateMediaUpload, error) {
 	t, err := s.templates.FindByID(ctx, cmd.TemplateID)
 	if err != nil {
 		return nil, err
@@ -260,38 +301,38 @@ func (s *TemplateService) UploadMedia(
 	if t.CreatedByUserID != cmd.UserID {
 		return nil, domaintemplate.ErrNotOwner
 	}
-	if strings.TrimSpace(cmd.S3Key) == "" {
-		return nil, domaintemplate.ErrInvalidS3Key
+	if !domaintemplate.MediaTypePhoto.AllowsContentType(cmd.ContentType) {
+		return nil, domaintemplate.ErrUnsupportedContentType
 	}
 
 	media := domaintemplate.TemplateMedia{
 		ID:         uuid.Must(uuid.NewV7()),
 		TemplateID: cmd.TemplateID,
 		MediaType:  domaintemplate.MediaTypePhoto,
-		SortOrder:  nextSortOrder(t.Media),
-		S3Key:      cmd.S3Key,
+		SortOrder:  domaintemplate.NextMediaSortOrder(t.Media),
+		S3Key:      s.storage.GenerateKey("templates/" + cmd.TemplateID.String()),
 	}
 	if err = s.templates.InsertMedia(ctx, media); err != nil {
 		return nil, err
 	}
-	return &media, nil
-}
 
-// nextSortOrder returns the highest existing media sort order plus one, or
-// zero when the template has no media yet.
-func nextSortOrder(media []domaintemplate.TemplateMedia) int {
-	next := 0
-	for _, m := range media {
-		if m.SortOrder >= next {
-			next = m.SortOrder + 1
-		}
+	uploadURL, err := s.storage.PresignedPutURL(ctx, media.S3Key, cmd.ContentType, s.mediaUploadTTL)
+	if err != nil {
+		return nil, err
 	}
-	return next
+	return &TemplateMediaUpload{
+		Media:     &media,
+		UploadURL: uploadURL,
+		ExpiresIn: s.mediaUploadTTL,
+	}, nil
 }
 
 // buildExercises converts command exercises into domain rows, assigning each
 // a sequential sort order within the template.
-func buildExercises(templateID uuid.UUID, items []TemplateExerciseCommand) []domaintemplate.TemplateExercise {
+func buildExercises(
+	templateID uuid.UUID,
+	items []TemplateExerciseCommand,
+) []domaintemplate.TemplateExercise {
 	exercises := make([]domaintemplate.TemplateExercise, 0, len(items))
 	for i, item := range items {
 		exercises = append(exercises, domaintemplate.TemplateExercise{
