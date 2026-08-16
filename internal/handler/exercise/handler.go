@@ -20,7 +20,7 @@ type ExerciseService interface {
 	Get(ctx context.Context, id uuid.UUID) (*domainexercise.Exercise, error)
 	Create(ctx context.Context, cmd serviceexercise.CreateExerciseCommand) (*domainexercise.Exercise, error)
 	Update(ctx context.Context, cmd serviceexercise.UpdateExerciseCommand) (*domainexercise.Exercise, error)
-	SoftDelete(ctx context.Context, id uuid.UUID) error
+	SoftDelete(ctx context.Context, id, userID uuid.UUID) error
 }
 
 type ExerciseHandler struct {
@@ -186,7 +186,7 @@ func (h *ExerciseHandler) Update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ex, err := h.svc.Update(r.Context(), toUpdateCommand(req, exerciseID))
+	ex, err := h.svc.Update(r.Context(), toUpdateCommand(req, exerciseID, handler.UserIDFromContext(r.Context())))
 	if err != nil {
 		switch {
 		case errors.Is(err, domainexercise.ErrExerciseNotFound):
@@ -230,7 +230,7 @@ func (h *ExerciseHandler) SoftDelete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := h.svc.SoftDelete(r.Context(), exerciseID); err != nil {
+	if err := h.svc.SoftDelete(r.Context(), exerciseID, handler.UserIDFromContext(r.Context())); err != nil {
 		switch {
 		case errors.Is(err, domainexercise.ErrExerciseNotFound):
 			handler.WriteError(w, h.logger, http.StatusNotFound, exerciseNotFoundDetail(err))

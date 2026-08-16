@@ -33,9 +33,11 @@ type HandlerTestSuite struct {
 	exerciseSvc *mediamocks.MockExerciseService
 	templateSvc *mediamocks.MockTemplateService
 	router      *chi.Mux
+	userID      uuid.UUID
 }
 
 func (s *HandlerTestSuite) SetupTest() {
+	s.userID = uuid.Must(uuid.NewV7())
 	s.exerciseSvc = mediamocks.NewMockExerciseService(s.T())
 	s.templateSvc = mediamocks.NewMockTemplateService(s.T())
 	s.handler = media.NewMediaHandler(s.exerciseSvc, s.templateSvc, slog.New(slog.DiscardHandler))
@@ -67,6 +69,7 @@ func (s *HandlerTestSuite) TestUploadExerciseMedia_Success() {
 	mediaID := uuid.Must(uuid.NewV7())
 	s.exerciseSvc.EXPECT().UploadMedia(mock.Anything, serviceexercise.UploadExerciseMediaCommand{
 		ExerciseID:  exerciseID,
+		UserID:      s.userID,
 		MediaType:   domainexercise.MediaTypePhoto,
 		ContentType: "image/jpeg",
 	}).Return(&serviceexercise.ExerciseMediaUpload{
@@ -83,7 +86,7 @@ func (s *HandlerTestSuite) TestUploadExerciseMedia_Success() {
 	w := s.serveJSON(
 		"/v1/exercises/"+exerciseID.String()+"/media",
 		`{"media_type":"photo","content_type":"image/jpeg"}`,
-		uuid.Nil,
+		s.userID,
 	)
 
 	s.Equal(http.StatusCreated, w.Code)

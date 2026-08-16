@@ -147,6 +147,9 @@ func (s *ExerciseService) Update(
 	if ex.IsBuiltIn {
 		return nil, domainexercise.ErrCannotEditBuiltIn
 	}
+	if ex.CreatedByUserID != cmd.UserID {
+		return nil, domainexercise.ErrExerciseNotFound
+	}
 
 	if cmd.Name != nil {
 		name := strings.TrimSpace(*cmd.Name)
@@ -194,14 +197,18 @@ func (s *ExerciseService) Update(
 	return updated, nil
 }
 
-// SoftDelete marks an exercise as deleted. Built-in exercises are read-only.
-func (s *ExerciseService) SoftDelete(ctx context.Context, id uuid.UUID) error {
+// SoftDelete marks an exercise as deleted. Built-in exercises are read-only
+// and exercises owned by other users are reported as not found.
+func (s *ExerciseService) SoftDelete(ctx context.Context, id, userID uuid.UUID) error {
 	ex, err := s.exercises.FindByID(ctx, id)
 	if err != nil {
 		return err
 	}
 	if ex.IsBuiltIn {
 		return domainexercise.ErrCannotEditBuiltIn
+	}
+	if ex.CreatedByUserID != userID {
+		return domainexercise.ErrExerciseNotFound
 	}
 	return s.exercises.SoftDelete(ctx, id)
 }
@@ -220,6 +227,9 @@ func (s *ExerciseService) UploadMedia(
 	}
 	if ex.IsBuiltIn {
 		return nil, domainexercise.ErrCannotEditBuiltIn
+	}
+	if ex.CreatedByUserID != cmd.UserID {
+		return nil, domainexercise.ErrExerciseNotFound
 	}
 	switch cmd.MediaType {
 	case domainexercise.MediaTypePhoto, domainexercise.MediaTypeVideo:

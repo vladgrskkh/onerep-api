@@ -97,6 +97,7 @@ func (h *MediaHandler) UploadExerciseMedia(w http.ResponseWriter, r *http.Reques
 		r.Context(),
 		serviceexercise.UploadExerciseMediaCommand{
 			ExerciseID:  exerciseID,
+			UserID:      handler.UserIDFromContext(r.Context()),
 			MediaType:   domainexercise.MediaType(req.MediaType),
 			ContentType: req.ContentType,
 		},

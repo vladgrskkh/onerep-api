@@ -20,9 +20,13 @@ func toCreateCommand(req dto.ExerciseCreateRequest, userID uuid.UUID) serviceexe
 }
 
 // toUpdateCommand maps the HTTP request to the service update command.
-func toUpdateCommand(req dto.ExerciseUpdateRequest, exerciseID uuid.UUID) serviceexercise.UpdateExerciseCommand {
+func toUpdateCommand(
+	req dto.ExerciseUpdateRequest,
+	exerciseID, userID uuid.UUID,
+) serviceexercise.UpdateExerciseCommand {
 	return serviceexercise.UpdateExerciseCommand{
 		ID:             exerciseID,
+		UserID:         userID,
 		Name:           req.Name,
 		Description:    req.Description,
 		Notes:          req.Notes,

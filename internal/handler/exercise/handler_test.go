@@ -55,12 +55,12 @@ func (s *HandlerTestSuite) createExercise(body string, userID uuid.UUID) *httpte
 	return testutil.Serve(s.router, http.MethodPost, "/v1/exercises", body, userID)
 }
 
-func (s *HandlerTestSuite) updateExercise(id, body string) *httptest.ResponseRecorder {
-	return testutil.Serve(s.router, http.MethodPatch, "/v1/exercises/"+id, body, uuid.Nil)
+func (s *HandlerTestSuite) updateExercise(id, body string, userID uuid.UUID) *httptest.ResponseRecorder {
+	return testutil.Serve(s.router, http.MethodPatch, "/v1/exercises/"+id, body, userID)
 }
 
-func (s *HandlerTestSuite) softDeleteExercise(id string) *httptest.ResponseRecorder {
-	return testutil.Serve(s.router, http.MethodDelete, "/v1/exercises/"+id, "", uuid.Nil)
+func (s *HandlerTestSuite) softDeleteExercise(id string, userID uuid.UUID) *httptest.ResponseRecorder {
+	return testutil.Serve(s.router, http.MethodDelete, "/v1/exercises/"+id, "", userID)
 }
 
 func (s *HandlerTestSuite) TestList_Success() {
@@ -198,11 +198,12 @@ func (s *HandlerTestSuite) TestUpdate_Success() {
 	newName := "Incline Bench Press"
 	updated := &domainexercise.Exercise{ID: exerciseID, Name: newName}
 	s.svc.EXPECT().Update(mock.Anything, serviceexercise.UpdateExerciseCommand{
-		ID:   exerciseID,
-		Name: &newName,
+		ID:     exerciseID,
+		UserID: s.userID,
+		Name:   &newName,
 	}).Return(updated, nil)
 
-	w := s.updateExercise(exerciseID.String(), `{"name":"Incline Bench Press"}`)
+	w := s.updateExercise(exerciseID.String(), `{"name":"Incline Bench Press"}`, s.userID)
 
 	s.Equal(http.StatusOK, w.Code)
 	var resp dto.ExerciseResponse
@@ -212,19 +213,19 @@ func (s *HandlerTestSuite) TestUpdate_Success() {
 
 func (s *HandlerTestSuite) TestSoftDelete_Success() {
 	exerciseID := uuid.Must(uuid.NewV7())
-	s.svc.EXPECT().SoftDelete(mock.Anything, exerciseID).Return(nil)
+	s.svc.EXPECT().SoftDelete(mock.Anything, exerciseID, s.userID).Return(nil)
 
-	w := s.softDeleteExercise(exerciseID.String())
+	w := s.softDeleteExercise(exerciseID.String(), s.userID)
 
 	s.Equal(http.StatusNoContent, w.Code)
 }
 
 func (s *HandlerTestSuite) TestSoftDelete_BuiltInRejected() {
 	exerciseID := uuid.Must(uuid.NewV7())
-	s.svc.EXPECT().SoftDelete(mock.Anything, exerciseID).
+	s.svc.EXPECT().SoftDelete(mock.Anything, exerciseID, s.userID).
 		Return(domainexercise.ErrCannotEditBuiltIn)
 
-	w := s.softDeleteExercise(exerciseID.String())
+	w := s.softDeleteExercise(exerciseID.String(), s.userID)
 
 	s.Equal(http.StatusBadRequest, w.Code)
 	resp := testutil.DecodeError(s.T(), w)

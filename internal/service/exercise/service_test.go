@@ -160,15 +160,17 @@ func (s *ServiceTestSuite) TestCreate_MuscleGroupNotFound() {
 
 func (s *ServiceTestSuite) TestUpdate_Success() {
 	exerciseID := uuid.Must(uuid.NewV7())
+	userID := uuid.Must(uuid.NewV7())
 	newName := "Incline Bench Press"
 	newGroups := []domainexercise.ExerciseMuscleGroup{{MuscleGroupID: 3}}
 
 	s.exerciseRepo.EXPECT().FindByID(mock.Anything, exerciseID).
 		Return(&domainexercise.Exercise{
-			ID:        exerciseID,
-			Name:      "Bench Press",
-			IsBuiltIn: false,
-			Version:   3,
+			ID:              exerciseID,
+			Name:            "Bench Press",
+			IsBuiltIn:       false,
+			CreatedByUserID: userID,
+			Version:         3,
 		}, nil)
 	s.muscleGroupRepo.EXPECT().List(mock.Anything).
 		Return([]*domainexercise.MuscleGroup{{ID: 3, Name: "Shoulders"}}, nil)
@@ -182,12 +184,33 @@ func (s *ServiceTestSuite) TestUpdate_Success() {
 
 	updated, err := s.svc.Update(context.Background(), serviceexercise.UpdateExerciseCommand{
 		ID:             exerciseID,
+		UserID:         userID,
 		Name:           &newName,
 		MuscleGroupIDs: &[]int{3},
 	})
 	s.Require().NoError(err)
 	s.Equal(newName, updated.Name)
 	s.Equal(newGroups, updated.MuscleGroups)
+}
+
+func (s *ServiceTestSuite) TestUpdate_NotOwner() {
+	exerciseID := uuid.Must(uuid.NewV7())
+	s.exerciseRepo.EXPECT().FindByID(mock.Anything, exerciseID).
+		Return(&domainexercise.Exercise{
+			ID:              exerciseID,
+			Name:            "Squat",
+			IsBuiltIn:       false,
+			CreatedByUserID: uuid.Must(uuid.NewV7()),
+		}, nil)
+
+	_, err := s.svc.Update(context.Background(), serviceexercise.UpdateExerciseCommand{
+		ID:     exerciseID,
+		UserID: uuid.Must(uuid.NewV7()),
+		Name:   new("Front Squat"),
+	})
+	s.Require().ErrorIs(err, domainexercise.ErrExerciseNotFound)
+	s.exerciseRepo.AssertNotCalled(s.T(), "Update", mock.Anything, mock.Anything)
+	s.trManager.AssertNotCalled(s.T(), "Do", mock.Anything, mock.Anything)
 }
 
 func (s *ServiceTestSuite) TestUpdate_NotFound() {
@@ -206,8 +229,9 @@ func (s *ServiceTestSuite) TestUpdate_BuiltInRejected() {
 		Return(&domainexercise.Exercise{ID: exerciseID, Name: "Squat", IsBuiltIn: true}, nil)
 
 	_, err := s.svc.Update(context.Background(), serviceexercise.UpdateExerciseCommand{
-		ID:   exerciseID,
-		Name: new("Front Squat"),
+		ID:     exerciseID,
+		UserID: uuid.Must(uuid.NewV7()),
+		Name:   new("Front Squat"),
 	})
 	s.Require().ErrorIs(err, domainexercise.ErrCannotEditBuiltIn)
 	s.trManager.AssertNotCalled(s.T(), "Do", mock.Anything, mock.Anything)
@@ -215,13 +239,19 @@ func (s *ServiceTestSuite) TestUpdate_BuiltInRejected() {
 
 func (s *ServiceTestSuite) TestUpdate_InvalidName() {
 	exerciseID := uuid.Must(uuid.NewV7())
+	userID := uuid.Must(uuid.NewV7())
 	empty := "   "
 	s.exerciseRepo.EXPECT().FindByID(mock.Anything, exerciseID).
-		Return(&domainexercise.Exercise{ID: exerciseID, Name: "Squat"}, nil)
+		Return(&domainexercise.Exercise{
+			ID:              exerciseID,
+			Name:            "Squat",
+			CreatedByUserID: userID,
+		}, nil)
 
 	_, err := s.svc.Update(context.Background(), serviceexercise.UpdateExerciseCommand{
-		ID:   exerciseID,
-		Name: &empty,
+		ID:     exerciseID,
+		UserID: userID,
+		Name:   &empty,
 	})
 	s.Require().ErrorIs(err, domainexercise.ErrInvalidName)
 	s.trManager.AssertNotCalled(s.T(), "Do", mock.Anything, mock.Anything)
@@ -229,12 +259,31 @@ func (s *ServiceTestSuite) TestUpdate_InvalidName() {
 
 func (s *ServiceTestSuite) TestSoftDelete_Success() {
 	exerciseID := uuid.Must(uuid.NewV7())
+	userID := uuid.Must(uuid.NewV7())
 	s.exerciseRepo.EXPECT().FindByID(mock.Anything, exerciseID).
-		Return(&domainexercise.Exercise{ID: exerciseID, Name: "Squat"}, nil)
+		Return(&domainexercise.Exercise{
+			ID:              exerciseID,
+			Name:            "Squat",
+			CreatedByUserID: userID,
+		}, nil)
 	s.exerciseRepo.EXPECT().SoftDelete(mock.Anything, exerciseID).Return(nil)
 
-	err := s.svc.SoftDelete(context.Background(), exerciseID)
+	err := s.svc.SoftDelete(context.Background(), exerciseID, userID)
 	s.NoError(err)
+}
+
+func (s *ServiceTestSuite) TestSoftDelete_NotOwner() {
+	exerciseID := uuid.Must(uuid.NewV7())
+	s.exerciseRepo.EXPECT().FindByID(mock.Anything, exerciseID).
+		Return(&domainexercise.Exercise{
+			ID:              exerciseID,
+			Name:            "Squat",
+			CreatedByUserID: uuid.Must(uuid.NewV7()),
+		}, nil)
+
+	err := s.svc.SoftDelete(context.Background(), exerciseID, uuid.Must(uuid.NewV7()))
+	s.Require().ErrorIs(err, domainexercise.ErrExerciseNotFound)
+	s.exerciseRepo.AssertNotCalled(s.T(), "SoftDelete", mock.Anything, mock.Anything)
 }
 
 func (s *ServiceTestSuite) TestSoftDelete_NotFound() {
@@ -242,7 +291,7 @@ func (s *ServiceTestSuite) TestSoftDelete_NotFound() {
 	s.exerciseRepo.EXPECT().FindByID(mock.Anything, exerciseID).
 		Return(nil, domainexercise.ErrExerciseNotFound)
 
-	err := s.svc.SoftDelete(context.Background(), exerciseID)
+	err := s.svc.SoftDelete(context.Background(), exerciseID, uuid.Must(uuid.NewV7()))
 	s.Require().ErrorIs(err, domainexercise.ErrExerciseNotFound)
 	s.exerciseRepo.AssertNotCalled(s.T(), "SoftDelete", mock.Anything, mock.Anything)
 }
@@ -252,17 +301,19 @@ func (s *ServiceTestSuite) TestSoftDelete_BuiltInRejected() {
 	s.exerciseRepo.EXPECT().FindByID(mock.Anything, exerciseID).
 		Return(&domainexercise.Exercise{ID: exerciseID, Name: "Squat", IsBuiltIn: true}, nil)
 
-	err := s.svc.SoftDelete(context.Background(), exerciseID)
+	err := s.svc.SoftDelete(context.Background(), exerciseID, uuid.Must(uuid.NewV7()))
 	s.Require().ErrorIs(err, domainexercise.ErrCannotEditBuiltIn)
 	s.exerciseRepo.AssertNotCalled(s.T(), "SoftDelete", mock.Anything, mock.Anything)
 }
 
 func (s *ServiceTestSuite) TestUploadMedia_Success() {
 	exerciseID := uuid.Must(uuid.NewV7())
+	userID := uuid.Must(uuid.NewV7())
 	s.exerciseRepo.EXPECT().FindByID(mock.Anything, exerciseID).
 		Return(&domainexercise.Exercise{
-			ID:   exerciseID,
-			Name: "Squat",
+			ID:              exerciseID,
+			Name:            "Squat",
+			CreatedByUserID: userID,
 			Media: []domainexercise.ExerciseMedia{
 				{ID: uuid.Must(uuid.NewV7()), SortOrder: 0, S3Key: "exercises/first.jpg"},
 				{ID: uuid.Must(uuid.NewV7()), SortOrder: 2, S3Key: "exercises/third.jpg"},
@@ -282,6 +333,7 @@ func (s *ServiceTestSuite) TestUploadMedia_Success() {
 
 	got, err := s.svc.UploadMedia(context.Background(), serviceexercise.UploadExerciseMediaCommand{
 		ExerciseID:  exerciseID,
+		UserID:      userID,
 		MediaType:   domainexercise.MediaTypePhoto,
 		ContentType: "image/jpeg",
 	})
@@ -297,8 +349,13 @@ func (s *ServiceTestSuite) TestUploadMedia_Success() {
 
 func (s *ServiceTestSuite) TestUploadMedia_FirstItemGetsSortOrderZero() {
 	exerciseID := uuid.Must(uuid.NewV7())
+	userID := uuid.Must(uuid.NewV7())
 	s.exerciseRepo.EXPECT().FindByID(mock.Anything, exerciseID).
-		Return(&domainexercise.Exercise{ID: exerciseID, Name: "Squat"}, nil)
+		Return(&domainexercise.Exercise{
+			ID:              exerciseID,
+			Name:            "Squat",
+			CreatedByUserID: userID,
+		}, nil)
 	s.storage.EXPECT().GenerateKey("exercises/" + exerciseID.String()).Return("exercises/generated-key")
 	s.exerciseRepo.EXPECT().InsertMedia(mock.Anything, mock.MatchedBy(func(m domainexercise.ExerciseMedia) bool {
 		return m.SortOrder == 0
@@ -309,11 +366,32 @@ func (s *ServiceTestSuite) TestUploadMedia_FirstItemGetsSortOrderZero() {
 
 	got, err := s.svc.UploadMedia(context.Background(), serviceexercise.UploadExerciseMediaCommand{
 		ExerciseID:  exerciseID,
+		UserID:      userID,
 		MediaType:   domainexercise.MediaTypePhoto,
 		ContentType: "image/jpeg",
 	})
 	s.Require().NoError(err)
 	s.Equal(0, got.Media.SortOrder)
+}
+
+func (s *ServiceTestSuite) TestUploadMedia_NotOwner() {
+	exerciseID := uuid.Must(uuid.NewV7())
+	s.exerciseRepo.EXPECT().FindByID(mock.Anything, exerciseID).
+		Return(&domainexercise.Exercise{
+			ID:              exerciseID,
+			Name:            "Squat",
+			CreatedByUserID: uuid.Must(uuid.NewV7()),
+		}, nil)
+
+	_, err := s.svc.UploadMedia(context.Background(), serviceexercise.UploadExerciseMediaCommand{
+		ExerciseID:  exerciseID,
+		UserID:      uuid.Must(uuid.NewV7()),
+		MediaType:   domainexercise.MediaTypePhoto,
+		ContentType: "image/jpeg",
+	})
+	s.Require().ErrorIs(err, domainexercise.ErrExerciseNotFound)
+	s.exerciseRepo.AssertNotCalled(s.T(), "InsertMedia", mock.Anything, mock.Anything)
+	s.storage.AssertNotCalled(s.T(), "GenerateKey", mock.Anything)
 }
 
 func (s *ServiceTestSuite) TestUploadMedia_NotFound() {
@@ -323,6 +401,7 @@ func (s *ServiceTestSuite) TestUploadMedia_NotFound() {
 
 	_, err := s.svc.UploadMedia(context.Background(), serviceexercise.UploadExerciseMediaCommand{
 		ExerciseID:  exerciseID,
+		UserID:      uuid.Nil,
 		MediaType:   domainexercise.MediaTypePhoto,
 		ContentType: "image/jpeg",
 	})
@@ -338,6 +417,7 @@ func (s *ServiceTestSuite) TestUploadMedia_BuiltInRejected() {
 
 	_, err := s.svc.UploadMedia(context.Background(), serviceexercise.UploadExerciseMediaCommand{
 		ExerciseID:  exerciseID,
+		UserID:      uuid.Nil,
 		MediaType:   domainexercise.MediaTypePhoto,
 		ContentType: "image/jpeg",
 	})
@@ -353,6 +433,7 @@ func (s *ServiceTestSuite) TestUploadMedia_InvalidMediaType() {
 
 	_, err := s.svc.UploadMedia(context.Background(), serviceexercise.UploadExerciseMediaCommand{
 		ExerciseID:  exerciseID,
+		UserID:      uuid.Nil,
 		MediaType:   "gif",
 		ContentType: "image/gif",
 	})
@@ -368,6 +449,7 @@ func (s *ServiceTestSuite) TestUploadMedia_ContentTypeMismatch() {
 
 	_, err := s.svc.UploadMedia(context.Background(), serviceexercise.UploadExerciseMediaCommand{
 		ExerciseID:  exerciseID,
+		UserID:      uuid.Nil,
 		MediaType:   domainexercise.MediaTypeVideo,
 		ContentType: "image/jpeg",
 	})
@@ -386,6 +468,7 @@ func (s *ServiceTestSuite) TestUploadMedia_InsertFails() {
 
 	_, err := s.svc.UploadMedia(context.Background(), serviceexercise.UploadExerciseMediaCommand{
 		ExerciseID:  exerciseID,
+		UserID:      uuid.Nil,
 		MediaType:   domainexercise.MediaTypePhoto,
 		ContentType: "image/jpeg",
 	})
@@ -405,6 +488,7 @@ func (s *ServiceTestSuite) TestUploadMedia_PresignFails() {
 
 	_, err := s.svc.UploadMedia(context.Background(), serviceexercise.UploadExerciseMediaCommand{
 		ExerciseID:  exerciseID,
+		UserID:      uuid.Nil,
 		MediaType:   domainexercise.MediaTypePhoto,
 		ContentType: "image/jpeg",
 	})
