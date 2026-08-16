@@ -17,7 +17,25 @@ import (
 // Serve builds a request with the given body and serves it on the router.
 // When userID is not the nil UUID it is injected into the request context.
 func Serve(router *chi.Mux, method, target, body string, userID uuid.UUID) *httptest.ResponseRecorder {
+	return serve(router, method, target, body, userID, nil)
+}
+
+// ServeJSON is like Serve but sets the request Content-Type header to
+// application/json.
+func ServeJSON(router *chi.Mux, method, target, body string, userID uuid.UUID) *httptest.ResponseRecorder {
+	return serve(router, method, target, body, userID, map[string]string{"Content-Type": "application/json"})
+}
+
+func serve(
+	router *chi.Mux,
+	method, target, body string,
+	userID uuid.UUID,
+	headers map[string]string,
+) *httptest.ResponseRecorder {
 	req := httptest.NewRequestWithContext(context.Background(), method, target, strings.NewReader(body))
+	for key, value := range headers {
+		req.Header.Set(key, value)
+	}
 	if userID != uuid.Nil {
 		req = req.WithContext(handler.WithUserID(req.Context(), userID))
 	}
