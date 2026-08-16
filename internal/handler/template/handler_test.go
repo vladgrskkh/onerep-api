@@ -94,6 +94,35 @@ func (s *HandlerTestSuite) TestList_Success() {
 	s.Equal("Push Day", resp[0].Name)
 }
 
+func (s *HandlerTestSuite) TestList_Public() {
+	templates := []*domaintemplate.Template{{
+		ID:       uuid.Must(uuid.NewV7()),
+		Name:     "Shared Push Day",
+		IsPublic: true,
+	}}
+	isPublic := true
+	s.svc.EXPECT().List(mock.Anything, domaintemplate.TemplateFilter{
+		IsPublic: &isPublic,
+	}).Return(templates, nil)
+
+	w := s.listTemplates("/v1/templates?public=true", s.userID)
+
+	s.Equal(http.StatusOK, w.Code)
+	var resp []dto.TemplateResponse
+	s.Require().NoError(json.Unmarshal(w.Body.Bytes(), &resp))
+	s.Require().Len(resp, 1)
+	s.Equal(templates[0].ID, resp[0].ID)
+}
+
+func (s *HandlerTestSuite) TestList_InvalidPublic() {
+	w := s.listTemplates("/v1/templates?public=maybe", s.userID)
+
+	s.Equal(http.StatusBadRequest, w.Code)
+	resp := testutil.DecodeError(s.T(), w)
+	s.Equal("INVALID_PUBLIC", string(resp.Error.Code))
+	s.svc.AssertNotCalled(s.T(), "List", mock.Anything, mock.Anything)
+}
+
 func (s *HandlerTestSuite) TestList_InvalidSince() {
 	w := s.listTemplates("/v1/templates?since=not-a-timestamp", s.userID)
 

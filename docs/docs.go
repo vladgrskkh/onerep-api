@@ -653,7 +653,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "List the authenticated user's templates, optionally filtered by last-updated time",
+                "description": "List the authenticated user's templates, or all public templates when public=true",
                 "consumes": [
                     "application/json"
                 ],
@@ -665,6 +665,12 @@ const docTemplate = `{
                 ],
                 "summary": "List templates",
                 "parameters": [
+                    {
+                        "type": "boolean",
+                        "description": "List public templates instead of the user's own",
+                        "name": "public",
+                        "in": "query"
+                    },
                     {
                         "type": "string",
                         "description": "Only templates updated after this RFC 3339 timestamp",

@@ -37,10 +37,11 @@ func NewTemplateHandler(svc TemplateService, logger *slog.Logger) *TemplateHandl
 // List returns templates matching the query filters.
 //
 // @Summary List templates
-// @Description List the authenticated user's templates, optionally filtered by last-updated time
+// @Description List the authenticated user's templates, or all public templates when public=true
 // @Tags templates
 // @Accept json
 // @Produce json
+// @Param public query bool false "List public templates instead of the user's own"
 // @Param since query string false "Only templates updated after this RFC 3339 timestamp"
 // @Success 200 {array} dto.TemplateResponse
 // @Failure 400 {object} handler.ErrorResponse
@@ -49,8 +50,20 @@ func NewTemplateHandler(svc TemplateService, logger *slog.Logger) *TemplateHandl
 // @Security BearerAuth
 // @Router /templates [get]
 func (h *TemplateHandler) List(w http.ResponseWriter, r *http.Request) {
-	userID := handler.UserIDFromContext(r.Context())
-	filter := domaintemplate.TemplateFilter{UserID: userID}
+	publicParam := r.URL.Query().Get("public")
+	if publicParam != "" && publicParam != "true" {
+		handler.WriteError(w, h.logger, http.StatusBadRequest, invalidPublicDetail())
+		return
+	}
+
+	filter := domaintemplate.TemplateFilter{}
+	if publicParam == "true" {
+		isPublic := true
+		filter.IsPublic = &isPublic
+	} else {
+		filter.UserID = handler.UserIDFromContext(r.Context())
+	}
+
 	since, parseErr := handler.ParseRFC3339QueryParam(r, "since")
 	if parseErr != nil {
 		handler.WriteError(w, h.logger, http.StatusBadRequest, invalidSinceDetail())
