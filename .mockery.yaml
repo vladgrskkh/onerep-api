@@ -10,6 +10,7 @@ packages:
       ExerciseRepository:
       MuscleGroupRepository:
       TransactionManager:
+      ObjectStorage:
   github.com/vladgrskkh/onerep-api/internal/handler/exercise:
     config:
       dir: internal/handler/exercise/mocks
@@ -27,6 +28,7 @@ packages:
     interfaces:
       TemplateRepository:
       TransactionManager:
+      ObjectStorage:
   github.com/vladgrskkh/onerep-api/internal/handler/template:
     config:
       dir: internal/handler/template/mocks
@@ -34,6 +36,15 @@ packages:
       outpkg: "mocks"
       filename: "{{.InterfaceName | snakecase}}.gen.go"
     interfaces:
+      TemplateService:
+  github.com/vladgrskkh/onerep-api/internal/handler/media:
+    config:
+      dir: internal/handler/media/mocks
+      mockname: "Mock{{.InterfaceName}}"
+      outpkg: "mocks"
+      filename: "{{.InterfaceName | snakecase}}.gen.go"
+    interfaces:
+      ExerciseService:
       TemplateService:
   github.com/vladgrskkh/onerep-api/internal/service/workout:
     config:
@@ -63,6 +74,14 @@ packages:
       filename: "{{.InterfaceName | snakecase}}.gen.go"
     interfaces:
       ProgressRepository:
+  github.com/vladgrskkh/onerep-api/internal/infrastructure/workout/redis:
+    config:
+      dir: internal/infrastructure/workout/redis/mocks
+      mockname: "Mock{{.InterfaceName}}"
+      outpkg: "mocks"
+      filename: "{{.InterfaceName | snakecase}}.gen.go"
+    interfaces:
+      VolumeCalculator:
   github.com/vladgrskkh/onerep-api/internal/service/bodyweight:
     config:
       dir: internal/service/bodyweight/mocks
@@ -80,3 +99,11 @@ packages:
     interfaces:
       ProgressService:
       BodyWeightService:
+  github.com/vladgrskkh/onerep-api/internal/handler/middleware:
+    config:
+      dir: internal/handler/middleware/mocks
+      mockname: "Mock{{.InterfaceName}}"
+      outpkg: "mocks"
+      filename: "{{.InterfaceName | snakecase}}.gen.go"
+    interfaces:
+      JWTValidator:

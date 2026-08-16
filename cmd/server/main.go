@@ -1,12 +1,3 @@
-package main
-
-import (
-	"log/slog"
-	"net/http"
-	"os"
-	"time"
-)
-
 // @title OneRep Gym API
 // @version 1.0
 // @description Core gym domain service for OneRep — exercises, templates, workouts, progress
@@ -15,32 +6,39 @@ import (
 // @securityDefinitions.apikey BearerAuth
 // @in header
 // @name Authorization
+package main
 
-const readHeaderTimeout = 5 * time.Second
+import (
+	"context"
+	"log/slog"
+	"os"
+
+	"github.com/vladgrskkh/onerep-api/internal/application"
+)
 
 func main() {
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
 
-	port := os.Getenv("GYM_API_PORT")
-	if port == "" {
-		port = "8081"
+	ctx := context.Background()
+
+	app, err := application.New(
+		application.WithLogger(logger),
+		application.WithDatabase(ctx),
+		application.WithRedis(ctx),
+		application.WithS3(ctx),
+		application.WithJWKS(ctx),
+		application.WithServices(),
+		application.WithHandlers(),
+	)
+	if err != nil {
+		logger.Error("failed to create app", "error", err)
+		os.Exit(1)
 	}
 
-	mux := http.NewServeMux()
-	mux.HandleFunc("GET /health", func(w http.ResponseWriter, _ *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		_, _ = w.Write([]byte(`{"status":"ok"}`))
-	})
-
-	server := &http.Server{
-		Addr:              ":" + port,
-		Handler:           mux,
-		ReadHeaderTimeout: readHeaderTimeout,
-	}
-
-	logger.Info("starting gym api", "port", port)
-	if err := server.ListenAndServe(); err != nil {
+	if err := app.Run(ctx); err != nil {
 		logger.Error("server error", "error", err)
 		os.Exit(1)
 	}
+
+	logger.Info("stopped")
 }

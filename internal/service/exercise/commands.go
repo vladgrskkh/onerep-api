@@ -35,6 +35,15 @@ type ListExercisesCommand struct {
 	Since       time.Time
 }
 
+// UploadExerciseMediaCommand carries the fields needed to register an
+// uploaded media object for an exercise and presign its upload. The sort
+// order and S3 key are computed by the service.
+type UploadExerciseMediaCommand struct {
+	ExerciseID  uuid.UUID
+	MediaType   domainexercise.MediaType
+	ContentType string
+}
+
 // Filter converts the command into the domain list filter.
 func (c ListExercisesCommand) Filter() domainexercise.ExerciseFilter {
 	return domainexercise.ExerciseFilter{

@@ -15,8 +15,9 @@ import (
 )
 
 const (
-	argExerciseID = "exercise_id"
-	argUserID     = "user_id"
+	argExerciseID    = "exercise_id"
+	argMuscleGroupID = "muscle_group_id"
+	argUserID        = "user_id"
 )
 
 type ProgressRepo struct {
@@ -127,6 +128,21 @@ func (r *ProgressRepo) Upsert1RM(ctx context.Context, p domainprogress.Progress1
 		argUserID:       p.UserID,
 		"date":          p.Date,
 		"estimated_1rm": p.Estimated1RM,
+	})
+	return err
+}
+
+func (r *ProgressRepo) UpsertVolume(ctx context.Context, p domainprogress.ProgressVolume) error {
+	conn := r.getter.DefaultTrOrDB(ctx, r.db)
+	_, err := conn.Exec(ctx, `
+		INSERT INTO gym.progress_volume (muscle_group_id, user_id, date, total_kg)
+		VALUES (@muscle_group_id, @user_id, @date, @total_kg)
+		ON CONFLICT (muscle_group_id, user_id, date) DO UPDATE SET total_kg = EXCLUDED.total_kg
+	`, pgx.NamedArgs{
+		argMuscleGroupID: p.MuscleGroupID,
+		argUserID:        p.UserID,
+		"date":           p.Date,
+		"total_kg":       p.TotalKG,
 	})
 	return err
 }

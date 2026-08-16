@@ -59,6 +59,7 @@ func NewProgressHandler(
 // @Param to query string false "End of the date range (RFC 3339)"
 // @Success 200 {array} dto.OneRMResponse
 // @Failure 400 {object} handler.ErrorResponse
+// @Failure 401 {object} handler.ErrorResponse
 // @Failure 500 {object} handler.ErrorResponse
 // @Security BearerAuth
 // @Router /progress/1rm [get]
@@ -117,6 +118,7 @@ func (h *ProgressHandler) Get1RM(w http.ResponseWriter, r *http.Request) {
 // @Param to query string false "End of the date range (RFC 3339)"
 // @Success 200 {array} dto.VolumeResponse
 // @Failure 400 {object} handler.ErrorResponse
+// @Failure 401 {object} handler.ErrorResponse
 // @Failure 500 {object} handler.ErrorResponse
 // @Security BearerAuth
 // @Router /progress/volume [get]
@@ -161,6 +163,7 @@ func (h *ProgressHandler) GetVolume(w http.ResponseWriter, r *http.Request) {
 // @Param since query string false "Only entries updated after this RFC 3339 timestamp"
 // @Success 200 {array} dto.BodyWeightResponse
 // @Failure 400 {object} handler.ErrorResponse
+// @Failure 401 {object} handler.ErrorResponse
 // @Failure 500 {object} handler.ErrorResponse
 // @Security BearerAuth
 // @Router /progress/body-weight [get]
@@ -196,6 +199,7 @@ func (h *ProgressHandler) GetBodyWeight(w http.ResponseWriter, r *http.Request) 
 // @Param request body dto.LogBodyWeightRequest true "Body weight data"
 // @Success 201 {object} dto.BodyWeightResponse
 // @Failure 400 {object} handler.ErrorResponse
+// @Failure 401 {object} handler.ErrorResponse
 // @Failure 500 {object} handler.ErrorResponse
 // @Security BearerAuth
 // @Router /progress/body-weight [post]

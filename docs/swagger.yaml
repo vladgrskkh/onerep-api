@@ -45,6 +45,19 @@ definitions:
       sort_order:
         type: integer
     type: object
+  dto.ExerciseMediaUploadRequest:
+    properties:
+      content_type:
+        type: string
+      media_type:
+        enum:
+        - photo
+        - video
+        type: string
+    required:
+    - content_type
+    - media_type
+    type: object
   dto.ExerciseResponse:
     properties:
       created_at:
@@ -137,6 +150,17 @@ definitions:
       weight_kg:
         type: number
     type: object
+  dto.MediaUploadResponse:
+    properties:
+      expires_in:
+        type: integer
+      id:
+        type: string
+      s3_key:
+        type: string
+      upload_url:
+        type: string
+    type: object
   dto.MuscleGroupResponse:
     properties:
       id:
@@ -198,6 +222,13 @@ definitions:
         type: string
       sort_order:
         type: integer
+    type: object
+  dto.TemplateMediaUploadRequest:
+    properties:
+      content_type:
+        type: string
+    required:
+    - content_type
     type: object
   dto.TemplateResponse:
     properties:
@@ -369,6 +400,10 @@ paths:
           description: Bad Request
           schema:
             $ref: '#/definitions/handler.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
         "500":
           description: Internal Server Error
           schema:
@@ -398,6 +433,10 @@ paths:
             $ref: '#/definitions/dto.ExerciseResponse'
         "400":
           description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "401":
+          description: Unauthorized
           schema:
             $ref: '#/definitions/handler.ErrorResponse'
         "404":
@@ -433,6 +472,10 @@ paths:
           description: Bad Request
           schema:
             $ref: '#/definitions/handler.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
         "404":
           description: Not Found
           schema:
@@ -465,6 +508,10 @@ paths:
             $ref: '#/definitions/dto.ExerciseResponse'
         "400":
           description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "401":
+          description: Unauthorized
           schema:
             $ref: '#/definitions/handler.ErrorResponse'
         "404":
@@ -507,6 +554,10 @@ paths:
           description: Bad Request
           schema:
             $ref: '#/definitions/handler.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
         "404":
           description: Not Found
           schema:
@@ -518,6 +569,52 @@ paths:
       security:
       - BearerAuth: []
       summary: Update an exercise
+      tags:
+      - exercises
+  /exercises/{id}/media:
+    post:
+      consumes:
+      - application/json
+      description: Register a photo or video for an exercise and return a presigned
+        URL for uploading the file to the media bucket
+      parameters:
+      - description: Exercise ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Media upload data
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/dto.ExerciseMediaUploadRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/dto.MediaUploadResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Create exercise media upload
       tags:
       - exercises
   /progress/1rm:
@@ -553,6 +650,10 @@ paths:
           description: Bad Request
           schema:
             $ref: '#/definitions/handler.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
         "500":
           description: Internal Server Error
           schema:
@@ -586,6 +687,10 @@ paths:
           description: Bad Request
           schema:
             $ref: '#/definitions/handler.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
         "500":
           description: Internal Server Error
           schema:
@@ -616,6 +721,10 @@ paths:
             $ref: '#/definitions/dto.BodyWeightResponse'
         "400":
           description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "401":
+          description: Unauthorized
           schema:
             $ref: '#/definitions/handler.ErrorResponse'
         "500":
@@ -655,6 +764,10 @@ paths:
           description: Bad Request
           schema:
             $ref: '#/definitions/handler.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
         "500":
           description: Internal Server Error
           schema:
@@ -688,6 +801,10 @@ paths:
           description: Bad Request
           schema:
             $ref: '#/definitions/handler.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
         "500":
           description: Internal Server Error
           schema:
@@ -719,6 +836,10 @@ paths:
           description: Bad Request
           schema:
             $ref: '#/definitions/handler.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
         "500":
           description: Internal Server Error
           schema:
@@ -746,6 +867,10 @@ paths:
           description: No Content
         "400":
           description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "401":
+          description: Unauthorized
           schema:
             $ref: '#/definitions/handler.ErrorResponse'
         "403":
@@ -784,6 +909,10 @@ paths:
             $ref: '#/definitions/dto.TemplateResponse'
         "400":
           description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "401":
+          description: Unauthorized
           schema:
             $ref: '#/definitions/handler.ErrorResponse'
         "403":
@@ -830,6 +959,10 @@ paths:
           description: Bad Request
           schema:
             $ref: '#/definitions/handler.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
         "403":
           description: Forbidden
           schema:
@@ -870,6 +1003,10 @@ paths:
           description: Bad Request
           schema:
             $ref: '#/definitions/handler.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
         "403":
           description: Forbidden
           schema:
@@ -885,6 +1022,56 @@ paths:
       security:
       - BearerAuth: []
       summary: Fork a template
+      tags:
+      - templates
+  /templates/{id}/media:
+    post:
+      consumes:
+      - application/json
+      description: Register a photo for a template and return a presigned URL for
+        uploading the file to the media bucket
+      parameters:
+      - description: Template ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Media upload data
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/dto.TemplateMediaUploadRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/dto.MediaUploadResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Create template media upload
       tags:
       - templates
   /templates/{id}/publish:
@@ -907,6 +1094,10 @@ paths:
             $ref: '#/definitions/dto.TemplateResponse'
         "400":
           description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "401":
+          description: Unauthorized
           schema:
             $ref: '#/definitions/handler.ErrorResponse'
         "403":
@@ -950,6 +1141,10 @@ paths:
           description: Bad Request
           schema:
             $ref: '#/definitions/handler.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
         "500":
           description: Internal Server Error
           schema:
@@ -979,6 +1174,10 @@ paths:
             $ref: '#/definitions/dto.WorkoutResponse'
         "400":
           description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "401":
+          description: Unauthorized
           schema:
             $ref: '#/definitions/handler.ErrorResponse'
         "404":
@@ -1020,6 +1219,10 @@ paths:
           description: Bad Request
           schema:
             $ref: '#/definitions/handler.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
         "404":
           description: Not Found
           schema:
@@ -1059,6 +1262,10 @@ paths:
             $ref: '#/definitions/dto.WorkoutExerciseResponse'
         "400":
           description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "401":
+          description: Unauthorized
           schema:
             $ref: '#/definitions/handler.ErrorResponse'
         "404":
@@ -1108,6 +1315,10 @@ paths:
           description: Bad Request
           schema:
             $ref: '#/definitions/handler.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
         "404":
           description: Not Found
           schema:
@@ -1142,6 +1353,10 @@ paths:
             $ref: '#/definitions/dto.WorkoutResponse'
         "400":
           description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "401":
+          description: Unauthorized
           schema:
             $ref: '#/definitions/handler.ErrorResponse'
         "404":

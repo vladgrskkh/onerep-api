@@ -256,6 +256,7 @@ func (r *ExerciseRepo) InsertMuscleGroup(ctx context.Context, mg domainexercise.
 
 func (r *ExerciseRepo) BatchInsertMuscleGroups(
 	ctx context.Context,
+	exerciseID uuid.UUID,
 	groups []domainexercise.ExerciseMuscleGroup,
 ) error {
 	if len(groups) == 0 {
@@ -264,6 +265,9 @@ func (r *ExerciseRepo) BatchInsertMuscleGroups(
 	conn := r.getter.DefaultTrOrDB(ctx, r.db)
 	batch := &pgx.Batch{}
 	for _, mg := range groups {
+		if mg.ExerciseID == uuid.Nil {
+			mg.ExerciseID = exerciseID
+		}
 		batch.Queue(`
 			INSERT INTO gym.exercise_muscle_groups (exercise_id, muscle_group_id, is_primary)
 			VALUES (@exercise_id, @muscle_group_id, @is_primary)
@@ -287,7 +291,7 @@ func (r *ExerciseRepo) ReplaceMuscleGroups(
 	`, pgx.NamedArgs{argExerciseID: exerciseID}); err != nil {
 		return err
 	}
-	return r.BatchInsertMuscleGroups(ctx, groups)
+	return r.BatchInsertMuscleGroups(ctx, exerciseID, groups)
 }
 
 func (r *ExerciseRepo) Update(ctx context.Context, ex domainexercise.Exercise) (*domainexercise.Exercise, error) {

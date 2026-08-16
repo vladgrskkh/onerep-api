@@ -254,6 +254,53 @@ func (_c *MockProgressRepository_Upsert1RM_Call) RunAndReturn(run func(context.C
 	return _c
 }
 
+// UpsertVolume provides a mock function with given fields: ctx, p
+func (_m *MockProgressRepository) UpsertVolume(ctx context.Context, p progress.ProgressVolume) error {
+	ret := _m.Called(ctx, p)
+
+	if len(ret) == 0 {
+		panic("no return value specified for UpsertVolume")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, progress.ProgressVolume) error); ok {
+		r0 = rf(ctx, p)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// MockProgressRepository_UpsertVolume_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'UpsertVolume'
+type MockProgressRepository_UpsertVolume_Call struct {
+	*mock.Call
+}
+
+// UpsertVolume is a helper method to define mock.On call
+//   - ctx context.Context
+//   - p progress.ProgressVolume
+func (_e *MockProgressRepository_Expecter) UpsertVolume(ctx interface{}, p interface{}) *MockProgressRepository_UpsertVolume_Call {
+	return &MockProgressRepository_UpsertVolume_Call{Call: _e.mock.On("UpsertVolume", ctx, p)}
+}
+
+func (_c *MockProgressRepository_UpsertVolume_Call) Run(run func(ctx context.Context, p progress.ProgressVolume)) *MockProgressRepository_UpsertVolume_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(progress.ProgressVolume))
+	})
+	return _c
+}
+
+func (_c *MockProgressRepository_UpsertVolume_Call) Return(_a0 error) *MockProgressRepository_UpsertVolume_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+func (_c *MockProgressRepository_UpsertVolume_Call) RunAndReturn(run func(context.Context, progress.ProgressVolume) error) *MockProgressRepository_UpsertVolume_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // NewMockProgressRepository creates a new instance of MockProgressRepository. It also registers a testing interface on the mock and a cleanup function to assert the mocks expectations.
 // The first argument is typically a *testing.T value.
 func NewMockProgressRepository(t interface {

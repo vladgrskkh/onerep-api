@@ -190,6 +190,53 @@ func (_c *MockExerciseRepository_FindByID_Call) RunAndReturn(run func(context.Co
 	return _c
 }
 
+// InsertMedia provides a mock function with given fields: ctx, m
+func (_m *MockExerciseRepository) InsertMedia(ctx context.Context, m exercise.ExerciseMedia) error {
+	ret := _m.Called(ctx, m)
+
+	if len(ret) == 0 {
+		panic("no return value specified for InsertMedia")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, exercise.ExerciseMedia) error); ok {
+		r0 = rf(ctx, m)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// MockExerciseRepository_InsertMedia_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'InsertMedia'
+type MockExerciseRepository_InsertMedia_Call struct {
+	*mock.Call
+}
+
+// InsertMedia is a helper method to define mock.On call
+//   - ctx context.Context
+//   - m exercise.ExerciseMedia
+func (_e *MockExerciseRepository_Expecter) InsertMedia(ctx interface{}, m interface{}) *MockExerciseRepository_InsertMedia_Call {
+	return &MockExerciseRepository_InsertMedia_Call{Call: _e.mock.On("InsertMedia", ctx, m)}
+}
+
+func (_c *MockExerciseRepository_InsertMedia_Call) Run(run func(ctx context.Context, m exercise.ExerciseMedia)) *MockExerciseRepository_InsertMedia_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(exercise.ExerciseMedia))
+	})
+	return _c
+}
+
+func (_c *MockExerciseRepository_InsertMedia_Call) Return(_a0 error) *MockExerciseRepository_InsertMedia_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+func (_c *MockExerciseRepository_InsertMedia_Call) RunAndReturn(run func(context.Context, exercise.ExerciseMedia) error) *MockExerciseRepository_InsertMedia_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // List provides a mock function with given fields: ctx, filter
 func (_m *MockExerciseRepository) List(ctx context.Context, filter exercise.ExerciseFilter) ([]*exercise.Exercise, error) {
 	ret := _m.Called(ctx, filter)
