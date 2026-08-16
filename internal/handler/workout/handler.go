@@ -59,6 +59,7 @@ func NewWorkoutHandler(svc WorkoutService, logger *slog.Logger) *WorkoutHandler 
 // @Failure 400 {object} handler.ErrorResponse
 // @Failure 404 {object} handler.ErrorResponse
 // @Failure 409 {object} handler.ErrorResponse
+// @Failure 401 {object} handler.ErrorResponse
 // @Failure 500 {object} handler.ErrorResponse
 // @Security BearerAuth
 // @Router /workouts [post]
@@ -98,6 +99,7 @@ func (h *WorkoutHandler) Start(w http.ResponseWriter, r *http.Request) {
 // @Param since query string false "Only workouts updated after this RFC 3339 timestamp"
 // @Success 200 {array} dto.WorkoutResponse
 // @Failure 400 {object} handler.ErrorResponse
+// @Failure 401 {object} handler.ErrorResponse
 // @Failure 500 {object} handler.ErrorResponse
 // @Security BearerAuth
 // @Router /workouts [get]
@@ -135,6 +137,7 @@ func (h *WorkoutHandler) List(w http.ResponseWriter, r *http.Request) {
 // @Success 200 {object} dto.WorkoutResponse
 // @Failure 400 {object} handler.ErrorResponse
 // @Failure 404 {object} handler.ErrorResponse
+// @Failure 401 {object} handler.ErrorResponse
 // @Failure 500 {object} handler.ErrorResponse
 // @Security BearerAuth
 // @Router /workouts/{id} [get]
@@ -172,6 +175,7 @@ func (h *WorkoutHandler) Get(w http.ResponseWriter, r *http.Request) {
 // @Success 201 {object} dto.WorkoutExerciseResponse
 // @Failure 400 {object} handler.ErrorResponse
 // @Failure 404 {object} handler.ErrorResponse
+// @Failure 401 {object} handler.ErrorResponse
 // @Failure 500 {object} handler.ErrorResponse
 // @Security BearerAuth
 // @Router /workouts/{id}/exercises [post]
@@ -222,6 +226,7 @@ func (h *WorkoutHandler) AddExercise(w http.ResponseWriter, r *http.Request) {
 // @Success 201 {object} dto.LogSetResponse
 // @Failure 400 {object} handler.ErrorResponse
 // @Failure 404 {object} handler.ErrorResponse
+// @Failure 401 {object} handler.ErrorResponse
 // @Failure 500 {object} handler.ErrorResponse
 // @Security BearerAuth
 // @Router /workouts/{id}/exercises/{exId}/sets [post]
@@ -283,6 +288,7 @@ func (h *WorkoutHandler) LogSet(w http.ResponseWriter, r *http.Request) {
 // @Success 200 {object} dto.WorkoutResponse
 // @Failure 400 {object} handler.ErrorResponse
 // @Failure 404 {object} handler.ErrorResponse
+// @Failure 401 {object} handler.ErrorResponse
 // @Failure 500 {object} handler.ErrorResponse
 // @Security BearerAuth
 // @Router /workouts/{id}/finish [patch]

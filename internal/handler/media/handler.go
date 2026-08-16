@@ -67,6 +67,7 @@ func NewMediaHandler(
 // @Success 201 {object} dto.MediaUploadResponse
 // @Failure 400 {object} handler.ErrorResponse
 // @Failure 404 {object} handler.ErrorResponse
+// @Failure 401 {object} handler.ErrorResponse
 // @Failure 500 {object} handler.ErrorResponse
 // @Security BearerAuth
 // @Router /exercises/{id}/media [post]
@@ -138,6 +139,7 @@ func (h *MediaHandler) UploadExerciseMedia(w http.ResponseWriter, r *http.Reques
 // @Failure 400 {object} handler.ErrorResponse
 // @Failure 403 {object} handler.ErrorResponse
 // @Failure 404 {object} handler.ErrorResponse
+// @Failure 401 {object} handler.ErrorResponse
 // @Failure 500 {object} handler.ErrorResponse
 // @Security BearerAuth
 // @Router /templates/{id}/media [post]

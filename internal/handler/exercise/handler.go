@@ -44,6 +44,7 @@ func NewExerciseHandler(svc ExerciseService, logger *slog.Logger) *ExerciseHandl
 // @Param since query string false "Only exercises updated after this RFC 3339 timestamp"
 // @Success 200 {array} dto.ExerciseResponse
 // @Failure 400 {object} handler.ErrorResponse
+// @Failure 401 {object} handler.ErrorResponse
 // @Failure 500 {object} handler.ErrorResponse
 // @Security BearerAuth
 // @Router /exercises [get]
@@ -80,6 +81,7 @@ func (h *ExerciseHandler) List(w http.ResponseWriter, r *http.Request) {
 // @Success 200 {object} dto.ExerciseResponse
 // @Failure 400 {object} handler.ErrorResponse
 // @Failure 404 {object} handler.ErrorResponse
+// @Failure 401 {object} handler.ErrorResponse
 // @Failure 500 {object} handler.ErrorResponse
 // @Security BearerAuth
 // @Router /exercises/{id} [get]
@@ -115,6 +117,7 @@ func (h *ExerciseHandler) Get(w http.ResponseWriter, r *http.Request) {
 // @Success 201 {object} dto.ExerciseResponse
 // @Failure 400 {object} handler.ErrorResponse
 // @Failure 404 {object} handler.ErrorResponse
+// @Failure 401 {object} handler.ErrorResponse
 // @Failure 500 {object} handler.ErrorResponse
 // @Security BearerAuth
 // @Router /exercises [post]
@@ -162,6 +165,7 @@ func (h *ExerciseHandler) Create(w http.ResponseWriter, r *http.Request) {
 // @Success 200 {object} dto.ExerciseResponse
 // @Failure 400 {object} handler.ErrorResponse
 // @Failure 404 {object} handler.ErrorResponse
+// @Failure 401 {object} handler.ErrorResponse
 // @Failure 500 {object} handler.ErrorResponse
 // @Security BearerAuth
 // @Router /exercises/{id} [patch]
@@ -215,6 +219,7 @@ func (h *ExerciseHandler) Update(w http.ResponseWriter, r *http.Request) {
 // @Success 204
 // @Failure 400 {object} handler.ErrorResponse
 // @Failure 404 {object} handler.ErrorResponse
+// @Failure 401 {object} handler.ErrorResponse
 // @Failure 500 {object} handler.ErrorResponse
 // @Security BearerAuth
 // @Router /exercises/{id} [delete]

@@ -44,6 +44,7 @@ func NewTemplateHandler(svc TemplateService, logger *slog.Logger) *TemplateHandl
 // @Param since query string false "Only templates updated after this RFC 3339 timestamp"
 // @Success 200 {array} dto.TemplateResponse
 // @Failure 400 {object} handler.ErrorResponse
+// @Failure 401 {object} handler.ErrorResponse
 // @Failure 500 {object} handler.ErrorResponse
 // @Security BearerAuth
 // @Router /templates [get]
@@ -84,6 +85,7 @@ func (h *TemplateHandler) List(w http.ResponseWriter, r *http.Request) {
 // @Failure 400 {object} handler.ErrorResponse
 // @Failure 403 {object} handler.ErrorResponse
 // @Failure 404 {object} handler.ErrorResponse
+// @Failure 401 {object} handler.ErrorResponse
 // @Failure 500 {object} handler.ErrorResponse
 // @Security BearerAuth
 // @Router /templates/{id} [get]
@@ -123,6 +125,7 @@ func (h *TemplateHandler) Get(w http.ResponseWriter, r *http.Request) {
 // @Param request body dto.TemplateCreateRequest true "Template data"
 // @Success 201 {object} dto.TemplateResponse
 // @Failure 400 {object} handler.ErrorResponse
+// @Failure 401 {object} handler.ErrorResponse
 // @Failure 500 {object} handler.ErrorResponse
 // @Security BearerAuth
 // @Router /templates [post]
@@ -167,6 +170,7 @@ func (h *TemplateHandler) Create(w http.ResponseWriter, r *http.Request) {
 // @Failure 400 {object} handler.ErrorResponse
 // @Failure 403 {object} handler.ErrorResponse
 // @Failure 404 {object} handler.ErrorResponse
+// @Failure 401 {object} handler.ErrorResponse
 // @Failure 500 {object} handler.ErrorResponse
 // @Security BearerAuth
 // @Router /templates/{id} [patch]
@@ -218,6 +222,7 @@ func (h *TemplateHandler) Update(w http.ResponseWriter, r *http.Request) {
 // @Failure 400 {object} handler.ErrorResponse
 // @Failure 403 {object} handler.ErrorResponse
 // @Failure 404 {object} handler.ErrorResponse
+// @Failure 401 {object} handler.ErrorResponse
 // @Failure 500 {object} handler.ErrorResponse
 // @Security BearerAuth
 // @Router /templates/{id}/publish [post]
@@ -260,6 +265,7 @@ func (h *TemplateHandler) Publish(w http.ResponseWriter, r *http.Request) {
 // @Failure 400 {object} handler.ErrorResponse
 // @Failure 403 {object} handler.ErrorResponse
 // @Failure 404 {object} handler.ErrorResponse
+// @Failure 401 {object} handler.ErrorResponse
 // @Failure 500 {object} handler.ErrorResponse
 // @Security BearerAuth
 // @Router /templates/{id}/fork [post]
@@ -303,6 +309,7 @@ func (h *TemplateHandler) Fork(w http.ResponseWriter, r *http.Request) {
 // @Failure 400 {object} handler.ErrorResponse
 // @Failure 403 {object} handler.ErrorResponse
 // @Failure 404 {object} handler.ErrorResponse
+// @Failure 401 {object} handler.ErrorResponse
 // @Failure 500 {object} handler.ErrorResponse
 // @Security BearerAuth
 // @Router /templates/{id} [delete]
