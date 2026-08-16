@@ -45,32 +45,86 @@ func (s *HandlerTestSuite) SetupTest() {
 	s.router.Delete("/v1/templates/{id}", s.handler.SoftDelete)
 }
 
-func (s *HandlerTestSuite) listTemplates(target string, userID uuid.UUID) *httptest.ResponseRecorder {
-	return testutil.Serve(s.router, http.MethodGet, target, "", userID)
+func (s *HandlerTestSuite) listTemplates(
+	query string,
+	userID uuid.UUID,
+) *httptest.ResponseRecorder {
+	return testutil.Serve(
+		s.router,
+		http.MethodGet,
+		testutil.URL(s.router, "/v1/templates")+query,
+		"",
+		userID,
+	)
 }
 
 func (s *HandlerTestSuite) getTemplate(id string, userID uuid.UUID) *httptest.ResponseRecorder {
-	return testutil.Serve(s.router, http.MethodGet, "/v1/templates/"+id, "", userID)
+	return testutil.Serve(
+		s.router,
+		http.MethodGet,
+		testutil.URL(s.router, "/v1/templates/{id}", id),
+		"",
+		userID,
+	)
 }
 
-func (s *HandlerTestSuite) createTemplate(body string, userID uuid.UUID) *httptest.ResponseRecorder {
-	return testutil.Serve(s.router, http.MethodPost, "/v1/templates", body, userID)
+func (s *HandlerTestSuite) createTemplate(
+	body string,
+	userID uuid.UUID,
+) *httptest.ResponseRecorder {
+	return testutil.Serve(
+		s.router,
+		http.MethodPost,
+		testutil.URL(s.router, "/v1/templates"),
+		body,
+		userID,
+	)
 }
 
-func (s *HandlerTestSuite) updateTemplate(id, body string, userID uuid.UUID) *httptest.ResponseRecorder {
-	return testutil.Serve(s.router, http.MethodPatch, "/v1/templates/"+id, body, userID)
+func (s *HandlerTestSuite) updateTemplate(
+	id, body string,
+	userID uuid.UUID,
+) *httptest.ResponseRecorder {
+	return testutil.Serve(
+		s.router,
+		http.MethodPatch,
+		testutil.URL(s.router, "/v1/templates/{id}", id),
+		body,
+		userID,
+	)
 }
 
 func (s *HandlerTestSuite) publishTemplate(id string, userID uuid.UUID) *httptest.ResponseRecorder {
-	return testutil.Serve(s.router, http.MethodPost, "/v1/templates/"+id+"/publish", "", userID)
+	return testutil.Serve(
+		s.router,
+		http.MethodPost,
+		testutil.URL(s.router, "/v1/templates/{id}/publish", id),
+		"",
+		userID,
+	)
 }
 
 func (s *HandlerTestSuite) forkTemplate(id string, userID uuid.UUID) *httptest.ResponseRecorder {
-	return testutil.Serve(s.router, http.MethodPost, "/v1/templates/"+id+"/fork", "", userID)
+	return testutil.Serve(
+		s.router,
+		http.MethodPost,
+		testutil.URL(s.router, "/v1/templates/{id}/fork", id),
+		"",
+		userID,
+	)
 }
 
-func (s *HandlerTestSuite) softDeleteTemplate(id string, userID uuid.UUID) *httptest.ResponseRecorder {
-	return testutil.Serve(s.router, http.MethodDelete, "/v1/templates/"+id, "", userID)
+func (s *HandlerTestSuite) softDeleteTemplate(
+	id string,
+	userID uuid.UUID,
+) *httptest.ResponseRecorder {
+	return testutil.Serve(
+		s.router,
+		http.MethodDelete,
+		testutil.URL(s.router, "/v1/templates/{id}", id),
+		"",
+		userID,
+	)
 }
 
 func (s *HandlerTestSuite) TestList_Success() {
@@ -84,7 +138,7 @@ func (s *HandlerTestSuite) TestList_Success() {
 		Since:  since,
 	}).Return(templates, nil)
 
-	w := s.listTemplates("/v1/templates?since=2026-08-01T00%3A00%3A00Z", s.userID)
+	w := s.listTemplates("?since=2026-08-01T00%3A00%3A00Z", s.userID)
 
 	s.Equal(http.StatusOK, w.Code)
 	var resp []dto.TemplateResponse
@@ -105,7 +159,7 @@ func (s *HandlerTestSuite) TestList_Public() {
 		IsPublic: &isPublic,
 	}).Return(templates, nil)
 
-	w := s.listTemplates("/v1/templates?public=true", s.userID)
+	w := s.listTemplates("?public=true", s.userID)
 
 	s.Equal(http.StatusOK, w.Code)
 	var resp []dto.TemplateResponse
@@ -115,7 +169,7 @@ func (s *HandlerTestSuite) TestList_Public() {
 }
 
 func (s *HandlerTestSuite) TestList_InvalidPublic() {
-	w := s.listTemplates("/v1/templates?public=maybe", s.userID)
+	w := s.listTemplates("?public=maybe", s.userID)
 
 	s.Equal(http.StatusBadRequest, w.Code)
 	resp := testutil.DecodeError(s.T(), w)
@@ -124,7 +178,7 @@ func (s *HandlerTestSuite) TestList_InvalidPublic() {
 }
 
 func (s *HandlerTestSuite) TestList_InvalidSince() {
-	w := s.listTemplates("/v1/templates?since=not-a-timestamp", s.userID)
+	w := s.listTemplates("?since=not-a-timestamp", s.userID)
 
 	s.Equal(http.StatusBadRequest, w.Code)
 	resp := testutil.DecodeError(s.T(), w)
@@ -136,7 +190,7 @@ func (s *HandlerTestSuite) TestList_ServiceError() {
 	s.svc.EXPECT().List(mock.Anything, mock.Anything).
 		Return(nil, domaintemplate.ErrInvalidUserID)
 
-	w := s.listTemplates("/v1/templates", s.userID)
+	w := s.listTemplates("", s.userID)
 
 	s.Equal(http.StatusBadRequest, w.Code)
 	resp := testutil.DecodeError(s.T(), w)

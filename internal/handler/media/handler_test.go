@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"log/slog"
 	"net/http"
+	"net/http/httptest"
 	"testing"
 	"time"
 
@@ -43,6 +44,32 @@ func (s *HandlerTestSuite) SetupTest() {
 	s.router.Post("/v1/templates/{id}/media", s.handler.UploadTemplateMedia)
 }
 
+func (s *HandlerTestSuite) uploadExerciseMedia(
+	exerciseID, body string,
+	userID uuid.UUID,
+) *httptest.ResponseRecorder {
+	return testutil.ServeJSON(
+		s.router,
+		http.MethodPost,
+		testutil.URL(s.router, "/v1/exercises/{id}/media", exerciseID),
+		body,
+		userID,
+	)
+}
+
+func (s *HandlerTestSuite) uploadTemplateMedia(
+	templateID, body string,
+	userID uuid.UUID,
+) *httptest.ResponseRecorder {
+	return testutil.ServeJSON(
+		s.router,
+		http.MethodPost,
+		testutil.URL(s.router, "/v1/templates/{id}/media", templateID),
+		body,
+		userID,
+	)
+}
+
 func (s *HandlerTestSuite) TestUploadExerciseMedia_Success() {
 	exerciseID := uuid.Must(uuid.NewV7())
 	mediaID := uuid.Must(uuid.NewV7())
@@ -62,8 +89,8 @@ func (s *HandlerTestSuite) TestUploadExerciseMedia_Success() {
 		ExpiresIn: time.Minute,
 	}, nil)
 
-	w := testutil.ServeJSON(s.router, http.MethodPost,
-		"/v1/exercises/"+exerciseID.String()+"/media",
+	w := s.uploadExerciseMedia(
+		exerciseID.String(),
 		`{"media_type":"photo","content_type":"image/jpeg"}`,
 		s.userID,
 	)
@@ -96,8 +123,8 @@ func (s *HandlerTestSuite) TestUploadExerciseMedia_Video() {
 			ExpiresIn: time.Minute,
 		}, nil)
 
-	w := testutil.ServeJSON(s.router, http.MethodPost,
-		"/v1/exercises/"+exerciseID.String()+"/media",
+	w := s.uploadExerciseMedia(
+		exerciseID.String(),
 		`{"media_type":"video","content_type":"video/mp4"}`,
 		uuid.Nil,
 	)
@@ -106,8 +133,8 @@ func (s *HandlerTestSuite) TestUploadExerciseMedia_Video() {
 }
 
 func (s *HandlerTestSuite) TestUploadExerciseMedia_InvalidID() {
-	w := testutil.ServeJSON(s.router, http.MethodPost,
-		"/v1/exercises/not-a-uuid/media",
+	w := s.uploadExerciseMedia(
+		"not-a-uuid",
 		`{"media_type":"photo","content_type":"image/jpeg"}`,
 		uuid.Nil,
 	)
@@ -119,8 +146,8 @@ func (s *HandlerTestSuite) TestUploadExerciseMedia_InvalidID() {
 }
 
 func (s *HandlerTestSuite) TestUploadExerciseMedia_InvalidMediaType() {
-	w := testutil.ServeJSON(s.router, http.MethodPost,
-		"/v1/exercises/"+uuid.Must(uuid.NewV7()).String()+"/media",
+	w := s.uploadExerciseMedia(
+		uuid.Must(uuid.NewV7()).String(),
 		`{"media_type":"gif","content_type":"image/jpeg"}`,
 		uuid.Nil,
 	)
@@ -132,11 +159,7 @@ func (s *HandlerTestSuite) TestUploadExerciseMedia_InvalidMediaType() {
 }
 
 func (s *HandlerTestSuite) TestUploadExerciseMedia_MissingContentType() {
-	w := testutil.ServeJSON(s.router, http.MethodPost,
-		"/v1/exercises/"+uuid.Must(uuid.NewV7()).String()+"/media",
-		`{"media_type":"photo"}`,
-		uuid.Nil,
-	)
+	w := s.uploadExerciseMedia(uuid.Must(uuid.NewV7()).String(), `{"media_type":"photo"}`, uuid.Nil)
 
 	s.Equal(http.StatusBadRequest, w.Code)
 	resp := testutil.DecodeError(s.T(), w)
@@ -149,8 +172,8 @@ func (s *HandlerTestSuite) TestUploadExerciseMedia_UnsupportedContentType() {
 	s.exerciseSvc.EXPECT().UploadMedia(mock.Anything, mock.Anything).
 		Return(nil, domainexercise.ErrUnsupportedContentType)
 
-	w := testutil.ServeJSON(s.router, http.MethodPost,
-		"/v1/exercises/"+exerciseID.String()+"/media",
+	w := s.uploadExerciseMedia(
+		exerciseID.String(),
 		`{"media_type":"photo","content_type":"text/plain"}`,
 		uuid.Nil,
 	)
@@ -165,8 +188,8 @@ func (s *HandlerTestSuite) TestUploadExerciseMedia_InvalidMediaTypeFromService()
 	s.exerciseSvc.EXPECT().UploadMedia(mock.Anything, mock.Anything).
 		Return(nil, domainexercise.ErrInvalidMediaType)
 
-	w := testutil.ServeJSON(s.router, http.MethodPost,
-		"/v1/exercises/"+exerciseID.String()+"/media",
+	w := s.uploadExerciseMedia(
+		exerciseID.String(),
 		`{"media_type":"photo","content_type":"image/jpeg"}`,
 		uuid.Nil,
 	)
@@ -181,8 +204,8 @@ func (s *HandlerTestSuite) TestUploadExerciseMedia_ExerciseNotFound() {
 	s.exerciseSvc.EXPECT().UploadMedia(mock.Anything, mock.Anything).
 		Return(nil, domainexercise.ErrExerciseNotFound)
 
-	w := testutil.ServeJSON(s.router, http.MethodPost,
-		"/v1/exercises/"+exerciseID.String()+"/media",
+	w := s.uploadExerciseMedia(
+		exerciseID.String(),
 		`{"media_type":"photo","content_type":"image/jpeg"}`,
 		uuid.Nil,
 	)
@@ -197,8 +220,8 @@ func (s *HandlerTestSuite) TestUploadExerciseMedia_BuiltIn() {
 	s.exerciseSvc.EXPECT().UploadMedia(mock.Anything, mock.Anything).
 		Return(nil, domainexercise.ErrCannotEditBuiltIn)
 
-	w := testutil.ServeJSON(s.router, http.MethodPost,
-		"/v1/exercises/"+exerciseID.String()+"/media",
+	w := s.uploadExerciseMedia(
+		exerciseID.String(),
 		`{"media_type":"photo","content_type":"image/jpeg"}`,
 		uuid.Nil,
 	)
@@ -227,11 +250,7 @@ func (s *HandlerTestSuite) TestUploadTemplateMedia_Success() {
 		ExpiresIn: time.Minute,
 	}, nil)
 
-	w := testutil.ServeJSON(s.router, http.MethodPost,
-		"/v1/templates/"+templateID.String()+"/media",
-		`{"content_type":"image/png"}`,
-		userID,
-	)
+	w := s.uploadTemplateMedia(templateID.String(), `{"content_type":"image/png"}`, userID)
 
 	s.Equal(http.StatusCreated, w.Code)
 	var resp mediadto.MediaUploadResponse
@@ -247,8 +266,8 @@ func (s *HandlerTestSuite) TestUploadTemplateMedia_NotOwner() {
 	s.templateSvc.EXPECT().UploadMedia(mock.Anything, mock.Anything).
 		Return(nil, domaintemplate.ErrNotOwner)
 
-	w := testutil.ServeJSON(s.router, http.MethodPost,
-		"/v1/templates/"+templateID.String()+"/media",
+	w := s.uploadTemplateMedia(
+		templateID.String(),
 		`{"content_type":"image/jpeg"}`,
 		uuid.Must(uuid.NewV7()),
 	)
@@ -263,8 +282,8 @@ func (s *HandlerTestSuite) TestUploadTemplateMedia_NotFound() {
 	s.templateSvc.EXPECT().UploadMedia(mock.Anything, mock.Anything).
 		Return(nil, domaintemplate.ErrTemplateNotFound)
 
-	w := testutil.ServeJSON(s.router, http.MethodPost,
-		"/v1/templates/"+templateID.String()+"/media",
+	w := s.uploadTemplateMedia(
+		templateID.String(),
 		`{"content_type":"image/jpeg"}`,
 		uuid.Must(uuid.NewV7()),
 	)
@@ -279,8 +298,8 @@ func (s *HandlerTestSuite) TestUploadTemplateMedia_UnsupportedContentType() {
 	s.templateSvc.EXPECT().UploadMedia(mock.Anything, mock.Anything).
 		Return(nil, domaintemplate.ErrUnsupportedContentType)
 
-	w := testutil.ServeJSON(s.router, http.MethodPost,
-		"/v1/templates/"+templateID.String()+"/media",
+	w := s.uploadTemplateMedia(
+		templateID.String(),
 		`{"content_type":"video/mp4"}`,
 		uuid.Must(uuid.NewV7()),
 	)
@@ -291,11 +310,7 @@ func (s *HandlerTestSuite) TestUploadTemplateMedia_UnsupportedContentType() {
 }
 
 func (s *HandlerTestSuite) TestUploadTemplateMedia_InvalidID() {
-	w := testutil.ServeJSON(s.router, http.MethodPost,
-		"/v1/templates/not-a-uuid/media",
-		`{"content_type":"image/jpeg"}`,
-		uuid.Nil,
-	)
+	w := s.uploadTemplateMedia("not-a-uuid", `{"content_type":"image/jpeg"}`, uuid.Nil)
 
 	s.Equal(http.StatusBadRequest, w.Code)
 	resp := testutil.DecodeError(s.T(), w)

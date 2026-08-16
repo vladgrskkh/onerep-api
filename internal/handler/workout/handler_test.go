@@ -46,27 +46,69 @@ func (s *HandlerTestSuite) SetupTest() {
 }
 
 func (s *HandlerTestSuite) startWorkout(body string, userID uuid.UUID) *httptest.ResponseRecorder {
-	return testutil.Serve(s.router, http.MethodPost, "/v1/workouts", body, userID)
+	return testutil.Serve(
+		s.router,
+		http.MethodPost,
+		testutil.URL(s.router, "/v1/workouts"),
+		body,
+		userID,
+	)
 }
 
-func (s *HandlerTestSuite) listWorkouts(target string, userID uuid.UUID) *httptest.ResponseRecorder {
-	return testutil.Serve(s.router, http.MethodGet, target, "", userID)
+func (s *HandlerTestSuite) listWorkouts(query string, userID uuid.UUID) *httptest.ResponseRecorder {
+	return testutil.Serve(
+		s.router,
+		http.MethodGet,
+		testutil.URL(s.router, "/v1/workouts")+query,
+		"",
+		userID,
+	)
 }
 
 func (s *HandlerTestSuite) getWorkout(id string, userID uuid.UUID) *httptest.ResponseRecorder {
-	return testutil.Serve(s.router, http.MethodGet, "/v1/workouts/"+id, "", userID)
+	return testutil.Serve(
+		s.router,
+		http.MethodGet,
+		testutil.URL(s.router, "/v1/workouts/{id}", id),
+		"",
+		userID,
+	)
 }
 
-func (s *HandlerTestSuite) addExercise(id, body string, userID uuid.UUID) *httptest.ResponseRecorder {
-	return testutil.Serve(s.router, http.MethodPost, "/v1/workouts/"+id+"/exercises", body, userID)
+func (s *HandlerTestSuite) addExercise(
+	id, body string,
+	userID uuid.UUID,
+) *httptest.ResponseRecorder {
+	return testutil.Serve(
+		s.router,
+		http.MethodPost,
+		testutil.URL(s.router, "/v1/workouts/{id}/exercises", id),
+		body,
+		userID,
+	)
 }
 
-func (s *HandlerTestSuite) logSet(id, exID, body string, userID uuid.UUID) *httptest.ResponseRecorder {
-	return testutil.Serve(s.router, http.MethodPost, "/v1/workouts/"+id+"/exercises/"+exID+"/sets", body, userID)
+func (s *HandlerTestSuite) logSet(
+	id, exID, body string,
+	userID uuid.UUID,
+) *httptest.ResponseRecorder {
+	return testutil.Serve(
+		s.router,
+		http.MethodPost,
+		testutil.URL(s.router, "/v1/workouts/{id}/exercises/{exId}/sets", id, exID),
+		body,
+		userID,
+	)
 }
 
 func (s *HandlerTestSuite) finishWorkout(id string, userID uuid.UUID) *httptest.ResponseRecorder {
-	return testutil.Serve(s.router, http.MethodPatch, "/v1/workouts/"+id+"/finish", "", userID)
+	return testutil.Serve(
+		s.router,
+		http.MethodPatch,
+		testutil.URL(s.router, "/v1/workouts/{id}/finish", id),
+		"",
+		userID,
+	)
 }
 
 func (s *HandlerTestSuite) TestStart_Success() {
@@ -148,7 +190,7 @@ func (s *HandlerTestSuite) TestList_Success() {
 	s.svc.EXPECT().List(mock.Anything, s.userID, since).
 		Return([]*domainworkout.Workout{{ID: workoutID, UserID: s.userID}}, nil)
 
-	w := s.listWorkouts("/v1/workouts?since=2026-08-01T00%3A00%3A00Z", s.userID)
+	w := s.listWorkouts("?since=2026-08-01T00%3A00%3A00Z", s.userID)
 
 	s.Equal(http.StatusOK, w.Code)
 	var resp []dto.WorkoutResponse
@@ -158,7 +200,7 @@ func (s *HandlerTestSuite) TestList_Success() {
 }
 
 func (s *HandlerTestSuite) TestList_InvalidSince() {
-	w := s.listWorkouts("/v1/workouts?since=not-a-timestamp", s.userID)
+	w := s.listWorkouts("?since=not-a-timestamp", s.userID)
 
 	s.Equal(http.StatusBadRequest, w.Code)
 	resp := testutil.DecodeError(s.T(), w)
@@ -355,7 +397,8 @@ func (s *HandlerTestSuite) TestLogSet_NotFound() {
 func (s *HandlerTestSuite) TestFinish_Success() {
 	workoutID := uuid.Must(uuid.NewV7())
 	finished := &domainworkout.Workout{ID: workoutID, UserID: s.userID}
-	s.svc.EXPECT().Finish(mock.Anything, serviceworkout.FinishWorkoutCommand{WorkoutID: workoutID}, s.userID).
+	s.svc.EXPECT().
+		Finish(mock.Anything, serviceworkout.FinishWorkoutCommand{WorkoutID: workoutID}, s.userID).
 		Return(finished, nil)
 
 	w := s.finishWorkout(workoutID.String(), s.userID)

@@ -43,24 +43,24 @@ func (s *HandlerTestSuite) SetupTest() {
 	s.router.Delete("/v1/exercises/{id}", s.handler.SoftDelete)
 }
 
-func (s *HandlerTestSuite) listExercises(target string) *httptest.ResponseRecorder {
-	return testutil.Serve(s.router, http.MethodGet, target, "", uuid.Nil)
+func (s *HandlerTestSuite) listExercises(query string) *httptest.ResponseRecorder {
+	return testutil.Serve(s.router, http.MethodGet, testutil.URL(s.router, "/v1/exercises")+query, "", uuid.Nil)
 }
 
 func (s *HandlerTestSuite) getExercise(id string) *httptest.ResponseRecorder {
-	return testutil.Serve(s.router, http.MethodGet, "/v1/exercises/"+id, "", uuid.Nil)
+	return testutil.Serve(s.router, http.MethodGet, testutil.URL(s.router, "/v1/exercises/{id}", id), "", uuid.Nil)
 }
 
 func (s *HandlerTestSuite) createExercise(body string, userID uuid.UUID) *httptest.ResponseRecorder {
-	return testutil.Serve(s.router, http.MethodPost, "/v1/exercises", body, userID)
+	return testutil.Serve(s.router, http.MethodPost, testutil.URL(s.router, "/v1/exercises"), body, userID)
 }
 
 func (s *HandlerTestSuite) updateExercise(id, body string, userID uuid.UUID) *httptest.ResponseRecorder {
-	return testutil.Serve(s.router, http.MethodPatch, "/v1/exercises/"+id, body, userID)
+	return testutil.Serve(s.router, http.MethodPatch, testutil.URL(s.router, "/v1/exercises/{id}", id), body, userID)
 }
 
 func (s *HandlerTestSuite) softDeleteExercise(id string, userID uuid.UUID) *httptest.ResponseRecorder {
-	return testutil.Serve(s.router, http.MethodDelete, "/v1/exercises/"+id, "", userID)
+	return testutil.Serve(s.router, http.MethodDelete, testutil.URL(s.router, "/v1/exercises/{id}", id), "", userID)
 }
 
 func (s *HandlerTestSuite) TestList_Success() {
@@ -76,7 +76,7 @@ func (s *HandlerTestSuite) TestList_Success() {
 		Since:       since,
 	}).Return(exercises, nil)
 
-	w := s.listExercises("/v1/exercises?search=bench&muscle_group=chest&since=2026-08-01T00%3A00%3A00Z")
+	w := s.listExercises("?search=bench&muscle_group=chest&since=2026-08-01T00%3A00%3A00Z")
 
 	s.Equal(http.StatusOK, w.Code)
 	var resp []dto.ExerciseResponse
@@ -87,7 +87,7 @@ func (s *HandlerTestSuite) TestList_Success() {
 }
 
 func (s *HandlerTestSuite) TestList_InvalidSince() {
-	w := s.listExercises("/v1/exercises?since=not-a-timestamp")
+	w := s.listExercises("?since=not-a-timestamp")
 
 	s.Equal(http.StatusBadRequest, w.Code)
 	resp := testutil.DecodeError(s.T(), w)
