@@ -21,6 +21,13 @@ import (
 	servicetemplate "github.com/vladgrskkh/onerep-api/internal/service/template"
 )
 
+const (
+	templatesPattern       = "/v1/templates"
+	templateByIDPattern    = "/v1/templates/{id}"
+	templatePublishPattern = "/v1/templates/{id}/publish"
+	templateForkPattern    = "/v1/templates/{id}/fork"
+)
+
 type HandlerTestSuite struct {
 	suite.Suite
 
@@ -36,13 +43,13 @@ func (s *HandlerTestSuite) SetupTest() {
 	s.handler = template.NewTemplateHandler(s.svc, slog.New(slog.DiscardHandler))
 
 	s.router = chi.NewRouter()
-	s.router.Get("/v1/templates", s.handler.List)
-	s.router.Get("/v1/templates/{id}", s.handler.Get)
-	s.router.Post("/v1/templates", s.handler.Create)
-	s.router.Patch("/v1/templates/{id}", s.handler.Update)
-	s.router.Post("/v1/templates/{id}/publish", s.handler.Publish)
-	s.router.Post("/v1/templates/{id}/fork", s.handler.Fork)
-	s.router.Delete("/v1/templates/{id}", s.handler.SoftDelete)
+	s.router.Get(templatesPattern, s.handler.List)
+	s.router.Get(templateByIDPattern, s.handler.Get)
+	s.router.Post(templatesPattern, s.handler.Create)
+	s.router.Patch(templateByIDPattern, s.handler.Update)
+	s.router.Post(templatePublishPattern, s.handler.Publish)
+	s.router.Post(templateForkPattern, s.handler.Fork)
+	s.router.Delete(templateByIDPattern, s.handler.SoftDelete)
 }
 
 func (s *HandlerTestSuite) listTemplates(
@@ -52,7 +59,7 @@ func (s *HandlerTestSuite) listTemplates(
 	return testutil.Serve(
 		s.router,
 		http.MethodGet,
-		testutil.URL(s.router, "/v1/templates")+query,
+		testutil.Path(templatesPattern)+query,
 		"",
 		userID,
 	)
@@ -62,7 +69,7 @@ func (s *HandlerTestSuite) getTemplate(id string, userID uuid.UUID) *httptest.Re
 	return testutil.Serve(
 		s.router,
 		http.MethodGet,
-		testutil.URL(s.router, "/v1/templates/{id}", id),
+		testutil.Path(templateByIDPattern, id),
 		"",
 		userID,
 	)
@@ -75,7 +82,7 @@ func (s *HandlerTestSuite) createTemplate(
 	return testutil.Serve(
 		s.router,
 		http.MethodPost,
-		testutil.URL(s.router, "/v1/templates"),
+		testutil.Path(templatesPattern),
 		body,
 		userID,
 	)
@@ -88,7 +95,7 @@ func (s *HandlerTestSuite) updateTemplate(
 	return testutil.Serve(
 		s.router,
 		http.MethodPatch,
-		testutil.URL(s.router, "/v1/templates/{id}", id),
+		testutil.Path(templateByIDPattern, id),
 		body,
 		userID,
 	)
@@ -98,7 +105,7 @@ func (s *HandlerTestSuite) publishTemplate(id string, userID uuid.UUID) *httptes
 	return testutil.Serve(
 		s.router,
 		http.MethodPost,
-		testutil.URL(s.router, "/v1/templates/{id}/publish", id),
+		testutil.Path(templatePublishPattern, id),
 		"",
 		userID,
 	)
@@ -108,7 +115,7 @@ func (s *HandlerTestSuite) forkTemplate(id string, userID uuid.UUID) *httptest.R
 	return testutil.Serve(
 		s.router,
 		http.MethodPost,
-		testutil.URL(s.router, "/v1/templates/{id}/fork", id),
+		testutil.Path(templateForkPattern, id),
 		"",
 		userID,
 	)
@@ -121,7 +128,7 @@ func (s *HandlerTestSuite) softDeleteTemplate(
 	return testutil.Serve(
 		s.router,
 		http.MethodDelete,
-		testutil.URL(s.router, "/v1/templates/{id}", id),
+		testutil.Path(templateByIDPattern, id),
 		"",
 		userID,
 	)

@@ -23,6 +23,11 @@ import (
 	servicetemplate "github.com/vladgrskkh/onerep-api/internal/service/template"
 )
 
+const (
+	exerciseMediaPattern = "/v1/exercises/{id}/media"
+	templateMediaPattern = "/v1/templates/{id}/media"
+)
+
 type HandlerTestSuite struct {
 	suite.Suite
 
@@ -40,8 +45,8 @@ func (s *HandlerTestSuite) SetupTest() {
 	s.handler = media.NewMediaHandler(s.exerciseSvc, s.templateSvc, slog.New(slog.DiscardHandler))
 
 	s.router = chi.NewRouter()
-	s.router.Post("/v1/exercises/{id}/media", s.handler.UploadExerciseMedia)
-	s.router.Post("/v1/templates/{id}/media", s.handler.UploadTemplateMedia)
+	s.router.Post(exerciseMediaPattern, s.handler.UploadExerciseMedia)
+	s.router.Post(templateMediaPattern, s.handler.UploadTemplateMedia)
 }
 
 func (s *HandlerTestSuite) uploadExerciseMedia(
@@ -51,7 +56,7 @@ func (s *HandlerTestSuite) uploadExerciseMedia(
 	return testutil.ServeJSON(
 		s.router,
 		http.MethodPost,
-		testutil.URL(s.router, "/v1/exercises/{id}/media", exerciseID),
+		testutil.Path(exerciseMediaPattern, exerciseID),
 		body,
 		userID,
 	)
@@ -64,7 +69,7 @@ func (s *HandlerTestSuite) uploadTemplateMedia(
 	return testutil.ServeJSON(
 		s.router,
 		http.MethodPost,
-		testutil.URL(s.router, "/v1/templates/{id}/media", templateID),
+		testutil.Path(templateMediaPattern, templateID),
 		body,
 		userID,
 	)

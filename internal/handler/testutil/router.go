@@ -3,10 +3,7 @@ package testutil
 import (
 	"context"
 	"encoding/json"
-	"net/http"
 	"net/http/httptest"
-	"regexp"
-	"strconv"
 	"strings"
 	"testing"
 
@@ -29,35 +26,19 @@ func ServeJSON(router *chi.Mux, method, target, body string, userID uuid.UUID) *
 	return serve(router, method, target, body, userID, map[string]string{"Content-Type": "application/json"})
 }
 
-// URL builds a request target from a route pattern registered on the router.
-// Pattern params are replaced by the given values in order; the pattern and
-// the number of values must match a route registered via chi, otherwise URL
-// panics so the test fails at the call site.
-func URL(router *chi.Mux, pattern string, params ...string) string {
-	registered := false
-	_ = chi.Walk(router, func(_, route string, _ http.Handler, _ ...func(http.Handler) http.Handler) error {
-		if route == pattern {
-			registered = true
+// Path builds a request target from a route pattern by replacing each
+// {param} placeholder with the corresponding value in order.
+func Path(pattern string, params ...string) string {
+	target := pattern
+	for _, param := range params {
+		start := strings.Index(target, "{")
+		end := strings.Index(target, "}")
+		if start == -1 || end == -1 || end < start {
+			break
 		}
-		return nil
-	})
-	if !registered {
-		panic("testutil.URL: route pattern not registered: " + pattern)
+		target = target[:start] + param + target[end+1:]
 	}
-
-	paramPattern := regexp.MustCompile(`\{[^{}]+\}`)
-	paramCount := len(paramPattern.FindAllString(pattern, -1))
-	if paramCount != len(params) {
-		panic("testutil.URL: pattern " + pattern + " expects " +
-			strconv.Itoa(paramCount) + " params, got " + strconv.Itoa(len(params)))
-	}
-
-	values := append([]string{}, params...)
-	return paramPattern.ReplaceAllStringFunc(pattern, func(string) string {
-		value := values[0]
-		values = values[1:]
-		return value
-	})
+	return target
 }
 
 func serve(

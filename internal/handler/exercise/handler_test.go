@@ -21,6 +21,11 @@ import (
 	serviceexercise "github.com/vladgrskkh/onerep-api/internal/service/exercise"
 )
 
+const (
+	exercisesPattern    = "/v1/exercises"
+	exerciseByIDPattern = "/v1/exercises/{id}"
+)
+
 type HandlerTestSuite struct {
 	suite.Suite
 
@@ -36,31 +41,31 @@ func (s *HandlerTestSuite) SetupTest() {
 	s.handler = exercise.NewExerciseHandler(s.svc, slog.New(slog.DiscardHandler))
 
 	s.router = chi.NewRouter()
-	s.router.Get("/v1/exercises", s.handler.List)
-	s.router.Get("/v1/exercises/{id}", s.handler.Get)
-	s.router.Post("/v1/exercises", s.handler.Create)
-	s.router.Patch("/v1/exercises/{id}", s.handler.Update)
-	s.router.Delete("/v1/exercises/{id}", s.handler.SoftDelete)
+	s.router.Get(exercisesPattern, s.handler.List)
+	s.router.Get(exerciseByIDPattern, s.handler.Get)
+	s.router.Post(exercisesPattern, s.handler.Create)
+	s.router.Patch(exerciseByIDPattern, s.handler.Update)
+	s.router.Delete(exerciseByIDPattern, s.handler.SoftDelete)
 }
 
 func (s *HandlerTestSuite) listExercises(query string) *httptest.ResponseRecorder {
-	return testutil.Serve(s.router, http.MethodGet, testutil.URL(s.router, "/v1/exercises")+query, "", uuid.Nil)
+	return testutil.Serve(s.router, http.MethodGet, testutil.Path(exercisesPattern)+query, "", uuid.Nil)
 }
 
 func (s *HandlerTestSuite) getExercise(id string) *httptest.ResponseRecorder {
-	return testutil.Serve(s.router, http.MethodGet, testutil.URL(s.router, "/v1/exercises/{id}", id), "", uuid.Nil)
+	return testutil.Serve(s.router, http.MethodGet, testutil.Path(exerciseByIDPattern, id), "", uuid.Nil)
 }
 
 func (s *HandlerTestSuite) createExercise(body string, userID uuid.UUID) *httptest.ResponseRecorder {
-	return testutil.Serve(s.router, http.MethodPost, testutil.URL(s.router, "/v1/exercises"), body, userID)
+	return testutil.Serve(s.router, http.MethodPost, testutil.Path(exercisesPattern), body, userID)
 }
 
 func (s *HandlerTestSuite) updateExercise(id, body string, userID uuid.UUID) *httptest.ResponseRecorder {
-	return testutil.Serve(s.router, http.MethodPatch, testutil.URL(s.router, "/v1/exercises/{id}", id), body, userID)
+	return testutil.Serve(s.router, http.MethodPatch, testutil.Path(exerciseByIDPattern, id), body, userID)
 }
 
 func (s *HandlerTestSuite) softDeleteExercise(id string, userID uuid.UUID) *httptest.ResponseRecorder {
-	return testutil.Serve(s.router, http.MethodDelete, testutil.URL(s.router, "/v1/exercises/{id}", id), "", userID)
+	return testutil.Serve(s.router, http.MethodDelete, testutil.Path(exerciseByIDPattern, id), "", userID)
 }
 
 func (s *HandlerTestSuite) TestList_Success() {

@@ -22,6 +22,14 @@ import (
 	serviceworkout "github.com/vladgrskkh/onerep-api/internal/service/workout"
 )
 
+const (
+	workoutsPattern         = "/v1/workouts"
+	workoutByIDPattern      = "/v1/workouts/{id}"
+	workoutExercisesPattern = "/v1/workouts/{id}/exercises"
+	workoutSetPattern       = "/v1/workouts/{id}/exercises/{exId}/sets"
+	workoutFinishPattern    = "/v1/workouts/{id}/finish"
+)
+
 type HandlerTestSuite struct {
 	suite.Suite
 
@@ -37,19 +45,19 @@ func (s *HandlerTestSuite) SetupTest() {
 	s.handler = workouthandler.NewWorkoutHandler(s.svc, slog.New(slog.DiscardHandler))
 
 	s.router = chi.NewRouter()
-	s.router.Post("/v1/workouts", s.handler.Start)
-	s.router.Get("/v1/workouts", s.handler.List)
-	s.router.Get("/v1/workouts/{id}", s.handler.Get)
-	s.router.Post("/v1/workouts/{id}/exercises", s.handler.AddExercise)
-	s.router.Post("/v1/workouts/{id}/exercises/{exId}/sets", s.handler.LogSet)
-	s.router.Patch("/v1/workouts/{id}/finish", s.handler.Finish)
+	s.router.Post(workoutsPattern, s.handler.Start)
+	s.router.Get(workoutsPattern, s.handler.List)
+	s.router.Get(workoutByIDPattern, s.handler.Get)
+	s.router.Post(workoutExercisesPattern, s.handler.AddExercise)
+	s.router.Post(workoutSetPattern, s.handler.LogSet)
+	s.router.Patch(workoutFinishPattern, s.handler.Finish)
 }
 
 func (s *HandlerTestSuite) startWorkout(body string, userID uuid.UUID) *httptest.ResponseRecorder {
 	return testutil.Serve(
 		s.router,
 		http.MethodPost,
-		testutil.URL(s.router, "/v1/workouts"),
+		testutil.Path(workoutsPattern),
 		body,
 		userID,
 	)
@@ -59,7 +67,7 @@ func (s *HandlerTestSuite) listWorkouts(query string, userID uuid.UUID) *httptes
 	return testutil.Serve(
 		s.router,
 		http.MethodGet,
-		testutil.URL(s.router, "/v1/workouts")+query,
+		testutil.Path(workoutsPattern)+query,
 		"",
 		userID,
 	)
@@ -69,7 +77,7 @@ func (s *HandlerTestSuite) getWorkout(id string, userID uuid.UUID) *httptest.Res
 	return testutil.Serve(
 		s.router,
 		http.MethodGet,
-		testutil.URL(s.router, "/v1/workouts/{id}", id),
+		testutil.Path(workoutByIDPattern, id),
 		"",
 		userID,
 	)
@@ -82,7 +90,7 @@ func (s *HandlerTestSuite) addExercise(
 	return testutil.Serve(
 		s.router,
 		http.MethodPost,
-		testutil.URL(s.router, "/v1/workouts/{id}/exercises", id),
+		testutil.Path(workoutExercisesPattern, id),
 		body,
 		userID,
 	)
@@ -95,7 +103,7 @@ func (s *HandlerTestSuite) logSet(
 	return testutil.Serve(
 		s.router,
 		http.MethodPost,
-		testutil.URL(s.router, "/v1/workouts/{id}/exercises/{exId}/sets", id, exID),
+		testutil.Path(workoutSetPattern, id, exID),
 		body,
 		userID,
 	)
@@ -105,7 +113,7 @@ func (s *HandlerTestSuite) finishWorkout(id string, userID uuid.UUID) *httptest.
 	return testutil.Serve(
 		s.router,
 		http.MethodPatch,
-		testutil.URL(s.router, "/v1/workouts/{id}/finish", id),
+		testutil.Path(workoutFinishPattern, id),
 		"",
 		userID,
 	)

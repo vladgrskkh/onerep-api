@@ -23,6 +23,12 @@ import (
 	servicebodyweight "github.com/vladgrskkh/onerep-api/internal/service/bodyweight"
 )
 
+const (
+	progress1RMPattern    = "/v1/progress/1rm"
+	progressVolumePattern = "/v1/progress/volume"
+	bodyWeightPattern     = "/v1/progress/body-weight"
+)
+
 // errRepo simulates an unexpected repository failure.
 var errRepo = errors.New("repository failure")
 
@@ -47,17 +53,17 @@ func (s *HandlerTestSuite) SetupTest() {
 	)
 
 	s.router = chi.NewRouter()
-	s.router.Get("/v1/progress/1rm", s.handler.Get1RM)
-	s.router.Get("/v1/progress/volume", s.handler.GetVolume)
-	s.router.Get("/v1/progress/body-weight", s.handler.GetBodyWeight)
-	s.router.Post("/v1/progress/body-weight", s.handler.LogBodyWeight)
+	s.router.Get(progress1RMPattern, s.handler.Get1RM)
+	s.router.Get(progressVolumePattern, s.handler.GetVolume)
+	s.router.Get(bodyWeightPattern, s.handler.GetBodyWeight)
+	s.router.Post(bodyWeightPattern, s.handler.LogBodyWeight)
 }
 
 func (s *HandlerTestSuite) get1RM(query string, userID uuid.UUID) *httptest.ResponseRecorder {
 	return testutil.Serve(
 		s.router,
 		http.MethodGet,
-		testutil.URL(s.router, "/v1/progress/1rm")+query,
+		testutil.Path(progress1RMPattern)+query,
 		"",
 		userID,
 	)
@@ -67,7 +73,7 @@ func (s *HandlerTestSuite) getVolume(query string, userID uuid.UUID) *httptest.R
 	return testutil.Serve(
 		s.router,
 		http.MethodGet,
-		testutil.URL(s.router, "/v1/progress/volume")+query,
+		testutil.Path(progressVolumePattern)+query,
 		"",
 		userID,
 	)
@@ -80,7 +86,7 @@ func (s *HandlerTestSuite) getBodyWeight(
 	return testutil.Serve(
 		s.router,
 		http.MethodGet,
-		testutil.URL(s.router, "/v1/progress/body-weight")+query,
+		testutil.Path(bodyWeightPattern)+query,
 		"",
 		userID,
 	)
@@ -90,7 +96,7 @@ func (s *HandlerTestSuite) logBodyWeight(body string, userID uuid.UUID) *httptes
 	return testutil.Serve(
 		s.router,
 		http.MethodPost,
-		testutil.URL(s.router, "/v1/progress/body-weight"),
+		testutil.Path(bodyWeightPattern),
 		body,
 		userID,
 	)
