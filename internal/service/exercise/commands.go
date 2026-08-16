@@ -21,6 +21,7 @@ type CreateExerciseCommand struct {
 // Pointers distinguish absent fields from empty ones.
 type UpdateExerciseCommand struct {
 	ID             uuid.UUID
+	UserID         uuid.UUID
 	Name           *string
 	Description    *string
 	Notes          *string
@@ -40,6 +41,7 @@ type ListExercisesCommand struct {
 // order and S3 key are computed by the service.
 type UploadExerciseMediaCommand struct {
 	ExerciseID  uuid.UUID
+	UserID      uuid.UUID
 	MediaType   domainexercise.MediaType
 	ContentType string
 }

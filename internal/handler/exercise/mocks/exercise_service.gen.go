@@ -203,17 +203,17 @@ func (_c *MockExerciseService_List_Call) RunAndReturn(run func(context.Context, 
 	return _c
 }
 
-// SoftDelete provides a mock function with given fields: ctx, id
-func (_m *MockExerciseService) SoftDelete(ctx context.Context, id uuid.UUID) error {
-	ret := _m.Called(ctx, id)
+// SoftDelete provides a mock function with given fields: ctx, id, userID
+func (_m *MockExerciseService) SoftDelete(ctx context.Context, id uuid.UUID, userID uuid.UUID) error {
+	ret := _m.Called(ctx, id, userID)
 
 	if len(ret) == 0 {
 		panic("no return value specified for SoftDelete")
 	}
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID) error); ok {
-		r0 = rf(ctx, id)
+	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID, uuid.UUID) error); ok {
+		r0 = rf(ctx, id, userID)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -229,13 +229,14 @@ type MockExerciseService_SoftDelete_Call struct {
 // SoftDelete is a helper method to define mock.On call
 //   - ctx context.Context
 //   - id uuid.UUID
-func (_e *MockExerciseService_Expecter) SoftDelete(ctx interface{}, id interface{}) *MockExerciseService_SoftDelete_Call {
-	return &MockExerciseService_SoftDelete_Call{Call: _e.mock.On("SoftDelete", ctx, id)}
+//   - userID uuid.UUID
+func (_e *MockExerciseService_Expecter) SoftDelete(ctx interface{}, id interface{}, userID interface{}) *MockExerciseService_SoftDelete_Call {
+	return &MockExerciseService_SoftDelete_Call{Call: _e.mock.On("SoftDelete", ctx, id, userID)}
 }
 
-func (_c *MockExerciseService_SoftDelete_Call) Run(run func(ctx context.Context, id uuid.UUID)) *MockExerciseService_SoftDelete_Call {
+func (_c *MockExerciseService_SoftDelete_Call) Run(run func(ctx context.Context, id uuid.UUID, userID uuid.UUID)) *MockExerciseService_SoftDelete_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context), args[1].(uuid.UUID))
+		run(args[0].(context.Context), args[1].(uuid.UUID), args[2].(uuid.UUID))
 	})
 	return _c
 }
@@ -245,7 +246,7 @@ func (_c *MockExerciseService_SoftDelete_Call) Return(_a0 error) *MockExerciseSe
 	return _c
 }
 
-func (_c *MockExerciseService_SoftDelete_Call) RunAndReturn(run func(context.Context, uuid.UUID) error) *MockExerciseService_SoftDelete_Call {
+func (_c *MockExerciseService_SoftDelete_Call) RunAndReturn(run func(context.Context, uuid.UUID, uuid.UUID) error) *MockExerciseService_SoftDelete_Call {
 	_c.Call.Return(run)
 	return _c
 }

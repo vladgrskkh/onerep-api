@@ -77,7 +77,7 @@ func (s *ApplicationIntegrationSuite) SetupTest() {
 		application.WithLogger(logger),
 		application.WithDatabase(ctx),
 		application.WithRedis(ctx),
-		application.WithS3(),
+		application.WithS3(ctx),
 		application.WithServices(),
 		application.WithHandlers(),
 	)

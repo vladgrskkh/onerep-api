@@ -21,6 +21,11 @@ import (
 	serviceexercise "github.com/vladgrskkh/onerep-api/internal/service/exercise"
 )
 
+const (
+	exercisesPattern    = "/v1/exercises"
+	exerciseByIDPattern = "/v1/exercises/{id}"
+)
+
 type HandlerTestSuite struct {
 	suite.Suite
 
@@ -36,31 +41,31 @@ func (s *HandlerTestSuite) SetupTest() {
 	s.handler = exercise.NewExerciseHandler(s.svc, slog.New(slog.DiscardHandler))
 
 	s.router = chi.NewRouter()
-	s.router.Get("/v1/exercises", s.handler.List)
-	s.router.Get("/v1/exercises/{id}", s.handler.Get)
-	s.router.Post("/v1/exercises", s.handler.Create)
-	s.router.Patch("/v1/exercises/{id}", s.handler.Update)
-	s.router.Delete("/v1/exercises/{id}", s.handler.SoftDelete)
+	s.router.Get(exercisesPattern, s.handler.List)
+	s.router.Get(exerciseByIDPattern, s.handler.Get)
+	s.router.Post(exercisesPattern, s.handler.Create)
+	s.router.Patch(exerciseByIDPattern, s.handler.Update)
+	s.router.Delete(exerciseByIDPattern, s.handler.SoftDelete)
 }
 
-func (s *HandlerTestSuite) listExercises(target string) *httptest.ResponseRecorder {
-	return testutil.Serve(s.router, http.MethodGet, target, "", uuid.Nil)
+func (s *HandlerTestSuite) listExercises(query string) *httptest.ResponseRecorder {
+	return testutil.Serve(s.router, http.MethodGet, testutil.Path(exercisesPattern)+query, "", uuid.Nil)
 }
 
 func (s *HandlerTestSuite) getExercise(id string) *httptest.ResponseRecorder {
-	return testutil.Serve(s.router, http.MethodGet, "/v1/exercises/"+id, "", uuid.Nil)
+	return testutil.Serve(s.router, http.MethodGet, testutil.Path(exerciseByIDPattern, id), "", uuid.Nil)
 }
 
 func (s *HandlerTestSuite) createExercise(body string, userID uuid.UUID) *httptest.ResponseRecorder {
-	return testutil.Serve(s.router, http.MethodPost, "/v1/exercises", body, userID)
+	return testutil.Serve(s.router, http.MethodPost, testutil.Path(exercisesPattern), body, userID)
 }
 
-func (s *HandlerTestSuite) updateExercise(id, body string) *httptest.ResponseRecorder {
-	return testutil.Serve(s.router, http.MethodPatch, "/v1/exercises/"+id, body, uuid.Nil)
+func (s *HandlerTestSuite) updateExercise(id, body string, userID uuid.UUID) *httptest.ResponseRecorder {
+	return testutil.Serve(s.router, http.MethodPatch, testutil.Path(exerciseByIDPattern, id), body, userID)
 }
 
-func (s *HandlerTestSuite) softDeleteExercise(id string) *httptest.ResponseRecorder {
-	return testutil.Serve(s.router, http.MethodDelete, "/v1/exercises/"+id, "", uuid.Nil)
+func (s *HandlerTestSuite) softDeleteExercise(id string, userID uuid.UUID) *httptest.ResponseRecorder {
+	return testutil.Serve(s.router, http.MethodDelete, testutil.Path(exerciseByIDPattern, id), "", userID)
 }
 
 func (s *HandlerTestSuite) TestList_Success() {
@@ -76,7 +81,7 @@ func (s *HandlerTestSuite) TestList_Success() {
 		Since:       since,
 	}).Return(exercises, nil)
 
-	w := s.listExercises("/v1/exercises?search=bench&muscle_group=chest&since=2026-08-01T00%3A00%3A00Z")
+	w := s.listExercises("?search=bench&muscle_group=chest&since=2026-08-01T00%3A00%3A00Z")
 
 	s.Equal(http.StatusOK, w.Code)
 	var resp []dto.ExerciseResponse
@@ -87,7 +92,7 @@ func (s *HandlerTestSuite) TestList_Success() {
 }
 
 func (s *HandlerTestSuite) TestList_InvalidSince() {
-	w := s.listExercises("/v1/exercises?since=not-a-timestamp")
+	w := s.listExercises("?since=not-a-timestamp")
 
 	s.Equal(http.StatusBadRequest, w.Code)
 	resp := testutil.DecodeError(s.T(), w)
@@ -198,11 +203,12 @@ func (s *HandlerTestSuite) TestUpdate_Success() {
 	newName := "Incline Bench Press"
 	updated := &domainexercise.Exercise{ID: exerciseID, Name: newName}
 	s.svc.EXPECT().Update(mock.Anything, serviceexercise.UpdateExerciseCommand{
-		ID:   exerciseID,
-		Name: &newName,
+		ID:     exerciseID,
+		UserID: s.userID,
+		Name:   &newName,
 	}).Return(updated, nil)
 
-	w := s.updateExercise(exerciseID.String(), `{"name":"Incline Bench Press"}`)
+	w := s.updateExercise(exerciseID.String(), `{"name":"Incline Bench Press"}`, s.userID)
 
 	s.Equal(http.StatusOK, w.Code)
 	var resp dto.ExerciseResponse
@@ -212,19 +218,19 @@ func (s *HandlerTestSuite) TestUpdate_Success() {
 
 func (s *HandlerTestSuite) TestSoftDelete_Success() {
 	exerciseID := uuid.Must(uuid.NewV7())
-	s.svc.EXPECT().SoftDelete(mock.Anything, exerciseID).Return(nil)
+	s.svc.EXPECT().SoftDelete(mock.Anything, exerciseID, s.userID).Return(nil)
 
-	w := s.softDeleteExercise(exerciseID.String())
+	w := s.softDeleteExercise(exerciseID.String(), s.userID)
 
 	s.Equal(http.StatusNoContent, w.Code)
 }
 
 func (s *HandlerTestSuite) TestSoftDelete_BuiltInRejected() {
 	exerciseID := uuid.Must(uuid.NewV7())
-	s.svc.EXPECT().SoftDelete(mock.Anything, exerciseID).
+	s.svc.EXPECT().SoftDelete(mock.Anything, exerciseID, s.userID).
 		Return(domainexercise.ErrCannotEditBuiltIn)
 
-	w := s.softDeleteExercise(exerciseID.String())
+	w := s.softDeleteExercise(exerciseID.String(), s.userID)
 
 	s.Equal(http.StatusBadRequest, w.Code)
 	resp := testutil.DecodeError(s.T(), w)

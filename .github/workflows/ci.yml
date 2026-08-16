@@ -77,6 +77,8 @@ jobs:
           fi
       - name: Run tests
         run: go test ./... -v -count=1 -race
+      - name: Compile integration-tagged files
+        run: go vet -tags integration ./...
 
   build:
     runs-on: ubuntu-latest

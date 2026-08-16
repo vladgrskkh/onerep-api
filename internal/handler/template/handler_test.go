@@ -21,6 +21,13 @@ import (
 	servicetemplate "github.com/vladgrskkh/onerep-api/internal/service/template"
 )
 
+const (
+	templatesPattern       = "/v1/templates"
+	templateByIDPattern    = "/v1/templates/{id}"
+	templatePublishPattern = "/v1/templates/{id}/publish"
+	templateForkPattern    = "/v1/templates/{id}/fork"
+)
+
 type HandlerTestSuite struct {
 	suite.Suite
 
@@ -36,41 +43,95 @@ func (s *HandlerTestSuite) SetupTest() {
 	s.handler = template.NewTemplateHandler(s.svc, slog.New(slog.DiscardHandler))
 
 	s.router = chi.NewRouter()
-	s.router.Get("/v1/templates", s.handler.List)
-	s.router.Get("/v1/templates/{id}", s.handler.Get)
-	s.router.Post("/v1/templates", s.handler.Create)
-	s.router.Patch("/v1/templates/{id}", s.handler.Update)
-	s.router.Post("/v1/templates/{id}/publish", s.handler.Publish)
-	s.router.Post("/v1/templates/{id}/fork", s.handler.Fork)
-	s.router.Delete("/v1/templates/{id}", s.handler.SoftDelete)
+	s.router.Get(templatesPattern, s.handler.List)
+	s.router.Get(templateByIDPattern, s.handler.Get)
+	s.router.Post(templatesPattern, s.handler.Create)
+	s.router.Patch(templateByIDPattern, s.handler.Update)
+	s.router.Post(templatePublishPattern, s.handler.Publish)
+	s.router.Post(templateForkPattern, s.handler.Fork)
+	s.router.Delete(templateByIDPattern, s.handler.SoftDelete)
 }
 
-func (s *HandlerTestSuite) listTemplates(target string, userID uuid.UUID) *httptest.ResponseRecorder {
-	return testutil.Serve(s.router, http.MethodGet, target, "", userID)
+func (s *HandlerTestSuite) listTemplates(
+	query string,
+	userID uuid.UUID,
+) *httptest.ResponseRecorder {
+	return testutil.Serve(
+		s.router,
+		http.MethodGet,
+		testutil.Path(templatesPattern)+query,
+		"",
+		userID,
+	)
 }
 
 func (s *HandlerTestSuite) getTemplate(id string, userID uuid.UUID) *httptest.ResponseRecorder {
-	return testutil.Serve(s.router, http.MethodGet, "/v1/templates/"+id, "", userID)
+	return testutil.Serve(
+		s.router,
+		http.MethodGet,
+		testutil.Path(templateByIDPattern, id),
+		"",
+		userID,
+	)
 }
 
-func (s *HandlerTestSuite) createTemplate(body string, userID uuid.UUID) *httptest.ResponseRecorder {
-	return testutil.Serve(s.router, http.MethodPost, "/v1/templates", body, userID)
+func (s *HandlerTestSuite) createTemplate(
+	body string,
+	userID uuid.UUID,
+) *httptest.ResponseRecorder {
+	return testutil.Serve(
+		s.router,
+		http.MethodPost,
+		testutil.Path(templatesPattern),
+		body,
+		userID,
+	)
 }
 
-func (s *HandlerTestSuite) updateTemplate(id, body string, userID uuid.UUID) *httptest.ResponseRecorder {
-	return testutil.Serve(s.router, http.MethodPatch, "/v1/templates/"+id, body, userID)
+func (s *HandlerTestSuite) updateTemplate(
+	id, body string,
+	userID uuid.UUID,
+) *httptest.ResponseRecorder {
+	return testutil.Serve(
+		s.router,
+		http.MethodPatch,
+		testutil.Path(templateByIDPattern, id),
+		body,
+		userID,
+	)
 }
 
 func (s *HandlerTestSuite) publishTemplate(id string, userID uuid.UUID) *httptest.ResponseRecorder {
-	return testutil.Serve(s.router, http.MethodPost, "/v1/templates/"+id+"/publish", "", userID)
+	return testutil.Serve(
+		s.router,
+		http.MethodPost,
+		testutil.Path(templatePublishPattern, id),
+		"",
+		userID,
+	)
 }
 
 func (s *HandlerTestSuite) forkTemplate(id string, userID uuid.UUID) *httptest.ResponseRecorder {
-	return testutil.Serve(s.router, http.MethodPost, "/v1/templates/"+id+"/fork", "", userID)
+	return testutil.Serve(
+		s.router,
+		http.MethodPost,
+		testutil.Path(templateForkPattern, id),
+		"",
+		userID,
+	)
 }
 
-func (s *HandlerTestSuite) softDeleteTemplate(id string, userID uuid.UUID) *httptest.ResponseRecorder {
-	return testutil.Serve(s.router, http.MethodDelete, "/v1/templates/"+id, "", userID)
+func (s *HandlerTestSuite) softDeleteTemplate(
+	id string,
+	userID uuid.UUID,
+) *httptest.ResponseRecorder {
+	return testutil.Serve(
+		s.router,
+		http.MethodDelete,
+		testutil.Path(templateByIDPattern, id),
+		"",
+		userID,
+	)
 }
 
 func (s *HandlerTestSuite) TestList_Success() {
@@ -84,7 +145,7 @@ func (s *HandlerTestSuite) TestList_Success() {
 		Since:  since,
 	}).Return(templates, nil)
 
-	w := s.listTemplates("/v1/templates?since=2026-08-01T00%3A00%3A00Z", s.userID)
+	w := s.listTemplates("?since=2026-08-01T00%3A00%3A00Z", s.userID)
 
 	s.Equal(http.StatusOK, w.Code)
 	var resp []dto.TemplateResponse
@@ -94,8 +155,37 @@ func (s *HandlerTestSuite) TestList_Success() {
 	s.Equal("Push Day", resp[0].Name)
 }
 
+func (s *HandlerTestSuite) TestList_Public() {
+	templates := []*domaintemplate.Template{{
+		ID:       uuid.Must(uuid.NewV7()),
+		Name:     "Shared Push Day",
+		IsPublic: true,
+	}}
+	isPublic := true
+	s.svc.EXPECT().List(mock.Anything, domaintemplate.TemplateFilter{
+		IsPublic: &isPublic,
+	}).Return(templates, nil)
+
+	w := s.listTemplates("?public=true", s.userID)
+
+	s.Equal(http.StatusOK, w.Code)
+	var resp []dto.TemplateResponse
+	s.Require().NoError(json.Unmarshal(w.Body.Bytes(), &resp))
+	s.Require().Len(resp, 1)
+	s.Equal(templates[0].ID, resp[0].ID)
+}
+
+func (s *HandlerTestSuite) TestList_InvalidPublic() {
+	w := s.listTemplates("?public=maybe", s.userID)
+
+	s.Equal(http.StatusBadRequest, w.Code)
+	resp := testutil.DecodeError(s.T(), w)
+	s.Equal("INVALID_PUBLIC", string(resp.Error.Code))
+	s.svc.AssertNotCalled(s.T(), "List", mock.Anything, mock.Anything)
+}
+
 func (s *HandlerTestSuite) TestList_InvalidSince() {
-	w := s.listTemplates("/v1/templates?since=not-a-timestamp", s.userID)
+	w := s.listTemplates("?since=not-a-timestamp", s.userID)
 
 	s.Equal(http.StatusBadRequest, w.Code)
 	resp := testutil.DecodeError(s.T(), w)
@@ -107,7 +197,7 @@ func (s *HandlerTestSuite) TestList_ServiceError() {
 	s.svc.EXPECT().List(mock.Anything, mock.Anything).
 		Return(nil, domaintemplate.ErrInvalidUserID)
 
-	w := s.listTemplates("/v1/templates", s.userID)
+	w := s.listTemplates("", s.userID)
 
 	s.Equal(http.StatusBadRequest, w.Code)
 	resp := testutil.DecodeError(s.T(), w)

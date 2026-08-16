@@ -781,9 +781,13 @@ paths:
     get:
       consumes:
       - application/json
-      description: List the authenticated user's templates, optionally filtered by
-        last-updated time
+      description: List the authenticated user's templates, or all public templates
+        when public=true
       parameters:
+      - description: List public templates instead of the user's own
+        in: query
+        name: public
+        type: boolean
       - description: Only templates updated after this RFC 3339 timestamp
         in: query
         name: since

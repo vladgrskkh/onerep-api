@@ -55,6 +55,18 @@ func (s *ServiceTestSuite) TestList_Success() {
 	s.Equal(expected[0], got[0])
 }
 
+func (s *ServiceTestSuite) TestList_PublicUnscoped() {
+	isPublic := true
+	filter := domaintemplate.TemplateFilter{IsPublic: &isPublic}
+	expected := []*domaintemplate.Template{{ID: uuid.Must(uuid.NewV7()), Name: "Shared Push Day"}}
+	s.tmplRepo.EXPECT().List(mock.Anything, filter).Return(expected, nil)
+
+	got, err := s.svc.List(context.Background(), filter)
+	s.Require().NoError(err)
+	s.Require().Len(got, 1)
+	s.Equal(expected[0], got[0])
+}
+
 func (s *ServiceTestSuite) TestList_NilUserRejected() {
 	_, err := s.svc.List(context.Background(), domaintemplate.TemplateFilter{})
 	s.Require().ErrorIs(err, domaintemplate.ErrInvalidUserID)

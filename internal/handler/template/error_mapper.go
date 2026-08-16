@@ -15,6 +15,10 @@ const (
 	errMsgInvalidSince  = "invalid since parameter"
 	errUserInvalidSince = "The since parameter must be an RFC 3339 timestamp"
 
+	errCodeInvalidPublic = "INVALID_PUBLIC"
+	errMsgInvalidPublic  = "invalid public parameter"
+	errUserInvalidPublic = "The public parameter must be true or omitted"
+
 	errCodeTemplateNotFound = "TEMPLATE_NOT_FOUND"
 	errUserTemplateNotFound = "Template not found"
 
@@ -49,6 +53,14 @@ func invalidSinceDetail() handler.ErrorDetail {
 		Code:        errCodeInvalidSince,
 		Message:     errMsgInvalidSince,
 		UserMessage: errUserInvalidSince,
+	}
+}
+
+func invalidPublicDetail() handler.ErrorDetail {
+	return handler.ErrorDetail{
+		Code:        errCodeInvalidPublic,
+		Message:     errMsgInvalidPublic,
+		UserMessage: errUserInvalidPublic,
 	}
 }
 
