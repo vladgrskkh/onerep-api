@@ -188,7 +188,7 @@ func WithServices() Option {
 			progressRepo,
 			trManager,
 		)
-		a.volumeWorker = workoutredis.NewWorker(a.redisClient, calculator, a.logger)
+		a.volumeWorker = workoutredis.NewWorker(queue, calculator, a.logger)
 
 		return nil
 	}

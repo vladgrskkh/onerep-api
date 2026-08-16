@@ -57,6 +57,21 @@ func (s *QueueIntegrationSuite) TestEnqueueVolumeCalc_RoundTrip() {
 	s.Equal(workout.UserID, job.UserID)
 }
 
+func (s *QueueIntegrationSuite) TestPopVolumeCalcJob_RoundTrip() {
+	workout := domainworkout.Workout{ID: uuid.Must(uuid.NewV7()), UserID: uuid.Must(uuid.NewV7())}
+	s.Require().NoError(s.queue.EnqueueVolumeCalc(s.ctx, workout))
+
+	job, err := s.queue.PopVolumeCalcJob(s.ctx)
+	s.Require().NoError(err)
+	s.Equal(workout.ID, job.WorkoutID)
+	s.Equal(workout.UserID, job.UserID)
+}
+
+func (s *QueueIntegrationSuite) TestPopVolumeCalcJob_EmptyQueueReportsNoJob() {
+	_, err := s.queue.PopVolumeCalcJob(s.ctx)
+	s.Require().ErrorIs(err, workoutredis.ErrNoVolumeJob)
+}
+
 func TestQueueIntegrationSuite(t *testing.T) {
 	suite.Run(t, new(QueueIntegrationSuite))
 }

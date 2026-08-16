@@ -67,6 +67,26 @@ func (s *QueueTestSuite) TestEnqueueVolumeCalc_RedisUnavailable() {
 	s.Error(err)
 }
 
+func (s *QueueTestSuite) TestPopVolumeCalcJob_RoundTrip() {
+	ctx := context.Background()
+	workout := domainworkout.Workout{ID: uuid.Must(uuid.NewV7()), UserID: uuid.Must(uuid.NewV7())}
+	s.Require().NoError(s.queue.EnqueueVolumeCalc(ctx, workout))
+
+	job, err := s.queue.PopVolumeCalcJob(ctx)
+	s.Require().NoError(err)
+	s.Equal(workout.ID, job.WorkoutID)
+	s.Equal(workout.UserID, job.UserID)
+}
+
+func (s *QueueTestSuite) TestPopVolumeCalcJob_MalformedPayload() {
+	ctx := context.Background()
+	s.Require().NoError(s.client.LPush(ctx, volumeCalcQueueKey, "not-json").Err())
+
+	_, err := s.queue.PopVolumeCalcJob(ctx)
+	s.Require().Error(err)
+	s.Require().NotErrorIs(err, workoutredis.ErrNoVolumeJob)
+}
+
 func TestQueueSuite(t *testing.T) {
 	suite.Run(t, new(QueueTestSuite))
 }

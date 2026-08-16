@@ -47,7 +47,7 @@ func (s *WorkerTestSuite) SetupTest() {
 	s.queue = workoutredis.NewQueue(s.client)
 	s.calculator = redismocks.NewMockVolumeCalculator(s.T())
 	s.worker = workoutredis.NewWorker(
-		s.client,
+		s.queue,
 		s.calculator,
 		slog.New(slog.DiscardHandler),
 	)
