@@ -18,8 +18,7 @@ import (
 )
 
 const (
-	// jwksPath is the auth service's JWKS route (matches onerep-auth's
-	// GET /v1/.well-known/jwks.json).
+	// jwksPath is the auth service's JWKS route.
 	jwksPath = "/v1/.well-known/jwks.json"
 
 	// jwksFetchTimeout bounds JWKS fetches: the default client timeout and the

@@ -26,8 +26,6 @@ type VolumeCalculator struct {
 	trManager TransactionManager
 }
 
-// NewVolumeCalculator creates a calculator reading workouts and exercises and
-// writing progress volume.
 func NewVolumeCalculator(
 	workouts WorkoutRepository,
 	exercises serviceexercise.ExerciseRepository,
