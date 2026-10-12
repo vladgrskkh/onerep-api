@@ -12,6 +12,7 @@ type Config struct {
 	Port              string        `env:"GYM_API_PORT"          envDefault:"8081"`
 	AuthBaseURL       string        `env:"AUTH_BASE_URL"         envDefault:"http://localhost:8080"`
 	S3Endpoint        string        `env:"S3_ENDPOINT"           envDefault:"http://localhost:9000"`
+	S3PublicEndpoint  string        `env:"S3_PUBLIC_ENDPOINT"`
 	S3AccessKey       string        `env:"S3_ACCESS_KEY"         envDefault:"minioadmin"`
 	S3SecretKey       string        `env:"S3_SECRET_KEY"         envDefault:"minioadmin"`
 	S3Bucket          string        `env:"S3_BUCKET"             envDefault:"gym-media"`

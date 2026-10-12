@@ -12,6 +12,8 @@ import (
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
+	"os"
 	"testing"
 	"time"
 
@@ -24,6 +26,7 @@ import (
 	"github.com/vladgrskkh/onerep-api/internal/application"
 	"github.com/vladgrskkh/onerep-api/internal/handler"
 	"github.com/vladgrskkh/onerep-api/internal/handler/exercise/dto"
+	mediadto "github.com/vladgrskkh/onerep-api/internal/handler/media/dto"
 	validatorjwt "github.com/vladgrskkh/onerep-api/internal/infrastructure/auth/jwt"
 )
 
@@ -38,7 +41,7 @@ const (
 )
 
 // ApplicationIntegrationSuite boots the full application wiring — real
-// postgres, redis and minio, a fake JWKS server — and drives the chi router
+// postgres, redis and S3, a fake JWKS server — and drives the chi router
 // through the real auth middleware with locally-signed RS256 tokens.
 type ApplicationIntegrationSuite struct {
 	suite.Suite
@@ -55,11 +58,12 @@ func TestApplicationIntegrationSuite(t *testing.T) {
 }
 
 func (s *ApplicationIntegrationSuite) SetupTest() {
-	s.T().Setenv("DATABASE_URL", testDBURL)
-	s.T().Setenv("REDIS_URL", testRedisURL)
-	s.T().Setenv("S3_ENDPOINT", testS3Endpoint)
-	s.T().Setenv("S3_ACCESS_KEY", testS3AccessKey)
-	s.T().Setenv("S3_SECRET_KEY", testS3SecretKey)
+	s.T().Setenv("DATABASE_URL", integrationEnv("DATABASE_TEST_URL", testDBURL))
+	s.T().Setenv("REDIS_URL", integrationEnv("REDIS_TEST_URL", testRedisURL))
+	s.T().Setenv("S3_ENDPOINT", integrationEnv("S3_TEST_ENDPOINT", testS3Endpoint))
+	s.T().Setenv("S3_PUBLIC_ENDPOINT", integrationEnv("S3_TEST_PUBLIC_ENDPOINT", ""))
+	s.T().Setenv("S3_ACCESS_KEY", integrationEnv("S3_TEST_ACCESS_KEY", testS3AccessKey))
+	s.T().Setenv("S3_SECRET_KEY", integrationEnv("S3_TEST_SECRET_KEY", testS3SecretKey))
 	s.T().Setenv("S3_BUCKET", testS3Bucket)
 
 	ctx := context.Background()
@@ -90,7 +94,7 @@ func (s *ApplicationIntegrationSuite) SetupTest() {
 	s.userID = uuid.Must(uuid.NewV7())
 	s.token = signToken(s.T(), key, s.userID)
 
-	pool, err := pgxpool.New(ctx, testDBURL)
+	pool, err := pgxpool.New(ctx, integrationEnv("DATABASE_TEST_URL", testDBURL))
 	s.Require().NoError(err)
 	s.pool = pool
 }
@@ -172,6 +176,36 @@ func (s *ApplicationIntegrationSuite) TestExerciseCRUDFlow() {
 		s.authorizedRequest(http.MethodGet, "/v1/exercises/"+exerciseID.String(), nil),
 	)
 	s.Equal(http.StatusNotFound, w.Code, "soft-deleted exercise must not be readable")
+}
+
+func (s *ApplicationIntegrationSuite) TestExerciseMediaUploadURL() {
+	exerciseID := s.createExercise("Media exercise", "Public upload URL wiring")
+	w := httptest.NewRecorder()
+	s.router.ServeHTTP(w, s.authorizedRequest(http.MethodPost,
+		"/v1/exercises/"+exerciseID.String()+"/media",
+		[]byte(`{"media_type":"photo","content_type":"image/jpeg"}`)))
+	s.Require().Equal(http.StatusCreated, w.Code, w.Body.String())
+	var resp mediadto.MediaUploadResponse
+	s.Require().NoError(json.Unmarshal(w.Body.Bytes(), &resp))
+	parsed, err := url.Parse(resp.UploadURL)
+	s.Require().NoError(err)
+	endpoint := integrationEnv("S3_TEST_PUBLIC_ENDPOINT", "")
+	if endpoint == "" {
+		endpoint = integrationEnv("S3_TEST_ENDPOINT", testS3Endpoint)
+	}
+	expected, err := url.Parse(endpoint)
+	s.Require().NoError(err)
+	s.Equal(expected.Scheme, parsed.Scheme)
+	s.Equal(expected.Host, parsed.Host)
+	s.Equal("/gym-media-test/"+resp.S3Key, parsed.Path)
+	s.NotEmpty(parsed.Query().Get("X-Amz-Signature"))
+}
+
+func integrationEnv(name, fallback string) string {
+	if value, ok := os.LookupEnv(name); ok {
+		return value
+	}
+	return fallback
 }
 
 func (s *ApplicationIntegrationSuite) createExercise(name, description string) uuid.UUID {
