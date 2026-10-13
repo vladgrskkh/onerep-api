@@ -31,22 +31,6 @@ func NewStorage(
 	internalEndpoint, publicEndpoint, accessKey, secretKey, bucket string,
 	useSSL bool,
 ) (*Storage, error) {
-	storage, err := newStorage(ctx, internalEndpoint, publicEndpoint, accessKey, secretKey, bucket, useSSL)
-	if err != nil {
-		return nil, err
-	}
-	if err := ensureBucket(ctx, storage.client, bucket); err != nil {
-		return nil, err
-	}
-	return storage, nil
-}
-
-// newStorage constructs the adapter without networked bucket bootstrap.
-func newStorage(
-	ctx context.Context,
-	internalEndpoint, publicEndpoint, accessKey, secretKey, bucket string,
-	useSSL bool,
-) (*Storage, error) {
 	cfg, err := config.LoadDefaultConfig(ctx,
 		config.WithBaseEndpoint(endpointWithScheme(internalEndpoint, useSSL)),
 		config.WithRegion("us-east-1"),
@@ -66,7 +50,11 @@ func newStorage(
 	presigner := s3.NewPresignClient(client, s3.WithPresignClientFromClientOptions(func(o *s3.Options) {
 		o.BaseEndpoint = aws.String(endpointWithScheme(publicEndpoint, useSSL))
 	}))
-	return &Storage{client: client, presigner: presigner, bucket: bucket}, nil
+	storage := &Storage{client: client, presigner: presigner, bucket: bucket}
+	if err := ensureBucket(ctx, storage.client, bucket); err != nil {
+		return nil, err
+	}
+	return storage, nil
 }
 
 // Upload stores body under key with the given content type.

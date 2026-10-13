@@ -1,4 +1,4 @@
-package s3 //nolint:testpackage // Exercise the unexported constructor without networked bucket bootstrap.
+package s3_test
 
 import (
 	"context"
@@ -6,19 +6,21 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"net/http"
+	"net/http/httptest"
 	"net/url"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/suite"
+
+	medias3 "github.com/vladgrskkh/onerep-api/internal/infrastructure/media/s3"
 )
 
 const (
-	unitInternalEndpoint = "http://rustfs:9000"
-	unitPublicEndpoint   = "https://onerep.mooo.com"
-	unitSecretKey        = "test-secret-key"
-	unitObjectKey        = "exercises/photo.jpg"
+	unitPublicEndpoint = "https://onerep.mooo.com"
+	unitSecretKey      = "test-secret-key"
+	unitObjectKey      = "exercises/photo.jpg"
 )
 
 type StorageSuite struct {
@@ -30,27 +32,27 @@ func TestStorageSuite(t *testing.T) {
 }
 
 func (s *StorageSuite) TestPresignedPutURLUsesPublicEndpoint() {
-	storage := s.newStorage(unitPublicEndpoint, false)
+	storage, _ := s.newTestStorage(unitPublicEndpoint, false)
 	signedURL, err := storage.PresignedPutURL(s.T().Context(), unitObjectKey, "image/jpeg", time.Minute)
 	s.Require().NoError(err)
 	s.assertSignedURL(signedURL, http.MethodPut, "https", "onerep.mooo.com")
 }
 
 func (s *StorageSuite) TestPresignedGetURLUsesPublicEndpoint() {
-	storage := s.newStorage(unitPublicEndpoint, false)
+	storage, _ := s.newTestStorage(unitPublicEndpoint, false)
 	signedURL, err := storage.PresignedGetURL(s.T().Context(), unitObjectKey, time.Minute)
 	s.Require().NoError(err)
 	s.assertSignedURL(signedURL, http.MethodGet, "https", "onerep.mooo.com")
 }
 
 func (s *StorageSuite) TestPresignedURLsDefaultToInternalEndpoint() {
-	storage := s.newStorage("", false)
+	storage, internalEndpoint := s.newTestStorage("", false)
 	putURL, err := storage.PresignedPutURL(s.T().Context(), unitObjectKey, "image/jpeg", time.Minute)
 	s.Require().NoError(err)
-	s.assertSignedURL(putURL, http.MethodPut, "http", "rustfs:9000")
+	s.assertSignedURL(putURL, http.MethodPut, "http", endpointHost(internalEndpoint))
 	getURL, err := storage.PresignedGetURL(s.T().Context(), unitObjectKey, time.Minute)
 	s.Require().NoError(err)
-	s.assertSignedURL(getURL, http.MethodGet, "http", "rustfs:9000")
+	s.assertSignedURL(getURL, http.MethodGet, "http", endpointHost(internalEndpoint))
 }
 
 func (s *StorageSuite) TestPresignedURLScheme() {
@@ -66,7 +68,7 @@ func (s *StorageSuite) TestPresignedURLScheme() {
 		{name: "explicit HTTP", endpoint: "http://media.invalid:9443", useSSL: true, scheme: "http"},
 	} {
 		s.Run(tc.name, func() {
-			storage := s.newStorage(tc.endpoint, tc.useSSL)
+			storage, _ := s.newTestStorage(tc.endpoint, tc.useSSL)
 			getURL, err := storage.PresignedGetURL(s.T().Context(), unitObjectKey, time.Minute)
 			s.Require().NoError(err)
 			s.assertSignedURL(getURL, http.MethodGet, tc.scheme, "media.invalid:9443")
@@ -74,11 +76,20 @@ func (s *StorageSuite) TestPresignedURLScheme() {
 	}
 }
 
-func (s *StorageSuite) newStorage(publicEndpoint string, useSSL bool) *Storage {
-	storage, err := newStorage(context.Background(), unitInternalEndpoint, publicEndpoint,
+func (s *StorageSuite) newTestStorage(publicEndpoint string, useSSL bool) (*medias3.Storage, string) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPut || r.URL.Path != "/gym-media" {
+			http.Error(w, "unexpected S3 request", http.StatusNotFound)
+			return
+		}
+		w.WriteHeader(http.StatusOK)
+	}))
+	s.T().Cleanup(server.Close)
+
+	storage, err := medias3.NewStorage(context.Background(), server.URL, publicEndpoint,
 		"test-access-key", unitSecretKey, "gym-media", useSSL)
 	s.Require().NoError(err)
-	return storage
+	return storage, server.URL
 }
 
 func (s *StorageSuite) assertSignedURL(rawURL, method, scheme, host string) {
@@ -114,6 +125,14 @@ func (s *StorageSuite) assertSignedURL(rawURL, method, scheme, host string) {
 		signingKey = signatureHMAC(signingKey, part)
 	}
 	s.Equal(hex.EncodeToString(signatureHMAC(signingKey, stringToSign)), signature)
+}
+
+func endpointHost(endpoint string) string {
+	parsed, err := url.Parse(endpoint)
+	if err != nil {
+		panic(err)
+	}
+	return parsed.Host
 }
 
 func signatureHMAC(key []byte, value string) []byte {
