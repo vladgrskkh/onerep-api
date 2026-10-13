@@ -100,6 +100,7 @@ func WithS3(ctx context.Context) Option {
 		storage, err := medias3.NewStorage(
 			ctx,
 			a.cfg.S3Endpoint,
+			a.cfg.S3PublicEndpoint,
 			a.cfg.S3AccessKey,
 			a.cfg.S3SecretKey,
 			a.cfg.S3Bucket,

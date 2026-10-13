@@ -18,20 +18,21 @@ import (
 
 // Storage is the S3 media bucket adapter.
 type Storage struct {
-	client *s3.Client
-	bucket string
+	client    *s3.Client
+	presigner *s3.PresignClient
+	bucket    string
 }
 
-// NewStorage builds an S3 client for the given endpoint, ensures the bucket
-// exists, and returns the storage adapter. useSSL only applies when the
-// endpoint carries no scheme.
+// NewStorage uses internalEndpoint for bucket and object operations and
+// publicEndpoint for presigned URLs. An empty publicEndpoint falls back to
+// internalEndpoint. useSSL only applies to endpoints without a scheme.
 func NewStorage(
 	ctx context.Context,
-	endpoint, accessKey, secretKey, bucket string,
+	internalEndpoint, publicEndpoint, accessKey, secretKey, bucket string,
 	useSSL bool,
 ) (*Storage, error) {
 	cfg, err := config.LoadDefaultConfig(ctx,
-		config.WithBaseEndpoint(endpointWithScheme(endpoint, useSSL)),
+		config.WithBaseEndpoint(endpointWithScheme(internalEndpoint, useSSL)),
 		config.WithRegion("us-east-1"),
 		config.WithCredentialsProvider(credentials.NewStaticCredentialsProvider(accessKey, secretKey, "")),
 	)
@@ -43,11 +44,17 @@ func NewStorage(
 		o.UsePathStyle = true
 	})
 
-	if err := ensureBucket(ctx, client, bucket); err != nil {
+	if publicEndpoint == "" {
+		publicEndpoint = internalEndpoint
+	}
+	presigner := s3.NewPresignClient(client, s3.WithPresignClientFromClientOptions(func(o *s3.Options) {
+		o.BaseEndpoint = aws.String(endpointWithScheme(publicEndpoint, useSSL))
+	}))
+	storage := &Storage{client: client, presigner: presigner, bucket: bucket}
+	if err := ensureBucket(ctx, storage.client, bucket); err != nil {
 		return nil, err
 	}
-
-	return &Storage{client: client, bucket: bucket}, nil
+	return storage, nil
 }
 
 // Upload stores body under key with the given content type.
@@ -74,7 +81,7 @@ func (s *Storage) Delete(ctx context.Context, key string) error {
 // PresignedGetURL returns a time-limited URL for downloading the object at
 // key without credentials.
 func (s *Storage) PresignedGetURL(ctx context.Context, key string, ttl time.Duration) (string, error) {
-	req, err := s3.NewPresignClient(s.client).PresignGetObject(ctx, &s3.GetObjectInput{
+	req, err := s.presigner.PresignGetObject(ctx, &s3.GetObjectInput{
 		Bucket: aws.String(s.bucket),
 		Key:    aws.String(key),
 	}, s3.WithPresignExpires(ttl))
@@ -87,7 +94,7 @@ func (s *Storage) PresignedGetURL(ctx context.Context, key string, ttl time.Dura
 // PresignedPutURL returns a time-limited URL for uploading an object with
 // the given content type to key without credentials.
 func (s *Storage) PresignedPutURL(ctx context.Context, key, contentType string, ttl time.Duration) (string, error) {
-	req, err := s3.NewPresignClient(s.client).PresignPutObject(ctx, &s3.PutObjectInput{
+	req, err := s.presigner.PresignPutObject(ctx, &s3.PutObjectInput{
 		Bucket:      aws.String(s.bucket),
 		Key:         aws.String(key),
 		ContentType: aws.String(contentType),
